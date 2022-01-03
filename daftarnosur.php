@@ -13,7 +13,17 @@ if(!$_SESSION['nip'])
 <html lang="en">
 
 <head>
-
+        <script>
+            function setup() {
+                document.getElementById('buttonid').addEventListener('click', openDialog);
+                function openDialog() {
+                    document.getElementById('fileid').click();
+                }
+                document.getElementById("fileid").onchange = function() {
+				document.getElementById("form").submit();
+				}
+            }
+        </script> 
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -31,7 +41,7 @@ if(!$_SESSION['nip'])
     <!-- Custom styles for this template-->
     <link href="css/sb-admin-2.min.css" rel="stylesheet">
 	<?php
-	$q_nosur = mysqli_query($con, "SELECT nosur.id, nosur.no, nosur.nip, nosur.tanggal, nosur.hal, user.nip, user.nama from nosur inner join user on nosur.nip=user.nip ORDER BY no DESC") or die(mysqli_connect_error());
+	$q_nosur = mysqli_query($con, "SELECT nosur.id, nosur.no, nosur.nip, nosur.file, nosur.tanggal, nosur.hal, user.nip, user.nama from nosur inner join user on nosur.nip=user.nip ORDER BY no DESC") or die(mysqli_connect_error());
 	$row_nosur = mysqli_fetch_assoc($q_nosur);
 	$run = mysqli_num_rows($q_nosur);
 	$count = 1;
@@ -40,7 +50,7 @@ if(!$_SESSION['nip'])
     <link href="vendor/datatables/dataTables.bootstrap4.min.css" rel="stylesheet">
 </head>
 
-<body id="page-top">
+<body id="page-top" onload="setup()">
 
     <!-- Page Wrapper -->
     <div id="wrapper">
@@ -164,7 +174,23 @@ if(!$_SESSION['nip'])
                                             <td><?php echo $row_nosur['nama'];?></td>
                                             <td><?php echo $row_nosur['tanggal'];?></td>
                                             <td><?php echo $row_nosur['hal'];?> </td>
-                                            <td></td>
+                                            <td>
+												<form id="form" method="post" action="upload_berkas.php" enctype="multipart/form-data">
+													<input type="file" id="fileid" name='file' hidden/>
+													<input type="hidden" name='id' value="<?=$row_nosur['id']?>">
+													<input class="btn btn-primary" id='buttonid' type='button' value='Upload' />
+												</form>		
+												<?php 
+												if (empty($row_nosur['file']))
+												{ ?>
+													
+												<?php
+												} else
+												{ ?>
+													<button class="btn btn-success" onclick=" window.open('<?=$row_nosur['file']?>','_blank')">Lihat</button>	
+												<?php }
+												?>
+																							
                                         </tr>
 										<?php 
 											$count++;
