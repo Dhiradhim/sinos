@@ -51,7 +51,8 @@ function getRomawi($bln){
 
 $xno = mysqli_query($con, "SELECT no_urut FROM nosur ORDER BY no DESC LIMIT 1");
 $hasil = mysqli_fetch_assoc($xno);
-$nip=$_SESSION['nip'];
+
+$nip=$_POST['nip'];
 $no_urut = $hasil['no_urut']+1;
 $kd= $_POST['kd'];
 $kd1= $_POST['kd1'];

@@ -154,7 +154,40 @@ if(!$_SESSION['nip'])
                     <h1 class="h3 mb-4 text-gray-800">Ambil Nomor Surat</h1>
 					<form class="user" action="ambilnosursave.php" method="post">
 					<div class="form-group row">
-                        <div class="col-sm-2 mb-sm-0">
+					<?php 
+						$nip=$_SESSION['nip'];
+						if ($nip=="admin")
+						{
+					?>						
+                        <div class="col-sm-3 mb-sm-0">
+                            <select class="form-control" required="required" id="nip" name="nip">
+								<option value="" hidden>Pilih</option>
+								<option value="ketua">Rasyid Muzhar, S.Ag., M.H.</option>
+								<option value="wakil">Sriyani HN, S.Ag., M.H.</option>
+								<option value="hakim1">Drs. Mansyur</option>
+								<option value="hakim2">Fauziah Burhan, S.H.I.</option>
+								<option value="panitera">Sahbudin Kesi, S.Ag., M.H.</option>
+								<option value="panmudhukum">Eva Farihat Fauziyah, S.Ag</option>
+								<option value="panmudpermohonan">Maryam Abubakar, S.H.</option>
+								<option value="panmudgugatan">Fatimah Mahben, S.Ag., M.H.</option>
+								<option value="sekretaris">Rofian, S.H.I., M.H.</option>
+								<option value="kasubumum">Nuraini Mahmud, S.E.</option>
+								<option value="kasubpeg">Khalil Wazir Bin Idris, S.Kom.</option>
+								<option value="kasubptip">Aisyah, S.Kom., M.H.</option>
+								<option value="jurusita1">Adhi Danial Hamid</option>
+								<option value="jurusita2">Wahyu Ardiansyah</option>
+								<option value="verkeu">Luqmanul Khakim, S.E.</option>
+								<option value="prakom">Dhimas Radhito, S.Kom.</option>
+							</select>
+                        </div>
+					<?php 
+					} else {
+						?>
+						<input type="hidden" class="form-control" id="nip" name="nip" placeholder="Perihal" value="<?=$nip;?>" >
+					<?php
+					}
+					?>
+                        <div class="col-sm-2 mb-sm-0">							
                             <select class="form-control" required="required" id="kd" name="kd">
 								<option value="" hidden>Kode Surat</option>
 								<option value="OT">OT</option>

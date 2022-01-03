@@ -143,6 +143,7 @@ if(!$_SESSION['nip'])
                                             <th>Nama</th>
                                             <th>Tanggal</th>
                                             <th>Perihal</th>
+                                            <th>File</th>
                                         </tr>
                                     </thead>
                                     <tfoot>
@@ -152,6 +153,7 @@ if(!$_SESSION['nip'])
                                             <th>Nama</th>
                                             <th>Tanggal</th>
                                             <th>Perihal</th>
+                                            <th>File</th>
                                         </tr>
                                     </tfoot>
 									<tbody>
@@ -162,6 +164,7 @@ if(!$_SESSION['nip'])
                                             <td><?php echo $row_nosur['nama'];?></td>
                                             <td><?php echo $row_nosur['tanggal'];?></td>
                                             <td><?php echo $row_nosur['hal'];?> </td>
+                                            <td></td>
                                         </tr>
 										<?php 
 											$count++;
