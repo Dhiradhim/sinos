@@ -164,21 +164,30 @@ if(!$_SESSION['nip'])
                                             <td><?php echo $row_nosur['tanggal'];?></td>
                                             <td><?php echo $row_nosur['hal'];?> </td>
                                             <td>
+												<?php 
+												 if($row_nosur['file']==1) { ?>
 												<form id="form" method="post" action="upload_berkas.php" enctype="multipart/form-data">
 													<input type="file" name='file'>
 													<input type="hidden" name='id' value="<?=$row_nosur['id']?>">
 													<button class="btn btn-primary btn-circle" type='submit'>
 													<i class="fas fa-check"></i>
 													</button>
-												</form>		
-												<?php 
-												if (empty($row_nosur['file']))
-												{ ?>
+												</form>													
+												 <?php } 
+												 else if (empty($row_nosur['file']))
+												 { ?>
 													
 												<?php
 												} else
 												{ ?>
-													<button class="btn btn-success" onclick=" window.open('<?=$row_nosur['file']?>','_blank')">Lihat</button>	
+													<form id="form" method="post" action="upload_berkas.php" enctype="multipart/form-data">
+													<input type="file" name='file'>
+													<input type="hidden" name='id' value="<?=$row_nosur['id']?>">
+													<button class="btn btn-primary btn-circle" type='submit'>
+													<i class="fas fa-check"></i>
+													</button>
+												</form>	
+												<button class="btn btn-success" onclick=" window.open('<?=$row_nosur['file']?>','_blank')">Lihat</button>	
 												<?php }
 												?>
 																							
