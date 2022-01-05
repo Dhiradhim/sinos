@@ -13,17 +13,6 @@ if(!$_SESSION['nip'])
 <html lang="en">
 
 <head>
-        <script>
-            function setup() {
-                document.getElementById('buttonid').addEventListener('click', openDialog);
-                function openDialog() {
-                    document.getElementById('fileid').click();
-                }
-                document.getElementById("fileid").onchange = function() {
-				document.getElementById("form").submit();
-				}
-            }
-        </script> 
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -176,9 +165,11 @@ if(!$_SESSION['nip'])
                                             <td><?php echo $row_nosur['hal'];?> </td>
                                             <td>
 												<form id="form" method="post" action="upload_berkas.php" enctype="multipart/form-data">
-													<input type="file" id="fileid" name='file' hidden/>
+													<input type="file" name='file'>
 													<input type="hidden" name='id' value="<?=$row_nosur['id']?>">
-													<input class="btn btn-primary" id='buttonid' type='button' value='Upload' />
+													<button class="btn btn-primary btn-circle" type='submit'>
+													<i class="fas fa-check"></i>
+													</button>
 												</form>		
 												<?php 
 												if (empty($row_nosur['file']))

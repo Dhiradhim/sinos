@@ -16,7 +16,7 @@ if (in_array($file_ext_kk,$allowed_file_types))
 							$db_file= "file/" . $file;
 							move_uploaded_file($_FILES["file"]["tmp_name"], "file/" . $file);
 							
-							$query = "UPDATE nosur SET file='$db_file'";
+							$query = "UPDATE nosur SET file='$db_file' WHERE id='$id'";
 							$sql=mysqli_query($con, $query);
 							echo "<script type='text/javascript'>alert('File berhasil diupload.');</script>";
 							echo '<script>window.location.href="daftarnosur.php"</script>';

@@ -1,11 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 5.0.4
+-- version 5.1.1
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jan 03, 2022 at 03:01 AM
--- Server version: 10.4.17-MariaDB
--- PHP Version: 8.0.2
+-- Generation Time: Jan 05, 2022 at 12:58 AM
+-- Server version: 10.4.21-MariaDB
+-- PHP Version: 8.0.11
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -33,7 +33,8 @@ CREATE TABLE `nosur` (
   `no_urut` varchar(4) NOT NULL,
   `nip` varchar(20) NOT NULL,
   `tanggal` date NOT NULL,
-  `hal` varchar(100) NOT NULL
+  `hal` varchar(100) NOT NULL,
+  `file` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
@@ -57,10 +58,10 @@ INSERT INTO `user` (`id`, `nip`, `nama`, `pass`) VALUES
 (1, 'ketua', 'Rasyid Muzhar, S.Ag., M.H.', 'e10adc3949ba59abbe56e057f20f883e'),
 (2, 'wakil', 'Sriyani HN, S.Ag., MH', 'e10adc3949ba59abbe56e057f20f883e'),
 (3, 'hakim1', 'Drs. Mansyur', 'e10adc3949ba59abbe56e057f20f883e'),
-(4, 'hakim2', 'Dra. Hj. Siti Syamsiah Mahrus, M.H.', 'e10adc3949ba59abbe56e057f20f883e'),
-(5, 'hakim3', 'Farida Latif, S.H.I.', 'e10adc3949ba59abbe56e057f20f883e'),
-(6, 'hakim4', 'Martina Lofa, S.H.I., M.H.I.', 'e10adc3949ba59abbe56e057f20f883e'),
-(7, 'hakim5', 'Fauziah Burhan, S.H.I.', 'e10adc3949ba59abbe56e057f20f883e'),
+(4, 'hakim2', 'Fauziah Burhan, S.H.I.', 'e10adc3949ba59abbe56e057f20f883e'),
+(5, 'hakim3', '', 'e10adc3949ba59abbe56e057f20f883e'),
+(6, 'hakim4', '', 'e10adc3949ba59abbe56e057f20f883e'),
+(7, 'hakim5', '', 'e10adc3949ba59abbe56e057f20f883e'),
 (8, 'panitera', 'Sahbudin Kesi, S.Ag., M.H.', 'e10adc3949ba59abbe56e057f20f883e'),
 (9, 'panmudhukum', 'Eva Farihat Fauziyah, S.Ag', 'e10adc3949ba59abbe56e057f20f883e'),
 (10, 'panmudpermohonan', 'Maryam Abubakar, S.H.', 'e10adc3949ba59abbe56e057f20f883e'),

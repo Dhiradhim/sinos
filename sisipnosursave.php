@@ -49,7 +49,7 @@ function getRomawi($bln){
                 }
 }
 
-$nip = $_SESSION['nip'];
+$nip=$_POST['nip'];
 $kd = $_POST['kd'];
 $kd1 = $_POST['kd1'];
 $kd2 = $_POST['kd2'];
