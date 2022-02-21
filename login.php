@@ -48,7 +48,7 @@ session_start();//session starts here
                                     </div>
                                     <form class="user" method="post" action="login.php">
                                         <div class="form-group">
-                                            <input type="username" class="form-control form-control-user" name="nip" placeholder="NIP" autofocus>
+                                            <input type="username" class="form-control form-control-user" name="nip" placeholder="Username" autofocus>
                                         </div>
                                         <div class="form-group">
                                             <input type="password" class="form-control form-control-user" name="pass" placeholder="Password">
