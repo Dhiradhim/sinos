@@ -58,8 +58,9 @@ $xtanggal=explode('-',$tanggal);
 $tahun=$xtanggal[0];
 $bul=$xtanggal[1];
 $hal = $_POST['hal'];
+$sk = $_POST['sk'];
 
-$query_kode= mysqli_query($con, "SELECT no_urut FROM nosur WHERE tanggal='$tanggal' ORDER BY no_urut DESC limit 1");
+$query_kode= mysqli_query($con, "SELECT no_urut FROM nosur WHERE tanggal<='$tanggal' ORDER BY no_urut DESC limit 1");
 $row_kode = mysqli_fetch_assoc($query_kode);
 $no_urut = $row_kode['no_urut'];
 
@@ -86,8 +87,17 @@ else
 }
 
 $bulan = getRomawi($bul);
-$no = "W23-A1/".$no_urut."/".$kode."/".$bulan."/".$tahun;
 
+if ($sk == "1")
+{
+	$no = "W23-A1/".$no_urut."/".$kode."/SK/".$bulan."/".$tahun;
+}
+else
+{
+	$no = "W23-A1/".$no_urut."/".$kode."/".$bulan."/".$tahun;
+}
+
+// echo $no;
 $query = "INSERT into nosur (no,no_urut,nip,tanggal,hal) values ('$no', '$no_urut', '$nip', '$tanggal', '$hal')";
 $sql=mysqli_query($con, $query);
 echo '<script>window.location.href="daftarnosur.php?page=1&count=1"</script>';

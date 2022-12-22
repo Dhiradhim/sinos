@@ -1,7 +1,7 @@
 <?php  
 include ('koneksi.php');
 session_start();  
-  
+$nip=$_SESSION['nip'];
 if(!$_SESSION['nip'])  
 {  
   
@@ -38,65 +38,7 @@ if(!$_SESSION['nip'])
     <div id="wrapper">
 
         <!-- Sidebar -->
-		<ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
-
-            <!-- Sidebar - Brand -->
-            <a class="sidebar-brand d-flex align-items-center justify-content-center">
-                <div class="sidebar-brand-text mx-3">SINOS</div>
-            </a>
-					   <!-- Divider -->
-            <hr class="sidebar-divider">
-			<li class="nav-item">
-                <a class="nav-link" href="index.php">
-                    <span>Beranda</span></a>
-            </li>
-         
-		   <!-- Divider -->
-            <hr class="sidebar-divider">
-
-            <!-- Heading -->
-            <div class="sidebar-heading">
-                Aplikasi
-            </div>
-
-            <!-- Nav Item - Pages Collapse Menu -->
-            <li class="nav-item active">
-                <a class="nav-link" href="ambilnosur.php">
-                    <span>Ambil Nomor Surat</span></a>
-            </li>
-			<li class="nav-item">
-                <a class="nav-link" href="daftarnosur.php">
-                    <span>Daftar Nomor Surat</span></a>
-            </li>
-            <!-- Divider -->
-            <hr class="sidebar-divider">
-
-            <!-- Heading -->
-            <div class="sidebar-heading">
-                Panduan
-            </div>
-
-            <!-- Nav Item - Charts -->
-            <li class="nav-item">
-                <a class="nav-link" href="pola.php">
-                    <span>Pola Klasifikasi Surat</span></a>
-            </li>
-
-            <!-- Nav Item - Tables -->
-            <li class="nav-item">
-                <a class="nav-link" href="panduan.php">
-                    <span>Panduan Penggunaan</span></a>
-            </li>
-
-            <!-- Divider -->
-            <hr class="sidebar-divider d-none d-md-block">
-
-            <!-- Sidebar Toggler (Sidebar) -->
-            <div class="text-center d-none d-md-inline">
-                <button class="rounded-circle border-0" id="sidebarToggle"></button>
-            </div>
-
-        </ul>
+		<?php include('sidebar.html');?>
         <!-- End of Sidebar -->
 
         <!-- Content Wrapper -->
@@ -155,29 +97,22 @@ if(!$_SESSION['nip'])
 					<form class="user" action="ambilnosursave.php" method="post">
 					<div class="form-group row">
 					<?php 
-						$nip=$_SESSION['nip'];
+						
 						if ($nip=="admin")
 						{
+                        $q_nama1="SELECT nip,nama FROM user WHERE aktif=0";
+                        $nama1 = mysqli_query ($con, $q_nama1);
+                        $row_nama1 = mysqli_fetch_assoc($nama1);
 					?>						
                         <div class="col-sm-3 mb-sm-0">
                             <select class="form-control" required="required" id="nip" name="nip">
 								<option value="" hidden>Pilih</option>
-								<option value="ketua">Rasyid Muzhar, S.Ag., M.H.</option>
-								<option value="wakil">Sriyani HN, S.Ag., M.H.</option>
-								<option value="hakim1">Drs. Mansyur</option>
-								<option value="hakim2">Fauziah Burhan, S.H.I.</option>
-								<option value="panitera">Sahbudin Kesi, S.Ag., M.H.</option>
-								<option value="panmudhukum">Eva Farihat Fauziyah, S.Ag</option>
-								<option value="panmudpermohonan">Maryam Abubakar, S.H.</option>
-								<option value="panmudgugatan">Fatimah Mahben, S.Ag., M.H.</option>
-								<option value="sekretaris">Rofian, S.H.I., M.H.</option>
-								<option value="kasubumum">Nuraini Mahmud, S.E.</option>
-								<option value="kasubpeg">Khalil Wazir Bin Idris, S.Kom.</option>
-								<option value="kasubptip">Aisyah, S.Kom., M.H.</option>
-								<option value="jurusita1">Adhi Danial Hamid</option>
-								<option value="jurusita2">Wahyu Ardiansyah</option>
-								<option value="verkeu">Luqmanul Khakim, S.E.</option>
-								<option value="prakom">Dhimas Radhito, S.Kom.</option>
+								<?php
+                                do {
+                                ?>
+                                <option value="<?=$row_nama1['nip']?>"><?=$row_nama1['nama'];?></option>
+                                <?php 
+                                } while ($row_nama1 = mysqli_fetch_assoc($nama1));?>
 							</select>
                         </div>
 					<?php 
@@ -202,7 +137,7 @@ if(!$_SESSION['nip'])
 								<option value="PS">PS</option>
 							</select>
                         </div>
-                        <div class="col-sm-2 mb-sm-0">
+                        <div class="col-sm-1 mb-sm-0">
                             <select class="form-control" required="required" id="kd1" name="kd1">
 								<option value="" hidden>-</option>
 								<option value="00">00</option>
@@ -217,7 +152,7 @@ if(!$_SESSION['nip'])
 								<option value="09">09</option>
 							</select>
                         </div>
-                        <div class="col-sm-2 mb-sm-0">
+                        <div class="col-sm-1 mb-sm-0">
                             <select class="form-control" id="kd2" name="kd2">
 								<option value="-">-</option>
 								<option value="1">1</option>
@@ -231,7 +166,16 @@ if(!$_SESSION['nip'])
 								<option value="9">9</option>
 							</select>
                         </div>
-						
+                        <!-- <div class="col-sm-2 mb-sm-0">
+                            <select class="form-control" id="sk" name="sk">
+								<option value="0">Bukan SK</option>
+								<option value="1">SK</option>
+							</select>
+                        </div> -->
+						<div class="form-check">
+                            <input class="form-check-input" id="flexCheckDefault" name="sk" type="checkbox" value="1">
+                            <label class="form-check-label" for="flexCheckDefault">SK</label>
+                        </div>
 						
                     </div>
 					<div class="form-group">

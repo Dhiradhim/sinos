@@ -57,12 +57,13 @@ $no_urut = $hasil['no_urut']+1;
 $kd= $_POST['kd'];
 $kd1= $_POST['kd1'];
 $kd2= $_POST['kd2'];
+$sk= $_POST['sk'];
 
 if ($kd2 == "-")
 {
 	$kode = $kd.".".$kd1;
 }
-else 
+else
 {
 	$kode = $kd.".".$kd1.".".$kd2;
 }
@@ -70,10 +71,19 @@ else
 $bul = date('n');
 $bulan = getRomawi($bul);
 $tahun = date('Y');
-$no = "W23-A1/".$no_urut."/".$kode."/".$bulan."/".$tahun;
+
+if ($sk == "1")
+{
+	$no = "W23-A1/".$no_urut."/".$kode."/SK/".$bulan."/".$tahun;
+}
+else
+{
+	$no = "W23-A1/".$no_urut."/".$kode."/".$bulan."/".$tahun;
+}
+
 $hal = $_POST['hal'];
 $tanggal = date('Y-m-d');
-
+// echo $no;
 $query = "INSERT into nosur (no,no_urut,nip,tanggal,hal) values ('$no', '$no_urut', '$nip', '$tanggal', '$hal')";
 $sql=mysqli_query($con, $query);
 echo '<script>window.location.href="daftarnosur.php?page=1&count=1"</script>';

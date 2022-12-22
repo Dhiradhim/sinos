@@ -5,14 +5,20 @@ include('koneksi.php');
 //ekstensi file
 $allowed_file_types = array('.pdf');
 $id=$_POST['id'];
+$sql = "SELECT no_urut FROM nosur WHERE id='$id'";
+$q_no_urut = mysqli_query($con, $sql) or die(mysqli_connect_error());
+$row_no_urut = mysqli_fetch_assoc($q_no_urut);
+$run = mysqli_num_rows($q_no_urut);
+$no_urut = $row_no_urut['no_urut'];
 $file = $_FILES["file"]["name"];
 $file_ext_kk = substr($file, strripos($file, '.'));
-$akte_kelahiran = $_FILES["akte_kelahiran"]["name"];
 
+// echo $no_urut;
+// echo $sql;
 if (in_array($file_ext_kk,$allowed_file_types))
 {
 	
-							$file = $id."_file".$file_ext_kk;
+							$file = $no_urut."_file".$file_ext_kk;
 							$db_file= "file/" . $file;
 							move_uploaded_file($_FILES["file"]["tmp_name"], "file/" . $file);
 							

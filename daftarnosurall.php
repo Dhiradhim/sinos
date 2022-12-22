@@ -29,7 +29,7 @@ if(!$_SESSION['nip'])
 
     <!-- Custom styles for this template-->
     <link href="css/sb-admin-2.min.css" rel="stylesheet">
-	
+
     <style>
         label.actual{
             background-color: #0356fc;
@@ -39,13 +39,13 @@ if(!$_SESSION['nip'])
             cursor: pointer;
             }
     </style>
-    
-    <?php
-    $nip=$_SESSION['nip'];
 
-        $q_nosur = mysqli_query($con, "SELECT nosur.id, nosur.no, nosur.nip, nosur.file, nosur.tanggal, nosur.hal, user.nip, user.nama from nosur inner join user on nosur.nip=user.nip WHERE user.nip='$nip' ORDER BY no DESC") or die(mysqli_connect_error());
+	<?php
+    $nip=$_SESSION['nip'];
+        $q_nosur = mysqli_query($con, "SELECT nosur.id, nosur.no, nosur.nip, nosur.file, nosur.tanggal, nosur.hal, user.nip, user.nama from nosur inner join user on nosur.nip=user.nip ORDER BY no DESC") or die(mysqli_connect_error());
         $row_nosur = mysqli_fetch_assoc($q_nosur);
         $run = mysqli_num_rows($q_nosur);
+
     
 	$count = 1;
 	?>
@@ -86,7 +86,7 @@ if(!$_SESSION['nip'])
                 <div class="container-fluid">
 
                     <!-- Page Heading -->
-                    <h1 class="h3 mb-4 text-gray-800">Daftar Nomor Surat</h1>
+                    <h1 class="h3 mb-4 text-gray-800">Daftar Seluruh Nomor Surat</h1>
 
 					<div class="card-body">
                             <div class="table-responsive">
@@ -99,7 +99,9 @@ if(!$_SESSION['nip'])
                                             <th>Tanggal</th>
                                             <th>Perihal</th>
                                             <th>File</th>
+                                            <?php if($nip=='admin'){ ?>
                                             <th>Action</th>
+                                            <?php } ?>
                                         </tr>
                                     </thead>
                                     <tfoot>
@@ -110,7 +112,9 @@ if(!$_SESSION['nip'])
                                             <th>Tanggal</th>
                                             <th>Perihal</th>
                                             <th>File</th>
+                                            <?php if($nip=='admin'){ ?>
                                             <th>Action</th>
+                                            <?php } ?>
                                         </tr>
                                     </tfoot>
 									<tbody>
@@ -122,11 +126,12 @@ if(!$_SESSION['nip'])
                                             <td><?php echo $row_nosur['tanggal'];?></td>
                                             <td><?php echo $row_nosur['hal'];?> </td>
                                             <td>
+                                            <?php if($nip=='admin'){ ?>
                                             <form id="form" method="post" action="upload_berkas.php" enctype="multipart/form-data">
                                                 <input type="file" name='file' id="actual-btn" onchange="this.form.submit();" hidden>
 												<input type="hidden" name='id' value="<?=$row_nosur['id']?>">
                                                 <label class="actual" for="actual-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Upload File"><i class="fas fa-upload"></i></label>
-                                                <?php 
+                                                <?php }
 												 if($row_nosur['file']==1) { ?>
                                                     <button class="btn btn-warning btn-circle btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Belum ada File" type="button">
                                                         <i class="fas fa-exclamation"></i>
@@ -145,6 +150,7 @@ if(!$_SESSION['nip'])
 												?>
                                             </form>	
 											</td>
+                                            <?php if($nip=='admin'){ ?>
                                             <td>
                                                 <button class="btn btn-info btn-circle btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit Data" onclick="#">
                                                     <i class="fas fa-edit"></i>
@@ -152,7 +158,8 @@ if(!$_SESSION['nip'])
                                                 <button class="btn btn-danger btn-circle btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete Data" onclick="#">
                                                     <i class="fas fa-times"></i>
                                                 </button>
-                                            </td>							
+                                            </td>	
+                                            <?php } ?>								
                                         </tr>
 										<?php 
 											$count++;
