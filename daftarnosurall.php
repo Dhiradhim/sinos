@@ -125,7 +125,7 @@ if(!$_SESSION['nip'])
                                             <td><?php echo $row_nosur['nama'];?></td>
                                             <td><?php echo $row_nosur['tanggal'];?></td>
                                             <td><?php echo $row_nosur['hal'];?> </td>
-                                            <td>
+                                            <td width="8%">
                                             <?php if($nip=='admin'){ ?>
                                             <form id="form" method="post" action="upload_berkas.php" enctype="multipart/form-data">
                                                 <input type="file" name='file' id="actual-btn" onchange="this.form.submit();" hidden>
