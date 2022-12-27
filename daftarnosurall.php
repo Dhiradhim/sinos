@@ -152,12 +152,12 @@ if(!$_SESSION['nip'])
 											</td>
                                             <?php if($nip=='admin'){ ?>
                                             <td>
-                                                <button class="btn btn-info btn-circle btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit Data" onclick="#">
+                                                <a href="editnosur.php?id=<?=$row_nosur['id']?>" class="btn btn-info btn-circle btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit Data" onclick="#">
                                                     <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="btn btn-danger btn-circle btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete Data" onclick="#">
+                                                </a>
+                                                <a href="hapus_data.php?id=<?=$row_nosur['id']?>" type="button" class="btn btn-danger btn-circle btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete Data" onclick="return confirm('Anda yakin akan menghapus Data ini?')">
                                                     <i class="fas fa-times"></i>
-                                                </button>
+                                                </a>
                                             </td>	
                                             <?php } ?>								
                                         </tr>

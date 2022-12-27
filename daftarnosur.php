@@ -121,7 +121,7 @@ if(!$_SESSION['nip'])
                                             <td><?php echo $row_nosur['nama'];?></td>
                                             <td><?php echo $row_nosur['tanggal'];?></td>
                                             <td><?php echo $row_nosur['hal'];?> </td>
-                                            <td>
+                                            <td width=8%>
                                             <form id="form" method="post" action="upload_berkas.php" enctype="multipart/form-data">
                                                 <input type="file" name='file' id="actual-btn" onchange="this.form.submit();" hidden>
 												<input type="hidden" name='id' value="<?=$row_nosur['id']?>">
@@ -146,12 +146,12 @@ if(!$_SESSION['nip'])
                                             </form>	
 											</td>
                                             <td>
-                                                <button class="btn btn-info btn-circle btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit Data" onclick="#">
+                                            <a href="editnosur.php?id=<?=$row_nosur['id']?>" class="btn btn-info btn-circle btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit Data" onclick="#">
                                                     <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="btn btn-danger btn-circle btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete Data" onclick="#">
+                                                </a>
+                                                <a href="hapus_data.php?id=<?=$row_nosur['id']?>" type="button" class="btn btn-danger btn-circle btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete Data" onclick="return confirm('Anda yakin akan menghapus Data ini?')">
                                                     <i class="fas fa-times"></i>
-                                                </button>
+                                                </a>
                                             </td>							
                                         </tr>
 										<?php 
