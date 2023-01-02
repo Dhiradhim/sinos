@@ -4,7 +4,7 @@ include('koneksi.php');
 
 //ekstensi file
 $allowed_file_types = array('.pdf');
-$id=$_POST['id'];
+$id=$_POST['id_surat'];
 $sql = "SELECT no_urut FROM nosur WHERE id='$id'";
 $q_no_urut = mysqli_query($con, $sql) or die(mysqli_connect_error());
 $row_no_urut = mysqli_fetch_assoc($q_no_urut);
@@ -23,6 +23,7 @@ if (in_array($file_ext_kk,$allowed_file_types))
 							move_uploaded_file($_FILES["file"]["tmp_name"], "file/" . $file);
 							
 							$query = "UPDATE nosur SET file='$db_file' WHERE id='$id'";
+							// echo $query;
 							$sql=mysqli_query($con, $query);
 							echo "<script type='text/javascript'>alert('File berhasil diupload.');</script>";
 							echo '<script>window.location.href="daftarnosurall.php"</script>';

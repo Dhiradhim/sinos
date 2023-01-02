@@ -127,10 +127,9 @@ if(!$_SESSION['nip'])
                                             <td><?php echo $row_nosur['hal'];?> </td>
                                             <td width="8%">
                                             <?php if($nip=='admin'){ ?>
-                                            <form id="form" method="post" action="upload_berkas.php" enctype="multipart/form-data">
-                                                <input type="file" name='file' id="actual-btn" onchange="this.form.submit();" hidden>
-												<input type="hidden" name='id' value="<?=$row_nosur['id']?>">
-                                                <label class="actual" for="actual-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Upload File"><i class="fas fa-upload"></i></label>
+                                                <a href="upload_data.php?id=<?=$row_nosur['id']?>" class="btn btn-primary btn-circle btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Upload File" type="button">
+                                                        <i class="fas fa-upload"></i>
+                                                </a>
                                                 <?php }
 												 if($row_nosur['file']==1) { ?>
                                                     <button class="btn btn-warning btn-circle btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Belum ada File" type="button">
@@ -148,7 +147,6 @@ if(!$_SESSION['nip'])
                                                 </button>	
 												<?php }
 												?>
-                                            </form>	
 											</td>
                                             <?php if($nip=='admin'){ ?>
                                             <td>
