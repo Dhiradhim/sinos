@@ -104,13 +104,22 @@ if(!$_SESSION['nip'])
                         foreach($row_nama1 as $key=>$value) {$$key=$value;}
                         $no_surat = explode('/',$no);
                         $kode = explode('.',$no_surat[2]);
-                        
+
+                        $q_nama2="SELECT nip,nama FROM user WHERE aktif=0";
+                        $nama2 = mysqli_query ($con, $q_nama2);
+                        $row_nama2 = mysqli_fetch_assoc($nama2);
 					?>						
                         <div class="col-sm-3 mb-sm-0">
                             <input type="hidden" readonly class="form-control" id="id" name="id" value="<?=$id;?>" >
                             <input type="hidden" readonly class="form-control" id="no_urut" name="no_urut" value="<?=$no_urut;?>" >
-                            <input type="hidden" readonly class="form-control" id="nip" name="nip"  value="<?=$nip;?>" >
-                            <input type="text" readonly class="form-control" id="nama" name="nama"  value="<?=$nama;?>" >
+                            <select class="form-control" required="required" id="nip" name="nip">
+								<?php
+                                do {
+                                ?>
+                                <option value="<?=$row_nama2['nip']?>" <?php if ($row_nama2['nip']==$row_nama1['nip']){ echo 'selected'; } ?>><?=$row_nama2['nama'];?></option>
+                                <?php 
+                                } while ($row_nama2 = mysqli_fetch_assoc($nama2));?>
+							</select>
                         </div>				
                         <div class="col-sm-2 mb-sm-0">
                             <input type="text" readonly class="form-control" id="no_surat1" name="no_surat1" placeholder="Perihal" value="<?=$no_surat[0];?>/<?=$no_surat[1];?>/" >

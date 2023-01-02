@@ -50,6 +50,7 @@ function getRomawi($bln){
 }
 
 $id=$_POST['id'];
+$nip=$_POST['nip'];
 $no_urut=$_POST['no_urut'];
 $kd= $_POST['kd'];
 $kd1= $_POST['kd1'];
@@ -77,7 +78,7 @@ else
 
 $hal = $_POST['hal'];
 // echo $no;
-$query = "UPDATE nosur SET no='$no', hal='$hal' WHERE id='$id'";
+$query = "UPDATE nosur SET nip='$nip', no='$no', hal='$hal' WHERE id='$id'";
 // echo $query;
 $sql=mysqli_query($con, $query);
 echo '<script>window.location.href="daftarnosurall.php?page=1&count=1"</script>';
