@@ -192,12 +192,11 @@ if(!$_SESSION['nip'])
                         <?php }?>			
                         <div class="col-sm-2 mb-sm-0">
                             <?php if ($no_surat[3]=='SK'){?>
-                            <input type="hidden" readonly class="form-control" id="no_surat2" name="no_surat2"  value="/<?=$no_surat[4];?>/<?=$no_surat[5];?>" >
-                            <input type="text" readonly class="form-control" id="no_surat2x" name="no_surat2x"  value="/<?=$no_surat[3];?>/<?=$no_surat[4];?>/<?=$no_surat[5];?>" >
+                                <input type="hidden" readonly class="form-control" id="no_surat2" name="no_surat2x"  value="/<?=$no_surat[4];?>/<?=$no_surat[5];?>" >
+                                <input type="text" readonly class="form-control" id="no_surat2x" name="no_surat2"  value="/<?=$no_surat[3];?>/<?=$no_surat[4];?>/<?=$no_surat[5];?>" >
                             <?php } else { ?>
-                            <input type="hidden" readonly class="form-control" id="no_surat2" name="no_surat2"  value="/<?=$no_surat[4];?>" >
-                            <input type="text" readonly class="form-control" id="no_surat2x" name="no_surat2x"  value="/<?=$no_surat[3];?>/<?=$no_surat[4];?>" >
-                            <?php } ?> 
+                                <input type="text" readonly class="form-control" id="no_surat2" name="no_surat2x"  value="/<?=$no_surat[3];?>/<?=$no_surat[4];?>" >
+                                <?php } ?> 
                         </div>
 						<div class="form-check">
                             <input class="form-check-input" id="flexCheckDefault" <?php if ($no_surat[3]=='SK'){ echo 'checked'; } ?> name="sk" type="checkbox" value="1">

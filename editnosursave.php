@@ -56,7 +56,7 @@ $kd= $_POST['kd'];
 $kd1= $_POST['kd1'];
 $kd2= $_POST['kd2'];
 $sk= $_POST['sk'];
-$no_surat2= $_POST['no_surat2'];
+$no_surat2= $_POST['no_surat2x'];
 
 if ($kd2 == "-")
 {
