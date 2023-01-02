@@ -112,6 +112,7 @@ if(!$_SESSION['nip'])
                         <div class="col-sm-3 mb-sm-0">
                             <input type="hidden" readonly class="form-control" id="id" name="id" value="<?=$id;?>" >
                             <input type="hidden" readonly class="form-control" id="no_urut" name="no_urut" value="<?=$no_urut;?>" >
+                            <?php if($nip=='admin'){?>
                             <select class="form-control" required="required" id="nip" name="nip">
 								<?php
                                 do {
@@ -120,6 +121,9 @@ if(!$_SESSION['nip'])
                                 <?php 
                                 } while ($row_nama2 = mysqli_fetch_assoc($nama2));?>
 							</select>
+                            <?php } else {?>
+                            <input type="text" readonly class="form-control" id="nip" name="nip" value="<?=$row_nama1['nama'];?>" >                                
+                                <?php }?> 
                         </div>				
                         <div class="col-sm-2 mb-sm-0">
                             <input type="text" readonly class="form-control" id="no_surat1" name="no_surat1" placeholder="Perihal" value="<?=$no_surat[0];?>/<?=$no_surat[1];?>/" >
