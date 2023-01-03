@@ -42,7 +42,7 @@ if(!$_SESSION['nip'])
 
 	<?php
     $nip=$_SESSION['nip'];
-        $q_nosur = mysqli_query($con, "SELECT nosur.id, nosur.no, nosur.nip, nosur.file, nosur.tanggal, nosur.hal, user.nip, user.nama from nosur inner join user on nosur.nip=user.nip ORDER BY nosur.id DESC") or die(mysqli_connect_error());
+        $q_nosur = mysqli_query($con, "SELECT nosur.id, nosur.no, nosur.nip, nosur.file, nosur.tanggal, nosur.hal, user.nip, user.nama from nosur inner join user on nosur.nip=user.nip WHERE file='1' ORDER BY nosur.id ASC") or die(mysqli_connect_error());
         $row_nosur = mysqli_fetch_assoc($q_nosur);
         $run = mysqli_num_rows($q_nosur);
 
@@ -86,10 +86,7 @@ if(!$_SESSION['nip'])
                 <div class="container-fluid">
 
                     <!-- Page Heading -->
-                    <h1 class="h3 mb-4 text-gray-800">Daftar Seluruh Nomor Surat</h1>
-                    <a href="daftarnosurall2.php" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Belum Upload File" type="button">Belum Upload File
-                    
-                    </a>
+                    <h1 class="h3 mb-4 text-gray-800">Daftar Seluruh Nomor Surat <br><strong>[Belum Upload File]</strong></h1>
 
 					<div class="card-body">
                             <div class="table-responsive">
