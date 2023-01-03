@@ -123,7 +123,8 @@ if(!$_SESSION['nip'])
                                 } while ($row_nama2 = mysqli_fetch_assoc($nama2));?>
 							</select>
                             <?php } else { ?>
-                            <input type="text" readonly class="form-control" id="nip" name="nip" value="<?=$row_nama1['nama'];?>" >                                
+                            <input type="hidden" readonly class="form-control" id="nip" name="nip" value="<?=$row_nama1['nip'];?>" >                                
+                            <input type="text" readonly class="form-control" id="nipx" name="nipx" value="<?=$row_nama1['nama'];?>" >                                
                                 <?php } ?> 
                         </div>				
                         <div class="col-sm-2 mb-sm-0">
