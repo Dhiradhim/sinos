@@ -60,11 +60,17 @@ $bul=$xtanggal[1];
 $hal = $_POST['hal'];
 $sk = $_POST['sk'];
 
+$tgl_kemarin    =date('Y-m-d', strtotime("-1 day", strtotime(date('Y-m-d'))));
+
 $query_kode= mysqli_query($con, "SELECT no_urut FROM nosur WHERE tanggal<='$tanggal' ORDER BY no_urut DESC limit 1");
 $row_kode = mysqli_fetch_assoc($query_kode);
 $no_urut = $row_kode['no_urut'];
 
-if (preg_match("/[A-Z]/", $no_urut))
+if ($tanggal == $tgl_kemarin){
+    $no_urut = $no_urut+1;
+}
+
+else if (preg_match("/[A-Z]/", $no_urut))
 {
 	$huruf = substr($no_urut, -1);
 	$huruf = chr(ord($huruf) + 1);
@@ -98,7 +104,9 @@ else
 }
 
 // echo $no;
+// echo '<br>';
+// echo $tanggal;
 $query = "INSERT into nosur (no,no_urut,nip,tanggal,hal) values ('$no', '$no_urut', '$nip', '$tanggal', '$hal')";
 $sql=mysqli_query($con, $query);
-echo '<script>window.location.href="daftarnosur.php?page=1&count=1"</script>';
+echo '<script>window.location.href="daftarnosurall.php?page=1&count=1"</script>';
 ?>
