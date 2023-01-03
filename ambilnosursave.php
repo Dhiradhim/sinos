@@ -86,5 +86,11 @@ $tanggal = date('Y-m-d');
 // echo $no;
 $query = "INSERT into nosur (no,no_urut,nip,tanggal,hal) values ('$no', '$no_urut', '$nip', '$tanggal', '$hal')";
 $sql=mysqli_query($con, $query);
+
+if ($nip=='admin'){
 echo '<script>window.location.href="daftarnosurall.php?page=1&count=1"</script>';
+}
+else {
+    echo '<script>window.location.href="daftarnosur.php?page=1&count=1"</script>';
+}
 ?>
