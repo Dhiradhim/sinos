@@ -49,7 +49,8 @@ function getRomawi($bln){
                 }
 }
 
-$nip=$_POST['nip'];
+$nip_x=$_POST['nip'];
+$nip=$_SESSION['nip'];
 $kd = $_POST['kd'];
 $kd1 = $_POST['kd1'];
 $kd2 = $_POST['kd2'];
@@ -62,20 +63,19 @@ $sk = $_POST['sk'];
 
 $tgl_kemarin    =date('Y-m-d', strtotime("-1 day", strtotime(date('Y-m-d'))));
 
-$query_kode= mysqli_query($con, "SELECT no_urut FROM nosur WHERE tanggal<='$tanggal' ORDER BY no_urut DESC limit 1");
+$query_kode= mysqli_query($con, "SELECT huruf, no_urut FROM nosur WHERE tanggal<='$tanggal' ORDER BY no_urut DESC limit 1");
 $row_kode = mysqli_fetch_assoc($query_kode);
 $no_urut = $row_kode['no_urut'];
+$huruf = $row_kode['huruf'];
 
 if ($tanggal == $tgl_kemarin){
     $no_urut = $no_urut+1;
 }
 
-else if (preg_match("/[A-Z]/", $no_urut))
+else if (preg_match("/[A-Z]/", $huruf))
 {
-	$huruf = substr($no_urut, -1);
+	$huruf = substr($huruf, -1);
 	$huruf = chr(ord($huruf) + 1);
-	$angka = preg_replace("/[^0-9]/", "", $no_urut);
-	$no_urut = $angka.$huruf;
 }
 else
 {
@@ -96,18 +96,19 @@ $bulan = getRomawi($bul);
 
 if ($sk == "1")
 {
-	$no = "W23-A1/".$no_urut."/".$kode."/SK/".$bulan."/".$tahun;
+	$no = "W23-A1/".$no_urut.$huruf."/".$kode."/SK/".$bulan."/".$tahun;
 }
 else
 {
-	$no = "W23-A1/".$no_urut."/".$kode."/".$bulan."/".$tahun;
+	$no = "W23-A1/".$no_urut.$huruf."/".$kode."/".$bulan."/".$tahun;
 }
 
 // echo $no;
 // echo '<br>';
 // echo $tanggal;
-$query = "INSERT into nosur (no,no_urut,nip,tanggal,hal) values ('$no', '$no_urut', '$nip', '$tanggal', '$hal')";
+$query = "INSERT into nosur (no,no_urut,huruf,nip,tanggal,hal) values ('$no', '$no_urut', '$huruf', '$nip_x', '$tanggal', '$hal')";
 $sql=mysqli_query($con, $query);
+// echo $query;
 if ($nip=='admin'){
     echo '<script>window.location.href="daftarnosurall.php?page=1&count=1"</script>';
 } else {
