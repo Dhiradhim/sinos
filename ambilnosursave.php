@@ -52,7 +52,8 @@ function getRomawi($bln){
 $xno = mysqli_query($con, "SELECT no_urut FROM nosur ORDER BY no_urut DESC LIMIT 1");
 $hasil = mysqli_fetch_assoc($xno);
 
-$nip=$_POST['nip'];
+$nip=$_SESSION['nip'];
+$nip_x=$_POST['nip'];
 $no_urut = $hasil['no_urut']+1;
 $kd= $_POST['kd'];
 $kd1= $_POST['kd1'];
@@ -84,7 +85,7 @@ else
 $hal = $_POST['hal'];
 $tanggal = date('Y-m-d');
 // echo $no;
-$query = "INSERT into nosur (no,no_urut,nip,tanggal,hal) values ('$no', '$no_urut', '$nip', '$tanggal', '$hal')";
+$query = "INSERT into nosur (no,no_urut,nip,tanggal,hal) values ('$no', '$no_urut', '$nip_x', '$tanggal', '$hal')";
 $sql=mysqli_query($con, $query);
 
 if ($nip=='admin'){
