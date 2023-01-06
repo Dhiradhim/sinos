@@ -51,7 +51,9 @@ function getRomawi($bln){
 
 $id=$_POST['id'];
 $nip_surat=$_POST['nip'];
+$nip=$_SESSION['nip'];
 $no_urut=$_POST['no_urut'];
+$huruf=$_POST['huruf'];
 $kd= $_POST['kd'];
 $kd1= $_POST['kd1'];
 $kd2= $_POST['kd2'];
@@ -69,11 +71,11 @@ else
 
 if ($sk == "1")
 {
-	$no = "W23-A1/".$no_urut."/".$kode."/SK".$no_surat2;
+	$no = "W23-A1/".$no_urut.$huruf."/".$kode."/SK".$no_surat2;
 }
 else
 {
-	$no = "W23-A1/".$no_urut."/".$kode."".$no_surat2;
+	$no = "W23-A1/".$no_urut.$huruf."/".$kode."".$no_surat2;
 }
 
 $hal = $_POST['hal'];
