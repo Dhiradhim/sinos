@@ -119,15 +119,15 @@ else
 	$no = "W23-A1/".$no_urut.$huruf."/".$kode."/".$bulan."/".$tahun;
 }
 $query = "INSERT into nosur (no,no_urut,huruf,nip,tanggal,hal) values ('$no', '$no_urut', '$huruf', '$nip_x', '$tanggal', '$hal')";
-// $sql=mysqli_query($con, $query);
-// if ($nip=='admin'){
-//     echo '<script>window.location.href="daftarnosurall.php?page=1&count=1"</script>';
-// } else {
-//     echo '<script>window.location.href="daftarnosur.php?page=1&count=1"</script>';
-// }
-echo $sql_kode2;
-echo "<br>";
-echo $huruf;
-echo "<br>";
-echo $query;
+$sql=mysqli_query($con, $query);
+if ($nip=='admin'){
+    echo '<script>window.location.href="daftarnosurall.php?page=1&count=1"</script>';
+} else {
+    echo '<script>window.location.href="daftarnosur.php?page=1&count=1"</script>';
+}
+// echo $sql_kode2;
+// echo "<br>";
+// echo $huruf;
+// echo "<br>";
+// echo $query;
 ?>
