@@ -63,12 +63,13 @@ $sk = $_POST['sk'];
 
 $tgl_kemarin    =date('Y-m-d', strtotime("-1 day", strtotime(date('Y-m-d'))));
 
-$query_kode= mysqli_query($con, "SELECT huruf, no_urut FROM nosur WHERE tanggal<='$tanggal' ORDER BY no_urut DESC limit 1");
+$query_kode= mysqli_query($con, "SELECT huruf, no_urut, tanggal FROM nosur WHERE tanggal<='$tanggal' ORDER BY no_urut DESC limit 1");
 $row_kode = mysqli_fetch_assoc($query_kode);
 $no_urut = $row_kode['no_urut'];
 $huruf = $row_kode['huruf'];
+$tanggal_x = $row_kode['tanggal'];
 
-if ($tanggal == $tgl_kemarin){
+if ($tanggal_x == $tgl_kemarin){
     $no_urut = $no_urut+1;
 }
 
