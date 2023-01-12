@@ -2,6 +2,7 @@
 session_start();  
 include('koneksi.php');
 
+$nip=$_SESSION['nip'];
 //ekstensi file
 $allowed_file_types = array('.pdf');
 $id=$_POST['id_surat'];
