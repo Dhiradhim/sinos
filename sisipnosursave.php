@@ -88,7 +88,7 @@ else if (preg_match("/[A-Z]/", $huruf2))
 {
 	$huruf = substr($huruf2, -1);
 	$huruf = chr(ord($huruf) + 1);
-    $no_urut=$no_urut2;
+    $no_urut=$no_urut2.$huruf;
 }
 else
 {
@@ -97,6 +97,7 @@ else
     $row_kode = mysqli_fetch_assoc($query_kode);
     $no_urut = $row_kode['no_urut'];
 	$no_urut = $no_urut."A";
+    $huruf='A';
 }
 
 if ($kd2 == "-")
@@ -112,11 +113,11 @@ $bulan = getRomawi($bul);
 
 if ($sk == "1")
 {
-	$no = "W23-A1/".$no_urut.$huruf."/".$kode."/SK/".$bulan."/".$tahun;
+	$no = "W23-A1/".$no_urut."/".$kode."/SK/".$bulan."/".$tahun;
 }
 else
 {
-	$no = "W23-A1/".$no_urut.$huruf."/".$kode."/".$bulan."/".$tahun;
+	$no = "W23-A1/".$no_urut."/".$kode."/".$bulan."/".$tahun;
 }
 $query = "INSERT into nosur (no,no_urut,huruf,nip,tanggal,hal) values ('$no', '$no_urut', '$huruf', '$nip_x', '$tanggal', '$hal')";
 $sql=mysqli_query($con, $query);
