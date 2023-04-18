@@ -114,10 +114,12 @@ $bulan = getRomawi($bul);
 if ($sk == "1")
 {
 	$no = "W23-A1/".$no_urut."/".$kode."/SK/".$bulan."/".$tahun;
+    $no_urut = preg_replace("/[^0-9]/", "", "$no_urut" );
 }
 else
 {
 	$no = "W23-A1/".$no_urut."/".$kode."/".$bulan."/".$tahun;
+    $no_urut = preg_replace("/[^0-9]/", "", "$no_urut" );
 }
 $query = "INSERT into nosur (no,no_urut,huruf,nip,tanggal,hal) values ('$no', '$no_urut', '$huruf', '$nip_x', '$tanggal', '$hal')";
 $sql=mysqli_query($con, $query);
