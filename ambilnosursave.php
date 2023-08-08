@@ -54,38 +54,39 @@ $hasil = mysqli_fetch_assoc($xno);
 
 $nip=$_SESSION['nip'];
 $nip_x=$_POST['nip'];
+$kj=$_POST['kj'];
+$kp=$_POST['kp'];
+$ks=$_POST['ks'];
 $no_urut = $hasil['no_urut']+1;
-$kd= $_POST['kd'];
 $kd1= $_POST['kd1'];
 $kd2= $_POST['kd2'];
-$sk= $_POST['sk'];
+$kd3= $_POST['kd3'];
 
 if ($kd2 == "-")
 {
-	$kode = $kd.".".$kd1;
+	$kode = $kp.".".$ks.$kd1;
+}
+else if ($kd3 == "-")
+{
+	$kode = $kp.".".$ks.$kd1.".".$kd2;
 }
 else
 {
-	$kode = $kd.".".$kd1.".".$kd2;
+	$kode = $kp.".".$ks.$kd1.".".$kd2.".".$kd3;
 }
 
 $bul = date('n');
 $bulan = getRomawi($bul);
 $tahun = date('Y');
 
-if ($sk == "1")
-{
-	$no = "W23-A1/".$no_urut."/".$kode."/SK/".$bulan."/".$tahun;
-}
-else
-{
-	$no = "W23-A1/".$no_urut."/".$kode."/".$bulan."/".$tahun;
-}
+$no = $no_urut."/".$kj.".W23-A1/".$kode."/".$bulan."/".$tahun;
+
 
 $hal = $_POST['hal'];
 $tanggal = date('Y-m-d');
 // echo $no;
-$query = "INSERT into nosur (no,no_urut,nip,tanggal,hal) values ('$no', '$no_urut', '$nip_x', '$tanggal', '$hal')";
+$query = "INSERT into nosur (no,no_urut,nip,kj,tanggal,hal) values ('$no', '$no_urut', '$nip_x', '$kj', '$tanggal', '$hal')";
+// echo $query;
 $sql=mysqli_query($con, $query);
 
 if ($nip=='admin'){

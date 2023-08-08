@@ -104,11 +104,17 @@ if(!$_SESSION['nip'])
                         foreach($row_nama1 as $key=>$value) {$$key=$value;}
                         $no_surat = explode('/',$no);
                         $kode = explode('.',$no_surat[2]);
+                        $ks=substr($kode[1],0,2);
+                        $ks1=substr($kode[1],2,1);
                         $nip=$_SESSION['nip'];
 
                         $q_nama2="SELECT nip,nama FROM user WHERE aktif=0";
                         $nama2 = mysqli_query ($con, $q_nama2);
                         $row_nama2 = mysqli_fetch_assoc($nama2);
+
+                        $q_nama3="SELECT id,nama,kode_jabatan FROM user WHERE aktif=0 AND NOT kode_jabatan='-'";
+                        $nama3 = mysqli_query ($con, $q_nama3);
+                        $row_nama3 = mysqli_fetch_assoc($nama3);
 					?>						
                         <div class="col-sm-3 mb-sm-0">
                             <input type="hidden" readonly class="form-control" id="id" name="id" value="<?=$id;?>" >
@@ -127,38 +133,64 @@ if(!$_SESSION['nip'])
                             <input type="hidden" readonly class="form-control" id="nip" name="nip" value="<?=$row_nama1['nip'];?>" >                                
                             <input type="text" readonly class="form-control" id="nipx" name="nipx" value="<?=$row_nama1['nama'];?>" >                                
                                 <?php } ?> 
-                        </div>				
+                        </div>
+                        <div class="col-sm-3 mb-sm-0">
+                        <select class="form-control" required="required" id="kj" name="kj">
+								<?php
+                                do {
+                                ?>
+                                <option value="<?=$row_nama3['kode_jabatan']?>" <?php if ($row_nama1['kj']==$row_nama3['kode_jabatan']){ echo 'selected'; } ?>><?=$row_nama3['nama'];?> [<?=$row_nama3['kode_jabatan'];?>]</option>
+                                <?php 
+                                } while ($row_nama3 = mysqli_fetch_assoc($nama3));?>
+							</select>	
+                        </div>			
+                            </div>
+                            <div class="form-group row">
                         <div class="col-sm-2 mb-sm-0">
-                            <input type="text" readonly class="form-control" id="no_surat1" name="no_surat1" placeholder="Perihal" value="<?=$no_surat[0];?>/<?=$no_surat[1];?>/" >
+                            <input type="text" readonly class="form-control" id="no_surat1" name="no_surat1" value="<?=$no_surat[0];?>" >
+                        </div>
+                        <div class="col-sm-3 mb-sm-0">							
+                            <select class="form-control" required="required" id="kp" name="kp">
+								<option value="" hidden>Kode Penetapan</option>
+								<option value="SK" <?php if ($kode[0]=='SK'){ echo "selected";}?>>Surat Keputusan [SK]</option>
+								<option value="SP" <?php if ($kode[0]=='SP'){ echo "selected";}?>>Surat Perintah [SP]</option>
+								<option value="ST" <?php if ($kode[0]=='ST'){ echo "selected";}?>>Surat Tugas [ST]</option>
+								<option value="SKET" <?php if ($kode[0]=='SKET'){ echo "selected";}?>>Surat Keterangan [SKET]</option>
+								<option value="PENG" <?php if ($kode[0]=='PENG'){ echo "selected";}?>>Pengumuman [PENG]</option>
+								<option value="UND" <?php if ($kode[0]=='UND'){ echo "selected";}?>>Undangan [UND]</option>
+							</select>
                         </div>
                         <div class="col-sm-2 mb-sm-0">							
-                            <select class="form-control" required="required" id="kd" name="kd">
+                            <select class="form-control" required="required" id="ks" name="ks">
 								<option value="" hidden>Kode Surat</option>
-								<option value="OT" <?php if ($kode[0]=='OT'){ echo "selected";}?>>OT</option>
-								<option value="HM" <?php if ($kode[0]=='HM'){ echo "selected";}?>>HM</option>
-								<option value="KP" <?php if ($kode[0]=='KP'){ echo "selected";}?>>KP</option>
-								<option value="KU" <?php if ($kode[0]=='KU'){ echo "selected";}?>>KU</option>
-								<option value="KS" <?php if ($kode[0]=='KS'){ echo "selected";}?>>KS</option>
-								<option value="PL" <?php if ($kode[0]=='PL'){ echo "selected";}?>>PL</option>
-								<option value="HK" <?php if ($kode[0]=='HK'){ echo "selected";}?>>HK</option>
-								<option value="PP" <?php if ($kode[0]=='PP'){ echo "selected";}?>>PP</option>
-								<option value="PB" <?php if ($kode[0]=='PB'){ echo "selected";}?>>PB</option>
-								<option value="PS" <?php if ($kode[0]=='PS'){ echo "selected";}?>>PS</option>
+								<option value="HK" <?php if ($ks=='HK'){ echo "selected";}?>>Hukum [HK]</option>
+								<option value="HM" <?php if ($ks=='HM'){ echo "selected";}?>>Humas dan Protokol [HM]</option>
+								<option value="KA" <?php if ($ks=='KA'){ echo "selected";}?>>Kearsipan [KA]</option>
+								<option value="KP" <?php if ($ks=='KP'){ echo "selected";}?>>Kepegawaian [KP]</option>
+								<option value="PL" <?php if ($ks=='PL'){ echo "selected";}?>>Perlengkapan [PL]</option>
+								<option value="PS" <?php if ($ks=='PS'){ echo "selected";}?>>Perpustakaan [PS]</option>
+								<option value="PW" <?php if ($ks=='PW'){ echo "selected";}?>>Pengawasan [PW]</option>
+								<option value="RT" <?php if ($ks=='RT'){ echo "selected";}?>>Rumah Tangga [RT]</option>
+								<option value="TI" <?php if ($ks=='TI'){ echo "selected";}?>>Teknologi Informasi [TI]</option>
+								<option value="DL" <?php if ($ks=='DL'){ echo "selected";}?>>Pendidikan dan Pelatihan [DL]</option>
+								<option value="RA" <?php if ($ks=='RA'){ echo "selected";}?>>Perencanaan Anggaran [RA]</option>
+								<option value="KU" <?php if ($ks=='KU'){ echo "selected";}?>>Keuangan [KU]</option>
+								<option value="OT" <?php if ($ks=='OT'){ echo "selected";}?>>Organisasi Tatalaksana [OT]</option>
 							</select>
                         </div>
                         <div class="col-sm-1 mb-sm-0">
                             <select class="form-control" required="required" id="kd1" name="kd1">
 								<option value="" hidden>-</option>
-								<option value="00" <?php if ($kode[1]=='00'){ echo "selected";}?>>00</option>
-								<option value="01" <?php if ($kode[1]=='01'){ echo "selected";}?>>01</option>
-								<option value="02" <?php if ($kode[1]=='02'){ echo "selected";}?>>02</option>
-								<option value="03" <?php if ($kode[1]=='03'){ echo "selected";}?>>03</option>
-								<option value="04" <?php if ($kode[1]=='04'){ echo "selected";}?>>04</option>
-								<option value="05" <?php if ($kode[1]=='05'){ echo "selected";}?>>05</option>
-								<option value="06" <?php if ($kode[1]=='06'){ echo "selected";}?>>06</option>
-								<option value="07" <?php if ($kode[1]=='07'){ echo "selected";}?>>07</option>
-								<option value="08" <?php if ($kode[1]=='08'){ echo "selected";}?>>08</option>
-								<option value="09" <?php if ($kode[1]=='09'){ echo "selected";}?>>09</option>
+								<option value="0" <?php if ($ks1=='0'){ echo "selected";}?>>0</option>
+								<option value="1" <?php if ($ks1=='1'){ echo "selected";}?>>1</option>
+								<option value="2" <?php if ($ks1=='2'){ echo "selected";}?>>2</option>
+								<option value="3" <?php if ($ks1=='3'){ echo "selected";}?>>3</option>
+								<option value="4" <?php if ($ks1=='4'){ echo "selected";}?>>4</option>
+								<option value="5" <?php if ($ks1=='5'){ echo "selected";}?>>5</option>
+								<option value="6" <?php if ($ks1=='6'){ echo "selected";}?>>6</option>
+								<option value="7" <?php if ($ks1=='7'){ echo "selected";}?>>7</option>
+								<option value="8" <?php if ($ks1=='8'){ echo "selected";}?>>8</option>
+								<option value="9" <?php if ($ks1=='9'){ echo "selected";}?>>9</option>
 							</select>
                         </div>
                         <?php if (!empty($kode[2])){ ?>
@@ -191,19 +223,44 @@ if(!$_SESSION['nip'])
 								<option value="9">9</option>
 							</select>
                         </div>
+                        <?php }?>
+                        <?php if (!empty($kode[2])){ ?>
+                        <div class="col-sm-1 mb-sm-0">
+                            <select class="form-control" id="kd3" name="kd3">
+								<option value="-">-</option>
+								<option value="1" <?php if ($kode[3]=='1'){ echo "selected";}?>>1</option>
+								<option value="2" <?php if ($kode[3]=='2'){ echo "selected";}?>>2</option>
+								<option value="3" <?php if ($kode[3]=='3'){ echo "selected";}?>>3</option>
+								<option value="4" <?php if ($kode[3]=='4'){ echo "selected";}?>>4</option>
+								<option value="5" <?php if ($kode[3]=='5'){ echo "selected";}?>>5</option>
+								<option value="6" <?php if ($kode[3]=='6'){ echo "selected";}?>>6</option>
+								<option value="7" <?php if ($kode[3]=='7'){ echo "selected";}?>>7</option>
+								<option value="8" <?php if ($kode[3]=='8'){ echo "selected";}?>>8</option>
+								<option value="9" <?php if ($kode[3]=='9'){ echo "selected";}?>>9</option>
+							</select>
+                        </div>
+                        <?php } else {?>
+                        <div class="col-sm-1 mb-sm-0">
+                            <select class="form-control" id="kd3" name="kd3">
+								<option value="-">-</option>
+								<option value="1">1</option>
+								<option value="2">2</option>
+								<option value="3">3</option>
+								<option value="4">4</option>
+								<option value="5">5</option>
+								<option value="6">6</option>
+								<option value="7">7</option>
+								<option value="8">8</option>
+								<option value="9">9</option>
+							</select>
+                        </div>
                         <?php }?>			
                         <div class="col-sm-2 mb-sm-0">
-                            <?php if ($no_surat[3]=='SK'){?>
-                                <input type="hidden" readonly class="form-control" id="no_surat2" name="no_surat2x"  value="/<?=$no_surat[4];?>/<?=$no_surat[5];?>" >
-                                <input type="text" readonly class="form-control" id="no_surat2x" name="no_surat2"  value="/<?=$no_surat[3];?>/<?=$no_surat[4];?>/<?=$no_surat[5];?>" >
-                            <?php } else { ?>
-                                <input type="text" readonly class="form-control" id="no_surat2" name="no_surat2x"  value="/<?=$no_surat[3];?>/<?=$no_surat[4];?>" >
-                                <?php } ?> 
                         </div>
-						<div class="form-check">
+						<!-- <div class="form-check">
                             <input class="form-check-input" id="flexCheckDefault" <?php if ($no_surat[3]=='SK'){ echo 'checked'; } ?> name="sk" type="checkbox" value="1">
                             <label class="form-check-label" for="flexCheckDefault">SK</label>
-                        </div>
+                        </div> -->
 						
                     </div>
 					<div class="form-group">

@@ -51,32 +51,34 @@ function getRomawi($bln){
 
 $id=$_POST['id'];
 $nip_surat=$_POST['nip'];
+$kj=$_POST['kj'];
+$kp=$_POST['kp'];
+$ks=$_POST['ks'];
 $nip=$_SESSION['nip'];
 $no_urut=$_POST['no_urut'];
 $huruf=$_POST['huruf'];
-$kd= $_POST['kd'];
 $kd1= $_POST['kd1'];
 $kd2= $_POST['kd2'];
-$sk= $_POST['sk'];
-$no_surat2= $_POST['no_surat2x'];
+$kd3= $_POST['kd3'];
 
 if ($kd2 == "-")
 {
-	$kode = $kd.".".$kd1;
+	$kode = $kp.".".$ks.$kd1;
+}
+else if ($kd3 == "-")
+{
+	$kode = $kp.".".$ks.$kd1.".".$kd2;
 }
 else
 {
-	$kode = $kd.".".$kd1.".".$kd2;
+	$kode = $kp.".".$ks.$kd1.".".$kd2.".".$kd3;
 }
 
-if ($sk == "1")
-{
-	$no = "W23-A1/".$no_urut.$huruf."/".$kode."/SK".$no_surat2;
-}
-else
-{
-	$no = "W23-A1/".$no_urut.$huruf."/".$kode."".$no_surat2;
-}
+$bul = date('n');
+$bulan = getRomawi($bul);
+$tahun = date('Y');
+
+$no = $no_urut."/".$kj.".W23-A1/".$kode."/".$bulan."/".$tahun;
 
 $hal = $_POST['hal'];
 // echo $no;

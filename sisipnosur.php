@@ -105,9 +105,9 @@ if(!$_SESSION['nip'])
                         $nama1 = mysqli_query ($con, $q_nama1);
                         $row_nama1 = mysqli_fetch_assoc($nama1);
 					?>						
-                        <div class="col-sm-3 mb-sm-0">
+                        <div class="col-sm-4 mb-sm-0">
                             <select class="form-control" required="required" id="nip" name="nip">
-								<option value="" hidden>Pilih</option>
+								<option value="" hidden>Pengambil Nomor</option>
 								<?php
                                 do {
                                 ?>
@@ -119,46 +119,63 @@ if(!$_SESSION['nip'])
 					<?php 
 					} else {
 						?>
-						<input type="hidden" class="form-control" id="nip" name="nip" placeholder="Perihal" value="<?=$nip;?>" >
+						<input type="hidden" class="form-control" id="nip" name="nip" value="<?=$nip;?>" >
 					<?php
 					}
+                        $q_nama2="SELECT id,nama,kode_jabatan FROM user WHERE aktif=0 AND NOT kode_jabatan='-'";
+                        $nama2 = mysqli_query ($con, $q_nama2);
+                        $row_nama2 = mysqli_fetch_assoc($nama2);
 					?>
+                    
+                        <div class="col-sm-4 mb-sm-0">
+                            <select class="form-control" required="required" id="kj" name="kj">
+								<option value="-" hidden>Penandatangan Surat</option>
+								<?php
+                                do {
+                                ?>
+                                <option value="<?=$row_nama2['kode_jabatan']?>"><?=$row_nama2['nama'];?> [<?=$row_nama2['kode_jabatan'];?>]</option>
+                                <?php 
+                                } while ($row_nama2 = mysqli_fetch_assoc($nama2));?>
+							</select>
+                        </div>
                     <div>
                         <input type="date" class="form-control" id="tanggal" name="tanggal" placeholder="Tanggal" required="required" > 
                     </div>
-                        <div class="col-sm-2 mb-sm-0">
-                            <select class="form-control" required="required" id="kd" name="kd">
+                    </div>
+                    <div class="form-group row">
+                            <div class="col-sm-3 mb-sm-0">							
+                            <select class="form-control" required="required" id="kp" name="kp">
+								<option value="" hidden>Kode Penetapan</option>
+								<option value="SK">Surat Keputusan [SK]</option>
+								<option value="SP">Surat Perintah [SP]</option>
+								<option value="ST">Surat Tugas [ST]</option>
+								<option value="SKET">Surat Keterangan [SKET]</option>
+								<option value="PENG">Pengumuman [PENG]</option>
+								<option value="UND">Undangan [UND]</option>
+							</select>
+                        </div>
+                        <div class="col-sm-4 mb-sm-0">							
+                            <select class="form-control" required="required" id="ks" name="ks">
 								<option value="" hidden>Kode Surat</option>
-								<option value="OT">OT</option>
-								<option value="HM">HM</option>
-								<option value="KP">KP</option>
-								<option value="KU">KU</option>
-								<option value="KS">KS</option>
-								<option value="PL">PL</option>
-								<option value="HK">HK</option>
-								<option value="PP">PP</option>
-								<option value="PB">PB</option>
-								<option value="PS">PS</option>
+								<option value="HK">Hukum [HK]</option>
+								<option value="HM">Humas dan Protokol [HM]</option>
+								<option value="KA">Kearsipan [KA]</option>
+								<option value="KP">Kepegawaian [KP]</option>
+								<option value="PL">Perlengkapan [PL]</option>
+								<option value="PS">Perpustakaan [PS]</option>
+								<option value="PW">Pengawasan [PW]</option>
+								<option value="RT">Rumah Tangga [RT]</option>
+								<option value="TI">Teknologi Informasi [TI]</option>
+								<option value="DL">Pendidikan dan Pelatihan [DL]</option>
+								<option value="RA">Perencanaan Anggaran [RA]</option>
+								<option value="KU">Keuangan [KU]</option>
+								<option value="OT">Organisasi Tatalaksana [OT]</option>
 							</select>
                         </div>
                         <div class="col-sm-1 mb-sm-0">
                             <select class="form-control" required="required" id="kd1" name="kd1">
-								<option value="" hidden>-</option>
-								<option value="00">00</option>
-								<option value="01">01</option>
-								<option value="02">02</option>
-								<option value="03">03</option>
-								<option value="04">04</option>
-								<option value="05">05</option>
-								<option value="06">06</option>
-								<option value="07">07</option>
-								<option value="08">08</option>
-								<option value="09">09</option>
-							</select>
-                        </div>
-                        <div class="col-sm-1 mb-sm-0">
-                            <select class="form-control" id="kd2" name="kd2">
-								<option value="-">-</option>
+								<option value="-" hidden>P</option>
+								<option value="0">0</option>
 								<option value="1">1</option>
 								<option value="2">2</option>
 								<option value="3">3</option>
@@ -169,17 +186,47 @@ if(!$_SESSION['nip'])
 								<option value="8">8</option>
 								<option value="9">9</option>
 							</select>
-                        </div>                        
+                        </div>
+                        <div class="col-sm-1 mb-sm-0">
+                            <select class="form-control" required="required" id="kd2" name="kd2">
+								<option value="-" hidden>S</option>
+								<option value="0">0</option>
+								<option value="1">1</option>
+								<option value="2">2</option>
+								<option value="3">3</option>
+								<option value="4">4</option>
+								<option value="5">5</option>
+								<option value="6">6</option>
+								<option value="7">7</option>
+								<option value="8">8</option>
+								<option value="9">9</option>
+							</select>
+                        </div>
+                        <div class="col-sm-1 mb-sm-0">
+                            <select class="form-control" id="kd3" name="kd3">
+                                <option value="-" hidden>T</option>
+                                <option value="0">0</option>
+								<option value="1">1</option>
+								<option value="2">2</option>
+								<option value="3">3</option>
+								<option value="4">4</option>
+								<option value="5">5</option>
+								<option value="6">6</option>
+								<option value="7">7</option>
+								<option value="8">8</option>
+								<option value="9">9</option>
+							</select>
+                        </div>                     
                         <!-- <div class="col-sm-2 mb-sm-0">
                             <select class="form-control" id="sk" name="sk">
 								<option value="0">Bukan SK</option>
 								<option value="1">SK</option>
 							</select>
                         </div> -->
-						<div class="form-check">
+						<!-- <div class="form-check">
                             <input class="form-check-input" id="flexCheckDefault" name="sk" type="checkbox" value="1">
                             <label class="form-check-label" for="flexCheckDefault">SK</label>
-                        </div>
+                        </div> -->
 						
                     </div>
 					<div class="form-group">
