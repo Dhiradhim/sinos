@@ -142,7 +142,7 @@ if(!$_SESSION['nip'])
                             <div class="col-sm-3 mb-sm-0">							
                             <select class="form-control" required="required" id="kp" name="kp">
 								<option value="" hidden>Kode Penetapan</option>
-								<option value="-">-</option>
+								<option value="-">Surat Lainnya [-]</option>
 								<option value="SK">Surat Keputusan [SK]</option>
 								<option value="SP">Surat Perintah [SP]</option>
 								<option value="ST">Surat Tugas [ST]</option>

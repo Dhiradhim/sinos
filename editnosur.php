@@ -104,8 +104,20 @@ if(!$_SESSION['nip'])
                         foreach($row_nama1 as $key=>$value) {$$key=$value;}
                         $no_surat = explode('/',$no);
                         $kode = explode('.',$no_surat[2]);
+                        if (mb_strlen($kode[1])<2)
+                        {
+                            $ks=substr($kode[0],0,2);
+                            $ks1=substr($kode[0],2,1);  
+                            $kode2=$kode[1];
+                            $kode3=$kode[2];
+                        }
+                        else 
+                        {
                         $ks=substr($kode[1],0,2);
-                        $ks1=substr($kode[1],2,1);
+                        $ks1=substr($kode[1],2,1);  
+                        $kode2=$kode[2];
+                        $kode3=$kode[3];
+                        }
                         $nip=$_SESSION['nip'];
 
                         $q_nama2="SELECT nip,nama FROM user WHERE aktif=0";
@@ -152,6 +164,7 @@ if(!$_SESSION['nip'])
                         <div class="col-sm-3 mb-sm-0">							
                             <select class="form-control" required="required" id="kp" name="kp">
 								<option value="" hidden>Kode Penetapan</option>
+								<option value="-" selected>Surat Lainnya [-]</option>
 								<option value="SK" <?php if ($kode[0]=='SK'){ echo "selected";}?>>Surat Keputusan [SK]</option>
 								<option value="SP" <?php if ($kode[0]=='SP'){ echo "selected";}?>>Surat Perintah [SP]</option>
 								<option value="ST" <?php if ($kode[0]=='ST'){ echo "selected";}?>>Surat Tugas [ST]</option>
@@ -197,15 +210,15 @@ if(!$_SESSION['nip'])
                         <div class="col-sm-1 mb-sm-0">
                             <select class="form-control" id="kd2" name="kd2">
 								<option value="-">-</option>
-								<option value="1" <?php if ($kode[2]=='1'){ echo "selected";}?>>1</option>
-								<option value="2" <?php if ($kode[2]=='2'){ echo "selected";}?>>2</option>
-								<option value="3" <?php if ($kode[2]=='3'){ echo "selected";}?>>3</option>
-								<option value="4" <?php if ($kode[2]=='4'){ echo "selected";}?>>4</option>
-								<option value="5" <?php if ($kode[2]=='5'){ echo "selected";}?>>5</option>
-								<option value="6" <?php if ($kode[2]=='6'){ echo "selected";}?>>6</option>
-								<option value="7" <?php if ($kode[2]=='7'){ echo "selected";}?>>7</option>
-								<option value="8" <?php if ($kode[2]=='8'){ echo "selected";}?>>8</option>
-								<option value="9" <?php if ($kode[2]=='9'){ echo "selected";}?>>9</option>
+								<option value="1" <?php if ($kode2=='1'){ echo "selected";}?>>1</option>
+								<option value="2" <?php if ($kode2=='2'){ echo "selected";}?>>2</option>
+								<option value="3" <?php if ($kode2=='3'){ echo "selected";}?>>3</option>
+								<option value="4" <?php if ($kode2=='4'){ echo "selected";}?>>4</option>
+								<option value="5" <?php if ($kode2=='5'){ echo "selected";}?>>5</option>
+								<option value="6" <?php if ($kode2=='6'){ echo "selected";}?>>6</option>
+								<option value="7" <?php if ($kode2=='7'){ echo "selected";}?>>7</option>
+								<option value="8" <?php if ($kode2=='8'){ echo "selected";}?>>8</option>
+								<option value="9" <?php if ($kode2=='9'){ echo "selected";}?>>9</option>
 							</select>
                         </div>
                         <?php } else {?>
@@ -228,15 +241,15 @@ if(!$_SESSION['nip'])
                         <div class="col-sm-1 mb-sm-0">
                             <select class="form-control" id="kd3" name="kd3">
 								<option value="-">-</option>
-								<option value="1" <?php if ($kode[3]=='1'){ echo "selected";}?>>1</option>
-								<option value="2" <?php if ($kode[3]=='2'){ echo "selected";}?>>2</option>
-								<option value="3" <?php if ($kode[3]=='3'){ echo "selected";}?>>3</option>
-								<option value="4" <?php if ($kode[3]=='4'){ echo "selected";}?>>4</option>
-								<option value="5" <?php if ($kode[3]=='5'){ echo "selected";}?>>5</option>
-								<option value="6" <?php if ($kode[3]=='6'){ echo "selected";}?>>6</option>
-								<option value="7" <?php if ($kode[3]=='7'){ echo "selected";}?>>7</option>
-								<option value="8" <?php if ($kode[3]=='8'){ echo "selected";}?>>8</option>
-								<option value="9" <?php if ($kode[3]=='9'){ echo "selected";}?>>9</option>
+								<option value="1" <?php if ($kode3=='1'){ echo "selected";}?>>1</option>
+								<option value="2" <?php if ($kode3=='2'){ echo "selected";}?>>2</option>
+								<option value="3" <?php if ($kode3=='3'){ echo "selected";}?>>3</option>
+								<option value="4" <?php if ($kode3=='4'){ echo "selected";}?>>4</option>
+								<option value="5" <?php if ($kode3=='5'){ echo "selected";}?>>5</option>
+								<option value="6" <?php if ($kode3=='6'){ echo "selected";}?>>6</option>
+								<option value="7" <?php if ($kode3=='7'){ echo "selected";}?>>7</option>
+								<option value="8" <?php if ($kode3=='8'){ echo "selected";}?>>8</option>
+								<option value="9" <?php if ($kode3=='9'){ echo "selected";}?>>9</option>
 							</select>
                         </div>
                         <?php } else {?>
