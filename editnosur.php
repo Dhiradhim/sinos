@@ -112,7 +112,7 @@ if(!$_SESSION['nip'])
                         $nama2 = mysqli_query ($con, $q_nama2);
                         $row_nama2 = mysqli_fetch_assoc($nama2);
 
-                        $q_nama3="SELECT id,nama,kode_jabatan FROM user WHERE aktif=0 AND NOT kode_jabatan='-'";
+                        $q_nama3="SELECT user.id,nama,kode FROM user LEFT JOIN jabatan ON user.id_jabatan=jabatan.id WHERE aktif=0 AND NOT kode='-'";
                         $nama3 = mysqli_query ($con, $q_nama3);
                         $row_nama3 = mysqli_fetch_assoc($nama3);
 					?>						
@@ -139,7 +139,7 @@ if(!$_SESSION['nip'])
 								<?php
                                 do {
                                 ?>
-                                <option value="<?=$row_nama3['kode_jabatan']?>" <?php if ($row_nama1['kj']==$row_nama3['kode_jabatan']){ echo 'selected'; } ?>><?=$row_nama3['nama'];?> [<?=$row_nama3['kode_jabatan'];?>]</option>
+                                <option value="<?=$row_nama3['kode']?>" <?php if ($row_nama1['kj']==$row_nama3['kode']){ echo 'selected'; } ?>><?=$row_nama3['nama'];?> [<?=$row_nama3['kode'];?>]</option>
                                 <?php 
                                 } while ($row_nama3 = mysqli_fetch_assoc($nama3));?>
 							</select>	

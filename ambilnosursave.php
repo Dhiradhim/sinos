@@ -62,17 +62,36 @@ $kd1= $_POST['kd1'];
 $kd2= $_POST['kd2'];
 $kd3= $_POST['kd3'];
 
-if ($kd2 == "-")
+if ($kp == "-")
 {
-	$kode = $kp.".".$ks.$kd1;
-}
-else if ($kd3 == "-")
-{
-	$kode = $kp.".".$ks.$kd1.".".$kd2;
+    
+    if ($kd2 == "-")
+    {
+        $kode = $ks.$kd1;
+    }
+    else if ($kd3 == "-")
+    {
+        $kode = $ks.$kd1.".".$kd2;
+    }
+    else
+    {
+        $kode = $ks.$kd1.".".$kd2.".".$kd3;
+    }
 }
 else
 {
-	$kode = $kp.".".$ks.$kd1.".".$kd2.".".$kd3;
+    if ($kd2 == "-")
+    {
+        $kode = $kp.".".$ks.$kd1;
+    }
+    else if ($kd3 == "-")
+    {
+        $kode = $kp.".".$ks.$kd1.".".$kd2;
+    }
+    else
+    {
+        $kode = $kp.".".$ks.$kd1.".".$kd2.".".$kd3;
+    }
 }
 
 $bul = date('n');
@@ -89,6 +108,7 @@ $query = "INSERT into nosur (no,no_urut,nip,kj,tanggal,hal) values ('$no', '$no_
 // echo $query;
 $sql=mysqli_query($con, $query);
 
+echo '<script>alert("Berikut detail nomor surat\n\nNomor: '.$no.'\nTanggal Surat: '.$tanggal.'\nPerihal: '.$hal.'");</script>';
 if ($nip=='admin'){
 echo '<script>window.location.href="daftarnosurall.php?page=1&count=1"</script>';
 }

@@ -121,9 +121,9 @@ if(!$_SESSION['nip'])
 						<input type="hidden" class="form-control" id="nip" name="nip" value="<?=$nip;?>" >
 					<?php
 					}
-                        $q_nama2="SELECT id,nama,kode_jabatan FROM user WHERE aktif=0 AND NOT kode_jabatan='-'";
+                        $q_nama2="SELECT user.id,nama,kode FROM user LEFT JOIN jabatan ON user.id_jabatan=jabatan.id WHERE aktif=0 AND NOT kode='-'";
                         $nama2 = mysqli_query ($con, $q_nama2);
-                        $row_nama2 = mysqli_fetch_assoc($nama2);
+                        $row_nama2 = mysqli_fetch_assoc($nama2);    
 					?>
                     
                         <div class="col-sm-4 mb-sm-0">
@@ -132,7 +132,7 @@ if(!$_SESSION['nip'])
 								<?php
                                 do {
                                 ?>
-                                <option value="<?=$row_nama2['kode_jabatan']?>"><?=$row_nama2['nama'];?> [<?=$row_nama2['kode_jabatan'];?>]</option>
+                                <option value="<?=$row_nama2['kode']?>"><?=$row_nama2['nama'];?> [<?=$row_nama2['kode'];?>]</option>
                                 <?php 
                                 } while ($row_nama2 = mysqli_fetch_assoc($nama2));?>
 							</select>
@@ -142,6 +142,7 @@ if(!$_SESSION['nip'])
                             <div class="col-sm-3 mb-sm-0">							
                             <select class="form-control" required="required" id="kp" name="kp">
 								<option value="" hidden>Kode Penetapan</option>
+								<option value="-">-</option>
 								<option value="SK">Surat Keputusan [SK]</option>
 								<option value="SP">Surat Perintah [SP]</option>
 								<option value="ST">Surat Tugas [ST]</option>
