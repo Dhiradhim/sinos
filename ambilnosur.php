@@ -100,7 +100,7 @@ if(!$_SESSION['nip'])
 						
 						if ($nip=="admin")
 						{
-                        $q_nama1="SELECT nip,nama FROM user WHERE aktif=0";
+                        $q_nama1="SELECT nip,nama FROM user WHERE aktif=0 ORDER BY id_jabatan";
                         $nama1 = mysqli_query ($con, $q_nama1);
                         $row_nama1 = mysqli_fetch_assoc($nama1);
 					?>						
@@ -121,7 +121,7 @@ if(!$_SESSION['nip'])
 						<input type="hidden" class="form-control" id="nip" name="nip" value="<?=$nip;?>" >
 					<?php
 					}
-                        $q_nama2="SELECT user.id,nama,kode FROM user LEFT JOIN jabatan ON user.id_jabatan=jabatan.id WHERE aktif=0 AND NOT kode='-'";
+                        $q_nama2="SELECT user.id,nama,kode FROM user LEFT JOIN jabatan ON user.id_jabatan=jabatan.id WHERE aktif=0 AND NOT kode='-' ORDER BY jabatan.id";
                         $nama2 = mysqli_query ($con, $q_nama2);
                         $row_nama2 = mysqli_fetch_assoc($nama2);    
 					?>
