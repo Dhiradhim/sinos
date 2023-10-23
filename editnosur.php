@@ -120,11 +120,11 @@ if(!$_SESSION['nip'])
                         }
                         $nip=$_SESSION['nip'];
 
-                        $q_nama2="SELECT nip,nama FROM user WHERE aktif=0";
+                        $q_nama2="SELECT nip,nama FROM user WHERE aktif=0 ORDER BY id_jabatan";
                         $nama2 = mysqli_query ($con, $q_nama2);
                         $row_nama2 = mysqli_fetch_assoc($nama2);
 
-                        $q_nama3="SELECT user.id,nama,kode FROM user LEFT JOIN jabatan ON user.id_jabatan=jabatan.id WHERE aktif=0 AND NOT kode='-'";
+                        $q_nama3="SELECT user.id,nama,kode FROM user LEFT JOIN jabatan ON user.id_jabatan=jabatan.id WHERE aktif=0 AND NOT kode='-' ORDER BY jabatan.id";
                         $nama3 = mysqli_query ($con, $q_nama3);
                         $row_nama3 = mysqli_fetch_assoc($nama3);
 					?>						
