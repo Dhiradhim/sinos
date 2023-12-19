@@ -105,8 +105,8 @@ $query = "UPDATE nosur SET nip='$nip_surat', no='$no', hal='$hal' WHERE id='$id'
 // echo $query;
 $sql=mysqli_query($con, $query);
 if ($nip=='admin'){
-    echo '<script>window.location.href="daftarnosurall.php?page=1&count=1"</script>';
+    echo '<script>window.location.href="daftarnosurall.php?tahun='.$tahun.'&page=1&count=1"</script>';
 } else {
-    echo '<script>window.location.href="daftarnosur.php?page=1&count=1"</script>';
+    echo '<script>window.location.href="daftarnosur.php?tahun='.$tahun.'&page=1&count=1"</script>';
 }
 ?>
