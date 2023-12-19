@@ -101,7 +101,7 @@ if(!$_SESSION['nip'])
 						$nip=$_SESSION['nip'];
 						if ($nip=="admin")
 						{
-                        $q_nama1="SELECT nip,nama FROM user WHERE aktif=0";
+                        $q_nama1="SELECT nip,nama FROM user WHERE aktif=0 ORDER BY id_jabatan";
                         $nama1 = mysqli_query ($con, $q_nama1);
                         $row_nama1 = mysqli_fetch_assoc($nama1);
 					?>						
