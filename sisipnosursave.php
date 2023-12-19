@@ -73,14 +73,12 @@ $no_urut = $row_kode['no_urut'];
 $huruf = $row_kode['huruf'];
 $xx = $row_kode['tgl'];
 
-$sql_kode2= "SELECT huruf, no_urut, tanggal as tgl FROM nosur WHERE tanggal<='$tanggal' ORDER BY no_urut DESC, id DESC limit 1";
+$sql_kode2= "SELECT huruf, no_urut, tanggal AS tgl FROM nosur WHERE tanggal<='$tanggal' AND YEAR(tanggal)=YEAR('$tanggal') ORDER BY no_urut DESC, id DESC LIMIT 1";
 $query_kode2= mysqli_query($con, $sql_kode2);
 $row_kode2 = mysqli_fetch_assoc($query_kode2);
 $no_urut2 = $row_kode2['no_urut'];
 $huruf2 = $row_kode2['huruf'];
-// echo $sql_kode2;
-// echo $sql_kode;
-// echo $xx;
+
 
 if ($xx==$tanggal){
     $no_urut = $no_urut+1;
@@ -94,12 +92,24 @@ else if (preg_match("/[A-Z]/", $huruf2))
 }
 else
 {
-    $sql_kode= "SELECT no_urut, tanggal as tgl FROM nosur WHERE tanggal<='$tanggal' ORDER BY no_urut DESC, id DESC limit 1";
+    $sql_kode= "SELECT huruf, no_urut, tanggal AS tgl FROM nosur WHERE tanggal<='$tanggal' AND YEAR(tanggal)=YEAR('$tanggal') ORDER BY no_urut DESC, id DESC LIMIT 1";
     $query_kode= mysqli_query($con, $sql_kode);
     $row_kode = mysqli_fetch_assoc($query_kode);
-    $no_urut = $row_kode['no_urut'];
-	$no_urut = $no_urut."A";
-    $huruf='A';
+    $no_urutx = $row_kode['no_urut'];
+    $tglx = $row_kode['tgl'];
+	
+	if ($tglx==$tanggal){
+		$no_urut = $no_urutx+1;
+		$huruf = "";
+	}
+	else if (is_null($no_urutx)){
+		$no_urut = "1";
+		$huruf = "";
+	}
+	else {
+		$no_urut = $no_urutx."A";
+		$huruf='A';
+	}
 }
 
 if ($kp == "-")
@@ -137,20 +147,20 @@ else
 $bulan = getRomawi($bul);
 
 $no = $no_urut."/".$kj.".W23-A1/".$kode."/".$bulan."/".$tahun;
-    $no_urut = preg_replace("/[^0-9]/", "", "$no_urut" );
+$no_urut = preg_replace("/[^0-9]/", "", "$no_urut" );
 
 $query = "INSERT into nosur (no,no_urut,huruf,nip,kj,tanggal,hal) values ('$no', '$no_urut', '$huruf', '$nip_x', '$kj', '$tanggal', '$hal')";
 $sql=mysqli_query($con, $query);
 echo '<script>alert("Berikut detail nomor surat\n\nNomor: '.$no.'\nTanggal Surat: '.$tanggal.'\nPerihal: '.$hal.'");</script>';
 if ($nip=='admin'){
-    echo '<script>window.location.href="daftarnosurall.php?page=1&count=1"</script>';
+    echo '<script>window.location.href="daftarnosurall.php?tahun='.$tahun.'&page=1&count=1"</script>';
 } else {
-    echo '<script>window.location.href="daftarnosur.php?page=1&count=1"</script>';
+    echo '<script>window.location.href="daftarnosur.php?tahun='.$tahun.'&page=1&count=1"</script>';
 }
 
-// echo $sql_kode2;
+// echo $sql_kode;
 // echo "<br>";
-// echo $huruf;
+// echo $sql_kode2;
 // echo "<br>";
 // echo $query;
 ?>

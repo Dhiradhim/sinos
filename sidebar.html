@@ -43,13 +43,31 @@
                     <span>Ambil Nomor Surat</span></a>
             </li>
 			<li class="nav-item">
-                <a class="nav-link" href="daftarnosurall.php">
-                    <span>Daftar Seluruh Nomor Surat</span></a>
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#daftarnosurall"
+                    aria-expanded="true" aria-controls="daftarnosurall">
+                    <span>Daftar Seluruh Nomor Surat</span>
+                </a>
+                <div id="daftarnosurall" class="collapse" aria-labelledby="headingUtilities"
+                    data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <a class="collapse-item" href="daftarnosurall.php?tahun=2024">2024</a>
+                        <a class="collapse-item" href="daftarnosurall.php?tahun=2023">2023</a>
+                    </div>
+                </div>
             </li>
             <?php if ($nip !=="admin") { ?>
 			<li class="nav-item">
-                <a class="nav-link" href="daftarnosur.php">
-                    <span>Daftar Nomor Surat</span></a>
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#daftarnosur"
+                    aria-expanded="true" aria-controls="daftarnosur">
+                    <span>Daftar Nomor Surat</span>
+                </a>
+                <div id="daftarnosur" class="collapse" aria-labelledby="headingUtilities"
+                    data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <a class="collapse-item" href="daftarnosur.php?tahun=2024">2024</a>
+                        <a class="collapse-item" href="daftarnosur.php?tahun=2023">2023</a>
+                    </div>
+                </div>
             </li>
             <?php } ?>
             <!-- Divider 
