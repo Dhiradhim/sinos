@@ -50,6 +50,7 @@ function getRomawi($bln){
 }
 
 $id=$_POST['id'];
+$tanggal=$_POST['tanggal'];
 $nip_surat=$_POST['nip'];
 $kj=$_POST['kj'];
 $kp=$_POST['kp'];
@@ -93,20 +94,20 @@ else
     }
 }
 
-$bul = date('n');
+$bul = date('m', strtotime($tanggal));
 $bulan = getRomawi($bul);
-$tahun = date('Y');
+$tahun = date('Y', strtotime($tanggal));
 
 $no = $no_urut."/".$kj.".W23-A1/".$kode."/".$bulan."/".$tahun;
 
 $hal = $_POST['hal'];
 // echo $no;
 $query = "UPDATE nosur SET nip='$nip_surat', no='$no', hal='$hal' WHERE id='$id'";
-// echo $query;
-$sql=mysqli_query($con, $query);
-if ($nip=='admin'){
-    echo '<script>window.location.href="daftarnosurall.php?tahun='.$tahun.'&page=1&count=1"</script>';
-} else {
-    echo '<script>window.location.href="daftarnosur.php?tahun='.$tahun.'&page=1&count=1"</script>';
-}
+echo $query;
+// $sql=mysqli_query($con, $query);
+// if ($nip=='admin'){
+    // echo '<script>window.location.href="daftarnosurall.php?tahun='.$tahun.'&page=1&count=1"</script>';
+// } else {
+    // echo '<script>window.location.href="daftarnosur.php?tahun='.$tahun.'&page=1&count=1"</script>';
+// }
 ?>
