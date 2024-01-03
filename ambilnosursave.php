@@ -48,8 +48,8 @@ function getRomawi($bln){
                         break;
                 }
 }
-
-$xno = mysqli_query($con, "SELECT no_urut FROM nosur ORDER BY no_urut DESC LIMIT 1");
+$tahun = date('Y');
+$xno = mysqli_query($con, "SELECT no_urut FROM nosur WHERE year(tanggal)='$tahun' ORDER BY no_urut DESC LIMIT 1");
 $hasil = mysqli_fetch_assoc($xno);
 
 $nip=$_SESSION['nip'];
