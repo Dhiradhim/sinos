@@ -102,7 +102,7 @@ $no = $no_urut."/".$kj.".W23-A1/".$kode."/".$bulan."/".$tahun;
 
 $hal = $_POST['hal'];
 // echo $no;
-$query = "UPDATE nosur SET nip='$nip_surat', no='$no', hal='$hal' WHERE id='$id'";
+$query = "UPDATE nosur SET nip='$nip_surat', no='$no', hal='$hal', kj='$kj' WHERE id='$id'";
 // echo $query;
 $sql=mysqli_query($con, $query);
 if ($nip=='admin'){
