@@ -30,7 +30,7 @@ if (in_array($file_ext_kk,$allowed_file_types))
 							if ($nip=='admin'){
 								echo '<script>window.location.href="daftarnosurall.php?page=1&count=1"</script>';
 							} else {
-								echo '<script>window.location.href="daftarnosur.php?page=1&count=1"</script>';
+								echo '<script>window.location.href="index.php"</script>';
 							}
 }
 else
