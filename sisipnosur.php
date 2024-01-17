@@ -7,7 +7,15 @@ if(!$_SESSION['nip'])
   
     header("Location: login.php");//redirect to login page to secure the welcome page without login access.  
 }  
-  
+$tahun = date('Y');
+$q1="SELECT count(*) as count FROM nosur where nip='$nip' AND file='1' AND NOT hal='Belum Diambil' AND YEAR(tanggal)='$tahun'";
+$jumlah1 = mysqli_query ($con, $q1);
+$jumlah = mysqli_fetch_assoc($jumlah1);
+if ($jumlah['count']>0)
+{
+    echo '<script>alert("Mohon upload softcopy nomor surat sebelumnya!");</script>';
+    echo '<script>window.location.href="daftarnosur.php?tahun='.$tahun.'&page=1&count=1"</script>';
+}
 ?> 
 <!DOCTYPE html>
 <html lang="en">
