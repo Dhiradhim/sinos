@@ -28,7 +28,7 @@ if (in_array($file_ext_kk,$allowed_file_types))
 							$sql=mysqli_query($con, $query);
 							echo "<script type='text/javascript'>alert('File berhasil diupload.');</script>";
 							if ($nip=='admin'){
-								echo '<script>window.location.href="daftarnosurall.php?page=1&count=1"</script>';
+								echo '<script>window.location.href="index.php"</script>';
 							} else {
 								echo '<script>window.location.href="index.php"</script>';
 							}
