@@ -151,21 +151,21 @@ $no = $no_urut."/".$kj.".W23-A1/".$kode."/".$bulan."/".$tahun;
 $no_urut = preg_replace("/[^0-9]/", "", "$no_urut" );
 
 $query = "INSERT into nosur (no,no_urut,huruf,nip,kj,tanggal,hal) values ('$no', '$no_urut', '$huruf', '$nip_x', '$kj', '$tanggal', '$hal')";
-// $sql=mysqli_query($con, $query);
-// echo '<script>alert("Berikut detail nomor surat\n\nNomor: '.$no.'\nTanggal Surat: '.$tanggal.'\nPerihal: '.$hal.'");</script>';
-// if ($nip=='admin'){
-    // echo '<script>window.location.href="daftarnosurall.php?tahun='.$tahun.'&page=1&count=1"</script>';
-// } else {
-    // echo '<script>window.location.href="daftarnosur.php?tahun='.$tahun.'&page=1&count=1"</script>';
-// }
+$sql=mysqli_query($con, $query);
+echo '<script>alert("Berikut detail nomor surat\n\nNomor: '.$no.'\nTanggal Surat: '.$tanggal.'\nPerihal: '.$hal.'");</script>';
+if ($nip=='admin'){
+    echo '<script>window.location.href="daftarnosurall.php?tahun='.$tahun.'&page=1&count=1"</script>';
+} else {
+    echo '<script>window.location.href="daftarnosur.php?tahun='.$tahun.'&page=1&count=1"</script>';
+}
 
-echo $sql_kode;
-echo "<br>";
-echo $sql_kode2;
-echo "<br>";
-echo $query;
-echo "<br>";
-echo $tglx;
-echo "<br>";
-echo $tanggal;
+// echo $sql_kode;
+// echo "<br>";
+// echo $sql_kode2;
+// echo "<br>";
+// echo $query;
+// echo "<br>";
+// echo $tglx;
+// echo "<br>";
+// echo $tanggal;
 ?>
