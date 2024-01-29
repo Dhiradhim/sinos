@@ -88,7 +88,7 @@ if(!$_SESSION['nip'])
 
                     <!-- Page Heading -->
                     <h1 class="h3 mb-4 text-gray-800">Daftar Seluruh Nomor Surat</h1>
-                    <a href="daftarnosurall2.php" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Belum Upload File" type="button">Belum Upload File
+                    <a href="daftarnosurall2.php?tahun=<?=$year?>" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Belum Upload File" type="button">Belum Upload File
                     
                     </a>
 

@@ -42,7 +42,8 @@ if(!$_SESSION['nip'])
 
 	<?php
     $nip=$_SESSION['nip'];
-        $q_nosur = mysqli_query($con, "SELECT nosur.id, nosur.no, nosur.nip, nosur.file, nosur.tanggal, nosur.hal, user.nip, user.nama from nosur inner join user on nosur.nip=user.nip WHERE file='1' ORDER BY nosur.id ASC") or die(mysqli_connect_error());
+	$year=$_GET['tahun'];
+        $q_nosur = mysqli_query($con, "SELECT nosur.id, nosur.no, nosur.nip, nosur.file, nosur.tanggal, nosur.hal, user.nip, user.nama from nosur inner join user on nosur.nip=user.nip WHERE file='1' and YEAR(nosur.tanggal)=$year ORDER BY nosur.id ASC") or die(mysqli_connect_error());
         $row_nosur = mysqli_fetch_assoc($q_nosur);
         $run = mysqli_num_rows($q_nosur);
 
