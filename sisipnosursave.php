@@ -66,14 +66,14 @@ $hal = $_POST['hal'];
 $tgl_hari_ini =date('Y-m-d');
 $tgl_kemarin = date('Y-m-d', strtotime("-1 day", strtotime(date('Y-m-d'))));
 
-$sql_kode= "SELECT huruf, no_urut, tanggal as tgl FROM nosur WHERE tanggal<='$tgl_hari_ini' ORDER BY id DESC limit 1";
+$sql_kode= "SELECT huruf, no_urut, tanggal as tgl FROM nosur WHERE tanggal<='$tgl_hari_ini' ORDER BY tanggal DESC, id DESC limit 1";
 $query_kode= mysqli_query($con, $sql_kode);
 $row_kode = mysqli_fetch_assoc($query_kode);
 $no_urut = $row_kode['no_urut'];
 $huruf = $row_kode['huruf'];
 $xx = $row_kode['tgl'];
 
-$sql_kode2= "SELECT huruf, no_urut, tanggal AS tgl FROM nosur WHERE tanggal<='$tanggal' AND YEAR(tanggal)=YEAR('$tanggal') ORDER BY id DESC LIMIT 1";
+$sql_kode2= "SELECT huruf, no_urut, tanggal AS tgl FROM nosur WHERE tanggal<='$tanggal' AND YEAR(tanggal)=YEAR('$tanggal') ORDER BY tanggal DESC, id DESC LIMIT 1";
 $query_kode2= mysqli_query($con, $sql_kode2);
 $row_kode2 = mysqli_fetch_assoc($query_kode2);
 $no_urut2 = $row_kode2['no_urut'];
@@ -92,7 +92,7 @@ else if (preg_match("/[A-Z]/", $huruf2))
 }
 else
 {
-    $sql_kode= "SELECT huruf, no_urut, tanggal AS tgl FROM nosur WHERE tanggal<='$tanggal' AND YEAR(tanggal)=YEAR('$tanggal') ORDER BY id DESC LIMIT 1";
+    $sql_kode= "SELECT huruf, no_urut, tanggal AS tgl FROM nosur WHERE tanggal<='$tanggal' AND YEAR(tanggal)=YEAR('$tanggal') ORDER BY tanggal DESC, id DESC LIMIT 1";
     $query_kode= mysqli_query($con, $sql_kode);
     $row_kode = mysqli_fetch_assoc($query_kode);
     $no_urutx = $row_kode['no_urut'];
