@@ -23,7 +23,7 @@ $file_ext_kk = substr($file, strripos($file, '.'));
 if (in_array($file_ext_kk,$allowed_file_types))
 {
 							if (is_null($huruf)){
-								$file = $tahun."_".$no."_file".$file_ext_kk;
+								$file = $tahun."_".$no."_file".$file_ext_kk; 
 							} else {
 								$file = $tahun."_".$no_urut.$huruf."_file".$file_ext_kk;
 							}
