@@ -104,7 +104,7 @@ $no = $no_urut."/".$kj.".W23-A1/".$kode."/".$bulan."/".$tahun;
 $hal = $_POST['hal'];
 $tanggal = date('Y-m-d');
 // echo $no;
-$query = "INSERT into nosur (no,no_urut,nip,kj,tanggal,hal) values ('$no', '$no_urut', '$nip_x', '$kj', '$tanggal', '$hal')";
+$query = "INSERT into nosur (no,kode,no_urut,nip,kj,tanggal,hal) values ('$no', '$ks', '$no_urut', '$nip_x', '$kj', '$tanggal', '$hal')";
 // echo $query;
 $sql=mysqli_query($con, $query);
 

@@ -150,7 +150,7 @@ $bulan = getRomawi($bul);
 $no = $no_urut."/".$kj.".W23-A1/".$kode."/".$bulan."/".$tahun;
 $no_urut = preg_replace("/[^0-9]/", "", "$no_urut" );
 
-$query = "INSERT into nosur (no,no_urut,huruf,nip,kj,tanggal,hal) values ('$no', '$no_urut', '$huruf', '$nip_x', '$kj', '$tanggal', '$hal')";
+$query = "INSERT into nosur (no,kode,no_urut,huruf,nip,kj,tanggal,hal) values ('$no', '$ks', '$no_urut', '$huruf', '$nip_x', '$kj', '$tanggal', '$hal')";
 $sql=mysqli_query($con, $query);
 echo '<script>alert("Berikut detail nomor surat\n\nNomor: '.$no.'\nTanggal Surat: '.$tanggal.'\nPerihal: '.$hal.'");</script>';
 if ($nip=='admin'){
