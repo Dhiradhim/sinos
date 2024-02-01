@@ -32,7 +32,7 @@ $ctahun=$_GET['tahun'];
 	} else {
 	$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil'");
 	}
-	while ($tampilkan = mysqli_fetch_assoc($sql)) { 
+	while ($tampilkan = mysqli_fetch_array($sql)) { 
 			$id = $tampilkan['id'];
 			$no_surat = $tampilkan['no'];
 			$hal = $tampilkan['hal'];
