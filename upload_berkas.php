@@ -7,13 +7,15 @@ $nip=$_SESSION['nip'];
 //ekstensi file
 $allowed_file_types = array('.pdf');
 $id=$_POST['id_surat'];
-$sql = "SELECT no_urut,huruf FROM nosur WHERE id='$id'";
+$sql = "SELECT no,no_urut,huruf FROM nosur WHERE id='$id'";
 $q_no_urut = mysqli_query($con, $sql) or die(mysqli_connect_error());
 $row_no_urut = mysqli_fetch_assoc($q_no_urut);
 $run = mysqli_num_rows($q_no_urut);
+$no = $row_no_urut['no'];
 $no_urut = $row_no_urut['no_urut'];
 $huruf = $row_no_urut['huruf'];
 $file = $_FILES["file"]["name"];
+$tahun = date("Y");
 $file_ext_kk = substr($file, strripos($file, '.'));
 
 // echo $no_urut;
@@ -21,9 +23,9 @@ $file_ext_kk = substr($file, strripos($file, '.'));
 if (in_array($file_ext_kk,$allowed_file_types))
 {
 							if (is_null($huruf)){
-								$file = $no_urut."_file".$file_ext_kk;
+								$file = $tahun."_".$no."_file".$file_ext_kk;
 							} else {
-								$file = $no_urut.$huruf."_file".$file_ext_kk;
+								$file = $tahun."_".$no_urut.$huruf."_file".$file_ext_kk;
 							}
 							$db_file= "file/" . $file;
 							move_uploaded_file($_FILES["file"]["tmp_name"], "file/" . $file);
