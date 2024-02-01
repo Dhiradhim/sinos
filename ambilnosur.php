@@ -239,6 +239,11 @@ if ($jumlah['count']>0)
                             <input type="text" class="form-control" id="hal" name="hal" placeholder="Perihal" required="required" >
                         </div>
                     </div>
+					<div class="form-group">
+						<div>
+                            <input type="text" class="form-control" id="tujuan" name="tujuan" placeholder="Tujuan Surat" required="required" >
+                        </div>
+                    </div>
 					
 					<div class="form-group">
                         <div>

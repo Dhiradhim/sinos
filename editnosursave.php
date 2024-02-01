@@ -101,8 +101,9 @@ $tahun = date('Y', strtotime($tanggal));
 $no = $no_urut."/".$kj.".W23-A1/".$kode."/".$bulan."/".$tahun;
 
 $hal = $_POST['hal'];
+$tujuan = $_POST['tujuan'];
 // echo $no;
-$query = "UPDATE nosur SET nip='$nip_surat', no='$no', kode='$ks', hal='$hal', kj='$kj' WHERE id='$id'";
+$query = "UPDATE nosur SET nip='$nip_surat', no='$no', kode='$ks', hal='$hal', kj='$kj', kode='$ks', tujuan='$tujuan' WHERE id='$id'";
 // echo $query;
 $sql=mysqli_query($con, $query);
 if ($nip=='admin'){

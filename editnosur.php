@@ -282,6 +282,11 @@ if(!$_SESSION['nip'])
                             <input type="text" class="form-control" id="hal" name="hal" placeholder="Perihal" required="required" value="<?=$hal?>">
                         </div>
                     </div>
+					<div class="form-group">
+						<div>
+                            <input type="text" class="form-control" id="tujuan" name="tujuan" placeholder="Perihal" required="required" value="<?=$tujuan?>">
+                        </div>
+                    </div>
 					
 					<div class="form-group">
                         <div>

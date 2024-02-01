@@ -102,13 +102,14 @@ $no = $no_urut."/".$kj.".W23-A1/".$kode."/".$bulan."/".$tahun;
 
 
 $hal = $_POST['hal'];
+$tujuan = $_POST['tujuan'];
 $tanggal = date('Y-m-d');
 // echo $no;
-$query = "INSERT into nosur (no,kode,no_urut,nip,kj,tanggal,hal) values ('$no', '$ks', '$no_urut', '$nip_x', '$kj', '$tanggal', '$hal')";
+$query = "INSERT into nosur (no,kode,no_urut,nip,kj,tanggal,hal,tujuan) values ('$no', '$ks', '$no_urut', '$nip_x', '$kj', '$tanggal', '$hal', '$tujuan')";
 // echo $query;
 $sql=mysqli_query($con, $query);
 
-echo '<script>alert("Berikut detail nomor surat\n\nNomor: '.$no.'\nTanggal Surat: '.$tanggal.'\nPerihal: '.$hal.'");</script>';
+echo '<script>alert("Berikut detail nomor surat\n\nNomor: '.$no.'\nTanggal Surat: '.$tanggal.'\nPerihal: '.$hal.'\nTujuan: '.$tujuan.'");</script>';
 if ($nip=='admin'){
     echo '<script>window.location.href="daftarnosurall.php?tahun='.$tahun.'&page=1&count=1"</script>';
 } else {

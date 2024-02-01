@@ -62,6 +62,7 @@ $xtanggal=explode('-',$tanggal);
 $tahun=$xtanggal[0];
 $bul=$xtanggal[1];
 $hal = $_POST['hal'];
+$tujuan = $_POST['tujuan'];
 
 $tgl_hari_ini =date('Y-m-d');
 $tgl_kemarin = date('Y-m-d', strtotime("-1 day", strtotime(date('Y-m-d'))));
@@ -150,9 +151,9 @@ $bulan = getRomawi($bul);
 $no = $no_urut."/".$kj.".W23-A1/".$kode."/".$bulan."/".$tahun;
 $no_urut = preg_replace("/[^0-9]/", "", "$no_urut" );
 
-$query = "INSERT into nosur (no,kode,no_urut,huruf,nip,kj,tanggal,hal) values ('$no', '$ks', '$no_urut', '$huruf', '$nip_x', '$kj', '$tanggal', '$hal')";
+$query = "INSERT into nosur (no,kode,no_urut,huruf,nip,kj,tanggal,hal,tujuan) values ('$no', '$ks', '$no_urut', '$huruf', '$nip_x', '$kj', '$tanggal', '$hal', '$tujuan')";
 $sql=mysqli_query($con, $query);
-echo '<script>alert("Berikut detail nomor surat\n\nNomor: '.$no.'\nTanggal Surat: '.$tanggal.'\nPerihal: '.$hal.'");</script>';
+echo '<script>alert("Berikut detail nomor surat\n\nNomor: '.$no.'\nTanggal Surat: '.$tanggal.'\nPerihal: '.$hal.'\nTujuan: '.$tujuan.'");</script>';
 if ($nip=='admin'){
     echo '<script>window.location.href="daftarnosurall.php?tahun='.$tahun.'&page=1&count=1"</script>';
 } else {

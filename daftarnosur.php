@@ -43,7 +43,7 @@ if(!$_SESSION['nip'])
     <?php
     $nip=$_SESSION['nip'];
 	$year=$_GET['tahun'];
-        $q_nosur = mysqli_query($con, "SELECT nosur.id, nosur.no, nosur.nip, nosur.file, nosur.tanggal, nosur.hal, user.nip, user.nama from nosur inner join user on nosur.nip=user.nip WHERE YEAR(nosur.tanggal)=$year AND user.nip='$nip' ORDER BY nosur.id DESC") or die(mysqli_connect_error());
+        $q_nosur = mysqli_query($con, "SELECT nosur.id, nosur.no, nosur.nip, nosur.file, nosur.tanggal, nosur.hal, nosur.tujuan, user.nip, user.nama from nosur inner join user on nosur.nip=user.nip WHERE YEAR(nosur.tanggal)=$year AND user.nip='$nip' ORDER BY nosur.id DESC") or die(mysqli_connect_error());
         $row_nosur = mysqli_fetch_assoc($q_nosur);
         $run = mysqli_num_rows($q_nosur);
     
@@ -98,6 +98,7 @@ if(!$_SESSION['nip'])
                                             <th>Nama</th>
                                             <th>Tanggal</th>
                                             <th>Perihal</th>
+                                            <th>Tujuan</th>
                                             <th>File</th>
                                             <th>Action</th>
                                         </tr>
@@ -109,6 +110,7 @@ if(!$_SESSION['nip'])
                                             <th>Nama</th>
                                             <th>Tanggal</th>
                                             <th>Perihal</th>
+                                            <th>Tujuan</th>
                                             <th>File</th>
                                             <th>Action</th>
                                         </tr>
@@ -121,6 +123,7 @@ if(!$_SESSION['nip'])
                                             <td><?php echo $row_nosur['nama'];?></td>
                                             <td><?php echo $row_nosur['tanggal'];?></td>
                                             <td><?php echo $row_nosur['hal'];?> </td>
+                                            <td><?php echo $row_nosur['tujuan'];?> </td>
                                             <td width=8%>
                                             <form id="form" method="post" action="upload_berkas.php" enctype="multipart/form-data">
                                             <a href="upload_data.php?id=<?=$row_nosur['id']?>" class="btn btn-primary btn-circle btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Upload File" type="button">
