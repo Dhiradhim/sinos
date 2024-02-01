@@ -137,9 +137,9 @@ $kodex=$_POST['kode'];
 				} else
 				{
 				if ($cbulan=='00'){
-				$sql = mysqli_query($con, "SELECT * FROM nosur where year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil' AND kode='$kode'");
+				$sql = mysqli_query($con, "SELECT * FROM nosur where year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil' AND kode='$kodex'");
 				} else {
-				$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil' AND kode='#kode'");
+				$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil' AND kode='$kodex'");
 				}
 				}
 			$no=1;
