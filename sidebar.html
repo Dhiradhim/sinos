@@ -74,6 +74,20 @@
                 </div>
             </li>
             <?php } ?>
+            <?php if ($nip=="admin") { ?>
+			<!-- Divider -->
+            <hr class="sidebar-divider">
+
+            <!-- Heading -->
+            <div class="sidebar-heading">
+                Laporan
+            </div>
+			<li class="nav-item">
+                <a class="nav-link" href="laporan.php">
+                    <span>Cetak Laporan</span></a>
+            </li>
+            <?php } ?>
+			
             <!-- Divider -->
             <hr class="sidebar-divider">
 
@@ -81,7 +95,6 @@
             <div class="sidebar-heading">
                 Panduan
             </div>
-
             <!-- Nav Item - Charts -->
             <li class="nav-item">
                 <a class="nav-link" href="klasifikasi.pdf">

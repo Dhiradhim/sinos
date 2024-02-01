@@ -1,9 +1,10 @@
 <?php
 include 'koneksi.php';
 $nama_dokumen='Daftar Surat Keluar';
-$cbulan=$_GET['bulan'];
-$ctahun=$_GET['tahun'];
-// $tglcetak=$_GET['tgl_cetak'];
+$cbulan=$_POST['bulan'];
+$ctahun=$_POST['tahun'];
+$kodex=$_POST['kode'];
+// $tglcetak=$_POST['tgl_cetak'];
 // $tgl_cetak=tahunduluan($tglcetak);
 // ob_start();
 ?> 
@@ -26,11 +27,19 @@ $ctahun=$_GET['tahun'];
 	<div>
 	<table width="1000" style="border:0px;">
 	<?php 
-	
+	if ($kodex=='all'){
 	if ($cbulan=='00'){
 	$sql = mysqli_query($con, "SELECT * FROM nosur where year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil'");
 	} else {
 	$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil'");
+	}
+	} else
+	{
+	if ($cbulan=='00'){
+	$sql = mysqli_query($con, "SELECT * FROM nosur where year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil' AND kode='$kodex'");
+	} else {
+	$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil' AND kode='$kodex'");
+	}
 	}
 	while ($tampilkan = mysqli_fetch_array($sql)) { 
 			$id = $tampilkan['id'];
@@ -116,13 +125,22 @@ $ctahun=$_GET['tahun'];
 
 			<tbody>
 			<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			
-			if ($cbulan=='00'){
+				if ($kodex=='all'){
+				if ($cbulan=='00'){
 				$sql = mysqli_query($con, "SELECT * FROM nosur where year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil'");
 				} else {
 				$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil'");
+				}
+				} else
+				{
+				if ($cbulan=='00'){
+				$sql = mysqli_query($con, "SELECT * FROM nosur where year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil' AND kode='$kode'");
+				} else {
+				$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil' AND kode='#kode'");
+				}
 				}
 			$no=1;
 			while ($tampilkan = mysqli_fetch_array($sql)) { 
@@ -149,20 +167,26 @@ $ctahun=$_GET['tahun'];
 				?>
 				</tr>
 				<?php 
-				$cbulan=$_GET['bulan'];
-				$ctahun=$_GET['tahun'];
-				
-				$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun'");
+				$cbulan=$_POST['bulan'];
+				$ctahun=$_POST['tahun'];
+				if ($kodex=='all'){
+					$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun'");
+				} else{
+					$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' AND kode='$kodex'");
+				}
 				while ($tampilkan = mysqli_fetch_array($sql)) { 
 				$sbi = mysqli_num_rows($sql);
 				}
 				?>
 				<?php 
-				$cbulan=$_GET['bulan'];
-				$ctahun=$_GET['tahun'];
+				$cbulan=$_POST['bulan'];
+				$ctahun=$_POST['tahun'];
 				$awal = '01';
-				
-				$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun'");
+				if ($kodex=='all'){
+					$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun'");
+				} else{
+					$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' AND kode='$kodex'");
+				}
 				while ($tampilkan = mysqli_fetch_array($sql)) { 
 				$sds = mysqli_num_rows($sql);
 				}
@@ -178,6 +202,7 @@ $ctahun=$_GET['tahun'];
 	  </table>
 	  </div>
 	  <div>
+	  <?php if ($kodex=='all'){?>
 	  <table width="1000" style="border:1px;">
 		<thead>
 				<tr>
@@ -220,8 +245,8 @@ $ctahun=$_GET['tahun'];
 			</thead>
 			<tbody>
 			<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			
 			$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' and LEFT (kode,2) = 'OT'");
 			while ($tampilkan = mysqli_fetch_array($sql)) { 
@@ -232,8 +257,8 @@ $ctahun=$_GET['tahun'];
 			}
 			?>
 			<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			
 			$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' and LEFT (kode,2) = 'HM'");
 			while ($tampilkan = mysqli_fetch_array($sql)) { 
@@ -244,8 +269,8 @@ $ctahun=$_GET['tahun'];
 			}
 			?>
 			<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			
 			$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' and LEFT (kode,2) = 'KP'");
 			while ($tampilkan = mysqli_fetch_array($sql)) { 
@@ -256,8 +281,8 @@ $ctahun=$_GET['tahun'];
 			}
 			?>
 			<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			
 			$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' and LEFT (kode,2) = 'KU'");
 			while ($tampilkan = mysqli_fetch_array($sql)) { 
@@ -268,8 +293,8 @@ $ctahun=$_GET['tahun'];
 			}
 			?>
 			<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			
 			$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' and LEFT (kode,2) = 'KS'");
 			while ($tampilkan = mysqli_fetch_array($sql)) { 
@@ -280,8 +305,8 @@ $ctahun=$_GET['tahun'];
 			}
 			?>
 			<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			
 			$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' and LEFT (kode,2) = 'PL'");
 			while ($tampilkan = mysqli_fetch_array($sql)) { 
@@ -292,8 +317,8 @@ $ctahun=$_GET['tahun'];
 			}
 			?>
 			<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			
 			$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' and LEFT (kode,2) = 'HK'");
 			while ($tampilkan = mysqli_fetch_array($sql)) { 
@@ -304,8 +329,8 @@ $ctahun=$_GET['tahun'];
 			}
 			?>
 			<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			
 			$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' and LEFT (kode,2) = 'PP'");
 			while ($tampilkan = mysqli_fetch_array($sql)) { 
@@ -316,8 +341,8 @@ $ctahun=$_GET['tahun'];
 			}
 			?>
 			<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			
 			$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' and LEFT (kode,2) = 'PB'");
 			while ($tampilkan = mysqli_fetch_array($sql)) { 
@@ -328,8 +353,8 @@ $ctahun=$_GET['tahun'];
 			}
 			?>
 			<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			
 			$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' and LEFT (kode,2) = 'PS'");
 			while ($tampilkan = mysqli_fetch_array($sql)) { 
@@ -340,8 +365,8 @@ $ctahun=$_GET['tahun'];
 			}
 			?>
 						<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			$awal = '01';
 			
 			$sql = mysqli_query($con, "SELECT * FROM nosur WHERE month(tanggal)BETWEEN '$awal' AND '$cbulan' and year(tanggal) = '$ctahun' and LEFT (kode,2) = 'OT'");
@@ -353,8 +378,8 @@ $ctahun=$_GET['tahun'];
 			}
 			?>
 			<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			$awal = '01';
 			
 			$sql = mysqli_query($con, "SELECT * FROM nosur WHERE month(tanggal)BETWEEN '$awal' AND '$cbulan' and year(tanggal) = '$ctahun' and LEFT (kode,2) = 'HM'");
@@ -366,8 +391,8 @@ $ctahun=$_GET['tahun'];
 			}
 			?>
 			<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			$awal = '01';
 			
 			$sql = mysqli_query($con, "SELECT * FROM nosur WHERE month(tanggal)BETWEEN '$awal' AND '$cbulan' and year(tanggal) = '$ctahun' and LEFT (kode,2) = 'KP'");
@@ -379,8 +404,8 @@ $ctahun=$_GET['tahun'];
 			}
 			?>
 			<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			$awal = '01';
 			
 			$sql = mysqli_query($con, "SELECT * FROM nosur WHERE month(tanggal)BETWEEN '$awal' AND '$cbulan' and year(tanggal) = '$ctahun' and LEFT (kode,2) = 'KU'");
@@ -392,8 +417,8 @@ $ctahun=$_GET['tahun'];
 			}
 			?>
 			<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			$awal = '01';
 			
 			$sql = mysqli_query($con, "SELECT * FROM nosur WHERE month(tanggal)BETWEEN '$awal' AND '$cbulan' and year(tanggal) = '$ctahun' and LEFT (kode,2) = 'KS'");
@@ -405,8 +430,8 @@ $ctahun=$_GET['tahun'];
 			}
 			?>
 			<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			$awal = '01';
 			
 			$sql = mysqli_query($con, "SELECT * FROM nosur WHERE month(tanggal)BETWEEN '$awal' AND '$cbulan' and year(tanggal) = '$ctahun' and LEFT (kode,2) = 'PL'");
@@ -418,8 +443,8 @@ $ctahun=$_GET['tahun'];
 			}
 			?>
 			<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			$awal = '01';
 			
 			$sql = mysqli_query($con, "SELECT * FROM nosur WHERE month(tanggal)BETWEEN '$awal' AND '$cbulan' and year(tanggal) = '$ctahun' and LEFT (kode,2) = 'HK'");
@@ -431,8 +456,8 @@ $ctahun=$_GET['tahun'];
 			}
 			?>
 			<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			$awal = '01';
 			
 			$sql = mysqli_query($con, "SELECT * FROM nosur WHERE month(tanggal)BETWEEN '$awal' AND '$cbulan' and year(tanggal) = '$ctahun' and LEFT (kode,2) = 'PP'");
@@ -444,8 +469,8 @@ $ctahun=$_GET['tahun'];
 			}
 			?>
 			<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			$awal = '01';
 			
 			$sql = mysqli_query($con, "SELECT * FROM nosur WHERE month(tanggal)BETWEEN '$awal' AND '$cbulan' and year(tanggal) = '$ctahun' and LEFT (kode,2) = 'PB'");
@@ -457,8 +482,8 @@ $ctahun=$_GET['tahun'];
 			}
 			?>
 			<?php 
-			$cbulan=$_GET['bulan'];
-			$ctahun=$_GET['tahun'];
+			$cbulan=$_POST['bulan'];
+			$ctahun=$_POST['tahun'];
 			$awal = '01';
 			
 			$sql = mysqli_query($con, "SELECT * FROM nosur WHERE month(tanggal)BETWEEN '$awal' AND '$cbulan' and year(tanggal) = '$ctahun' and LEFT (kode,2) = 'PS'");
@@ -496,6 +521,12 @@ $ctahun=$_GET['tahun'];
 				</tr>
 			</tbody>	
 	  </table>
+	  <?php }
+	  else
+	  {
+		  
+	  }
+	  ?>
 	  </div>
 	  		<?php 
 			$sql = "SELECT * FROM pegawai WHERE jabatan = 'Sekretaris'";
