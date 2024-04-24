@@ -271,11 +271,6 @@ if(!$_SESSION['nip'])
                         <?php }?>			
                         <div class="col-sm-2 mb-sm-0">
                         </div>
-						<!-- <div class="form-check">
-                            <input class="form-check-input" id="flexCheckDefault" <?php if ($no_surat[3]=='SK'){ echo 'checked'; } ?> name="sk" type="checkbox" value="1">
-                            <label class="form-check-label" for="flexCheckDefault">SK</label>
-                        </div> -->
-						
                     </div>
 					<div class="form-group">
 						<div>
