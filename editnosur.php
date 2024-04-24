@@ -284,7 +284,7 @@ if(!$_SESSION['nip'])
                     </div>
 					<div class="form-group">
 						<div>
-                            <input type="text" class="form-control" id="tujuan" name="tujuan" placeholder="Perihal" required="required" value="<?=$tujuan?>">
+                            <input type="text" class="form-control" id="tujuan" name="tujuan" placeholder="Tujuan" required="required" value="<?=$tujuan?>">
                         </div>
                     </div>
 					
