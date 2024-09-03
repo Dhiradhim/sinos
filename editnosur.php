@@ -130,7 +130,7 @@ if(!$_SESSION['nip'])
 					?>						
                         <div class="col-sm-3 mb-sm-0">
                             <input type="hidden" readonly class="form-control" id="id" name="id" value="<?=$id;?>" >
-                            <input type="hidden" readonly class="form-control" id="no_urut" name="no_urut" value="<?=$no_urut;?>" >
+                            <input type="hidden" readonly class="form-control" id="no_urut" name="no_urut" value="<?=$no_surat[0];?>" >
                             <input type="hidden" readonly class="form-control" id="huruf" name="huruf" value="<?=$huruf;?>" >
                             <input type="hidden" readonly class="form-control" id="tanggal" name="tanggal" value="<?=$tanggal;?>" >
                             <?php if ($nip=='admin'){ ?>
