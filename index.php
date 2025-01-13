@@ -81,13 +81,13 @@ a:hover {
 					$q_nama="SELECT nama FROM user WHERE nip='$nip'";
 					$nama = mysqli_query ($con, $q_nama);
 					$row_nama = mysqli_fetch_assoc($nama);
-					$q_surall="SELECT count(*) as count FROM nosur WHERE LEFT (tanggal,4)='2024'";
+					$q_surall="SELECT count(*) as count FROM nosur WHERE LEFT (tanggal,4)='2025'";
 					$surall = mysqli_query ($con, $q_surall);
 					$row_surall = mysqli_fetch_assoc($surall);
-					$q_surpri="SELECT count(*) as count FROM nosur WHERE LEFT (tanggal,4)='2024' AND nip='$nip' AND NOT hal='Belum Diambil'";
+					$q_surpri="SELECT count(*) as count FROM nosur WHERE LEFT (tanggal,4)='2025' AND nip='$nip' AND NOT hal='Belum Diambil'";
 					$surpri = mysqli_query ($con, $q_surpri);
 					$row_surpri = mysqli_fetch_assoc($surpri);
-					$q_surbup="SELECT count(*) as count FROM nosur WHERE LEFT (tanggal,4)='2024' AND nip='$nip' AND file='1' AND NOT hal='Belum Diambil'";
+					$q_surbup="SELECT count(*) as count FROM nosur WHERE LEFT (tanggal,4)='2025' AND nip='$nip' AND file='1' AND NOT hal='Belum Diambil'";
 					$surbup = mysqli_query ($con, $q_surbup);
 					$row_surbup = mysqli_fetch_assoc($surbup);
 					?>
@@ -131,8 +131,8 @@ a:hover {
                                     <div class="row no-gutters align-items-center">
                                         <div class="col mr-2">
                                             <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                                Jumlah seluruh Surat Tahun 2024</div>
-                                            <div class="h5 mb-0 font-weight-bold text-gray-800"><a href='daftarnosurall.php?tahun=2024'><?=$row_surall['count']?> Surat</a></div>
+                                                Jumlah seluruh Surat Tahun 2025</div>
+                                            <div class="h5 mb-0 font-weight-bold text-gray-800"><a href='daftarnosurall.php?tahun=2025'><?=$row_surall['count']?> Surat</a></div>
                                         </div>
                                          <!--<div class="col-auto">
                                             <i class="fas fa-calendar fa-2x text-gray-300"></i>
@@ -151,7 +151,7 @@ a:hover {
                                             <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
                                                 No Surat yang Diambil</div>
                                             <div class="h5 mb-0 font-weight-bold text-gray-800">
-											<a href='daftarnosur.php?tahun=2024'><?=$row_surpri['count']?> Surat</a>
+											<a href='daftarnosur.php?tahun=2025'><?=$row_surpri['count']?> Surat</a>
 											</div>
                                         </div>
                                         <!--<div class="col-auto">
@@ -170,7 +170,7 @@ a:hover {
                                         <div class="col mr-2">
                                             <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
                                                 Belum Upload File</div>
-                                            <div class="h5 mb-0 font-weight-bold text-gray-800"><a href='daftarnosur.php?tahun=2024'><?=$row_surbup['count']?> Surat</a></div>
+                                            <div class="h5 mb-0 font-weight-bold text-gray-800"><a href='daftarnosur.php?tahun=2025'><?=$row_surbup['count']?> Surat</a></div>
                                         </div>
                                         <!--<div class="col-auto">
                                             <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
