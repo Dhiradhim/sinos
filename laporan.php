@@ -125,6 +125,7 @@ if ($jumlah['count']>0)
                         <div class="col-sm-2 mb-sm-0">
                             <select class="form-control" required="required" id="tahun" name="tahun">
 								<option value="-" hidden>Tahun</option>
+								<option value="2025">2025</option>
 								<option value="2024">2024</option>
 								<option value="2023">2023</option>
 							</select>
