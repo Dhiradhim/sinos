@@ -29,16 +29,16 @@ $kodex=$_POST['kode'];
 	<?php 
 	if ($kodex=='all'){
 	if ($cbulan=='00'){
-	$sql = mysqli_query($con, "SELECT * FROM nosur where year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil'");
+	$sql = mysqli_query($con, "SELECT * FROM nosur where year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil' ORDER BY tanggal ASC");
 	} else {
-	$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil'");
+	$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil' ORDER BY tanggal ASC");
 	}
 	} else
 	{
 	if ($cbulan=='00'){
-	$sql = mysqli_query($con, "SELECT * FROM nosur where year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil' AND kode='$kodex'");
+	$sql = mysqli_query($con, "SELECT * FROM nosur where year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil' AND kode='$kodex' ORDER BY tanggal ASC");
 	} else {
-	$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil' AND kode='$kodex'");
+	$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil' AND kode='$kodex' ORDER BY tanggal ASC");
 	}
 	}
 	while ($tampilkan = mysqli_fetch_array($sql)) { 
@@ -130,16 +130,16 @@ $kodex=$_POST['kode'];
 			
 				if ($kodex=='all'){
 				if ($cbulan=='00'){
-				$sql = mysqli_query($con, "SELECT * FROM nosur where year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil'");
+				$sql = mysqli_query($con, "SELECT * FROM nosur where year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil' ORDER BY tanggal ASC");
 				} else {
-				$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil'");
+				$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil' ORDER BY tanggal ASC");
 				}
 				} else
 				{
 				if ($cbulan=='00'){
-				$sql = mysqli_query($con, "SELECT * FROM nosur where year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil' AND kode='$kodex'");
+				$sql = mysqli_query($con, "SELECT * FROM nosur where year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil' AND kode='$kodex' ORDER BY tanggal ASC");
 				} else {
-				$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil' AND kode='$kodex'");
+				$sql = mysqli_query($con, "SELECT * FROM nosur where month(tanggal)='$cbulan' and year(tanggal) = '$ctahun' AND NOT hal='Belum Diambil' AND kode='$kodex' ORDER BY tanggal ASC");
 				}
 				}
 			$no=1;
