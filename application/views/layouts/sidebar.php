@@ -42,11 +42,17 @@ $off  = 'text-slate-300 hover:bg-slate-800 hover:text-white';
         <a href="<?= base_url('surat-masuk'); ?>" class="<?= $link . ' ' . ($active === 'surat-masuk' ? $on : $off); ?>">
             <span class="mr-2">📥</span> Input Surat Masuk
         </a>
-        <div class="pl-8">
-            <a href="<?= base_url('surat-masuk/daftar?tahun=' . date('Y')); ?>" class="block rounded-lg px-3 py-2 text-sm <?= $off; ?>">Daftar <?= date('Y'); ?></a>
-            <a href="<?= base_url('surat-masuk/daftar?tahun=' . (date('Y') - 1)); ?>" class="block rounded-lg px-3 py-2 text-sm <?= $off; ?>">Daftar <?= date('Y') - 1; ?></a>
-            <a href="<?= base_url('surat-masuk/daftar?tahun=' . (date('Y') - 2)); ?>" class="block rounded-lg px-3 py-2 text-sm <?= $off; ?>">Daftar <?= date('Y') - 2; ?></a>
-        </div>
+        <a href="<?= base_url('surat-masuk/daftar?tahun=' . date('Y')); ?>" class="<?= $link . ' ' . $off; ?>">
+            <span class="mr-2">🗂️</span> Daftar Surat Masuk
+        </a>
+        <a href="<?= base_url('disposisi?tahun=' . date('Y')); ?>" class="<?= $link . ' ' . ($active === 'disposisi' ? $on : $off); ?>">
+            <span class="mr-2">📨</span> Disposisi
+            <?php if (! empty($disposisi_count)): ?>
+                <span class="ml-auto inline-flex min-w-[1.5rem] items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-xs font-semibold text-white">
+                    <?= (int) $disposisi_count; ?>
+                </span>
+            <?php endif; ?>
+        </a>
 
         <p class="mt-5 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Surat Keluar</p>
         <a href="<?= base_url('surat-keluar/ambil'); ?>" class="<?= $link . ' ' . $off; ?>">

@@ -1,17 +1,14 @@
 <div class="card">
     <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 class="text-base font-semibold text-slate-700">Daftar Pengguna</h2>
-        <div class="flex gap-2">
-            <input type="text" data-table-search="tblUser" placeholder="Cari user..." class="form-input sm:w-64">
-            <a href="<?= base_url('user/tambah'); ?>" class="btn-primary whitespace-nowrap">+ Tambah User</a>
-        </div>
+        <a href="<?= base_url('user/tambah'); ?>" class="btn-primary whitespace-nowrap">+ Tambah User</a>
     </div>
 
     <?php if (empty($rows)): ?>
         <p class="py-10 text-center text-sm text-slate-400">Belum ada data user.</p>
     <?php else: ?>
         <div class="overflow-x-auto">
-            <table class="table-modern" id="tblUser">
+            <table class="table-modern" id="tblUser" data-datatable data-nosort="5">
                 <thead>
                     <tr>
                         <th>No.</th>

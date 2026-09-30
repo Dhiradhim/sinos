@@ -104,3 +104,18 @@ if (! function_exists('old')) {
         return (is_array($old) && isset($old[$field])) ? $old[$field] : $default;
     }
 }
+
+if (! function_exists('tahun_tersedia')) {
+    /**
+     * Daftar tahun yang dapat dipilih (2024 s.d. tahun berjalan), urut menurun.
+     */
+    function tahun_tersedia($mulai = 2024)
+    {
+        $sekarang = (int) date('Y');
+        $tahun = array();
+        for ($y = $sekarang; $y >= $mulai; $y--) {
+            $tahun[] = $y;
+        }
+        return $tahun;
+    }
+}

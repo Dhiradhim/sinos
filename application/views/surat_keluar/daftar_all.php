@@ -1,14 +1,17 @@
 <div class="card">
     <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 class="text-base font-semibold text-slate-700">Seluruh Surat Keluar - <?= (int) $tahun; ?></h2>
-        <input type="text" data-table-search="tblKeluarAll" placeholder="Cari surat..." class="form-input sm:w-64">
+        <div class="flex flex-wrap items-center gap-3">
+            <h2 class="text-base font-semibold text-slate-700">Seluruh Surat Keluar</h2>
+            <?php $tahun_action = base_url('surat-keluar/daftar-semua');
+            $this->load->view('layouts/_tahun_selector'); ?>
+        </div>
     </div>
 
     <?php if (empty($rows)): ?>
         <p class="py-10 text-center text-sm text-slate-400">Belum ada data untuk tahun <?= (int) $tahun; ?>.</p>
     <?php else: ?>
         <div class="overflow-x-auto">
-            <table class="table-modern" id="tblKeluarAll">
+            <table class="table-modern" id="tblKeluarAll" data-datatable data-nosort="7">
                 <thead>
                     <tr>
                         <th>No.</th>
@@ -28,7 +31,7 @@
                             <td><?= $i++; ?></td>
                             <td class="font-medium text-slate-700"><?= html_escape($r->no); ?></td>
                             <td><?= html_escape($r->nama); ?></td>
-                            <td><?= tanggal_indonesia($r->tanggal); ?></td>
+                            <td data-order="<?= html_escape($r->tanggal); ?>"><?= tanggal_indonesia($r->tanggal); ?></td>
                             <td><?= html_escape($r->hal); ?></td>
                             <td><?= html_escape($r->tujuan); ?></td>
                             <td>

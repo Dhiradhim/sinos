@@ -1,5 +1,5 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+defined('BASEPATH') or exit('No direct script access allowed');
 
 /**
  * Surat_keluar - modul Surat Keluar (tabel `nosur`)
@@ -192,8 +192,10 @@ class Surat_keluar extends MY_Controller
         $tahun = $tahun ? $tahun : date('Y');
 
         $data = array(
-            'tahun' => $tahun,
-            'rows'  => $this->M_nosur->daftar_user($this->user['nip'], $tahun),
+            'tahun'         => $tahun,
+            'tahun_list'    => tahun_tersedia(),
+            'use_datatables' => TRUE,
+            'rows'          => $this->M_nosur->daftar_user($this->user['nip'], $tahun),
         );
 
         $this->render('surat_keluar/daftar', $data, array(
@@ -212,8 +214,10 @@ class Surat_keluar extends MY_Controller
         $tahun = $tahun ? $tahun : date('Y');
 
         $data = array(
-            'tahun' => $tahun,
-            'rows'  => $this->M_nosur->daftar_tahun($tahun),
+            'tahun'          => $tahun,
+            'tahun_list'     => tahun_tersedia(),
+            'use_datatables' => TRUE,
+            'rows'           => $this->M_nosur->daftar_tahun($tahun),
         );
 
         $this->render('surat_keluar/daftar_all', $data, array(
@@ -229,7 +233,7 @@ class Surat_keluar extends MY_Controller
     public function edit($id)
     {
         $row = $this->M_nosur->get($id);
-        if ( ! $row) {
+        if (! $row) {
             show_404();
         }
 
@@ -252,7 +256,7 @@ class Surat_keluar extends MY_Controller
     public function update($id)
     {
         $row = $this->M_nosur->get($id);
-        if ( ! $row) {
+        if (! $row) {
             show_404();
         }
 
@@ -291,7 +295,7 @@ class Surat_keluar extends MY_Controller
     public function upload($id)
     {
         $row = $this->M_nosur->get($id);
-        if ( ! $row) {
+        if (! $row) {
             show_404();
         }
 
@@ -309,7 +313,7 @@ class Surat_keluar extends MY_Controller
     {
         $id  = $this->input->post('id_surat');
         $row = $this->M_nosur->get($id);
-        if ( ! $row) {
+        if (! $row) {
             show_404();
         }
 
@@ -319,7 +323,7 @@ class Surat_keluar extends MY_Controller
             'max_size'      => 10240,
         ));
 
-        if ( ! $this->upload->do_upload('file')) {
+        if (! $this->upload->do_upload('file')) {
             $this->flash('error', 'Gagal upload: ' . $this->upload->display_errors('', ''));
             redirect('surat-keluar/upload/' . $id);
             return;

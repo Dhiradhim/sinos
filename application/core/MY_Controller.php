@@ -45,9 +45,22 @@ class MY_Controller extends CI_Controller
         $data['title']     = isset($meta['title']) ? $meta['title'] : 'SINOS';
         $data['subtitle']  = isset($meta['subtitle']) ? $meta['subtitle'] : '';
         $data['active']    = isset($meta['active']) ? $meta['active'] : $this->uri->segment(1);
+        $data['disposisi_count'] = $this->disposisi_count();
         $data['content']   = $this->load->view($view, $data, TRUE);
 
         $this->load->view('layouts/master', $data);
+    }
+
+    /**
+     * Jumlah disposisi belum dibaca untuk user yang sedang login.
+     */
+    protected function disposisi_count()
+    {
+        if (empty($this->user['nip'])) {
+            return 0;
+        }
+        $this->load->model('M_disposisi');
+        return $this->M_disposisi->count_belum_dibaca($this->user['nip']);
     }
 
     /**

@@ -17,7 +17,10 @@ class User extends MY_Controller
 
     public function index()
     {
-        $this->render('user/index', array('rows' => $this->M_user->daftar()), array(
+        $this->render('user/index', array(
+            'rows'           => $this->M_user->daftar(),
+            'use_datatables' => TRUE,
+        ), array(
             'title'    => 'Daftar User',
             'subtitle' => 'Kelola akun pengguna SINOS.',
             'active'   => 'user',

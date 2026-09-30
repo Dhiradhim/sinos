@@ -87,3 +87,22 @@ CREATE TABLE IF NOT EXISTS `user` (
   `aktif` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- Tabel `disposisi` (Disposisi Surat Masuk)
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `disposisi` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `surmas_id` int(11) NOT NULL,
+  `kepada` varchar(150) NOT NULL,
+  `kategori` varchar(50) NOT NULL,
+  `nip_tujuan` varchar(20) DEFAULT NULL,
+  `instruksi` varchar(500) DEFAULT NULL,
+  `catatan` text DEFAULT NULL,
+  `dari` varchar(20) NOT NULL,
+  `tanggal` datetime NOT NULL,
+  `dibaca` int(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `surmas_id` (`surmas_id`),
+  KEY `nip_tujuan` (`nip_tujuan`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;

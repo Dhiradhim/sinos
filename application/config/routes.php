@@ -25,6 +25,14 @@ $route['surat-masuk/update/(:num)'] = 'surat_masuk/update/$1';
 $route['surat-masuk/hapus/(:num)'] = 'surat_masuk/hapus/$1';
 $route['surat-masuk/disposisi/(:num)'] = 'surat_masuk/disposisi/$1';
 
+// Disposisi
+$route['disposisi'] = 'disposisi/index';
+$route['disposisi/form/(:num)'] = 'disposisi/form/$1';
+$route['disposisi/form-ajax/(:num)'] = 'disposisi/form_ajax/$1';
+$route['disposisi/kirim'] = 'disposisi/kirim';
+$route['disposisi/detail/(:num)'] = 'disposisi/detail/$1';
+$route['disposisi/hapus/(:num)'] = 'disposisi/hapus/$1';
+
 // Surat Keluar
 $route['surat-keluar/ambil'] = 'surat_keluar/ambil';
 $route['surat-keluar/ambil-simpan'] = 'surat_keluar/ambil_simpan';

@@ -1,5 +1,5 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+defined('BASEPATH') or exit('No direct script access allowed');
 
 /**
  * Surat_masuk - modul Surat Masuk (tabel `surmas`)
@@ -46,14 +46,14 @@ class Surat_masuk extends MY_Controller
             'file'         => '',
         );
 
-        if ( ! empty($_FILES['file']['name'])) {
+        if (! empty($_FILES['file']['name'])) {
             $this->load->library('upload', array(
                 'upload_path'   => FCPATH . 'file/sm',
                 'allowed_types' => 'pdf',
                 'max_size'      => 10240,
             ));
 
-            if ( ! $this->upload->do_upload('file')) {
+            if (! $this->upload->do_upload('file')) {
                 $this->flash('error', 'Gagal upload: ' . $this->upload->display_errors('', ''));
                 redirect('surat-masuk');
                 return;
@@ -81,8 +81,10 @@ class Surat_masuk extends MY_Controller
         $tahun = $tahun ? $tahun : date('Y');
 
         $data = array(
-            'tahun' => $tahun,
-            'rows'  => $this->M_surmas->daftar_tahun($tahun),
+            'tahun'          => $tahun,
+            'tahun_list'     => tahun_tersedia(),
+            'use_datatables' => TRUE,
+            'rows'           => $this->M_surmas->daftar_tahun($tahun),
         );
 
         $this->render('surat_masuk/daftar', $data, array(
@@ -98,7 +100,7 @@ class Surat_masuk extends MY_Controller
     public function edit($id)
     {
         $row = $this->M_surmas->get($id);
-        if ( ! $row) {
+        if (! $row) {
             show_404();
         }
 
@@ -120,7 +122,7 @@ class Surat_masuk extends MY_Controller
     public function update($id)
     {
         $row = $this->M_surmas->get($id);
-        if ( ! $row) {
+        if (! $row) {
             show_404();
         }
 
@@ -136,14 +138,14 @@ class Surat_masuk extends MY_Controller
             'keterangan'   => $this->input->post('keterangan'),
         );
 
-        if ( ! empty($_FILES['file']['name'])) {
+        if (! empty($_FILES['file']['name'])) {
             $this->load->library('upload', array(
                 'upload_path'   => FCPATH . 'file/sm',
                 'allowed_types' => 'pdf',
                 'max_size'      => 10240,
             ));
 
-            if ( ! $this->upload->do_upload('file')) {
+            if (! $this->upload->do_upload('file')) {
                 $this->flash('error', 'Gagal upload: ' . $this->upload->display_errors('', ''));
                 redirect('surat-masuk/edit/' . $id);
                 return;
@@ -168,10 +170,10 @@ class Surat_masuk extends MY_Controller
     public function hapus($id)
     {
         $row = $this->M_surmas->get($id);
-        if ( ! $row) {
+        if (! $row) {
             show_404();
         }
-        if ( ! $this->user['is_admin']) {
+        if (! $this->user['is_admin']) {
             show_error('Hanya admin yang dapat menghapus data.', 403);
         }
 
@@ -186,7 +188,7 @@ class Surat_masuk extends MY_Controller
     public function disposisi($id)
     {
         $row = $this->M_surmas->get($id);
-        if ( ! $row) {
+        if (! $row) {
             show_404();
         }
         $this->load->view('surat_masuk/disposisi', array('row' => $row));
