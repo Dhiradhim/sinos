@@ -1,0 +1,12 @@
+{
+    "name": "sinos/ci3",
+    "description": "SINOS - Sistem Informasi Nomor Surat (CodeIgniter 3 + Tailwind CSS)",
+    "type": "project",
+    "require": {
+        "php": ">=7.2",
+        "mpdf/mpdf": "^8.3"
+    },
+    "config": {
+        "optimize-autoloader": true
+    }
+}

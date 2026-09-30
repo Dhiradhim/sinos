@@ -1,2 +1,14 @@
-node_modules
-*.pdf
+/vendor/
+/node_modules/
+/.env
+/application/cache/*
+!/application/cache/index.html
+/application/logs/*
+!/application/logs/index.html
+/tmp/
+/file/*
+!/file/index.html
+/file/sm/*
+!/file/sm/index.html
+/assets/css/app.css
+composer.phar

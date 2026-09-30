@@ -1,0 +1,18 @@
+RewriteEngine On
+RewriteBase /sinos/
+
+# Jangan rewrite file/direktori yang memang ada (asset, index.php, dll)
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Jangan rewrite index.php itu sendiri agar tidak terjadi loop
+
+RewriteCond $1 !^(index\.php|assets|file|img|css|js|vendor|tmp|robots\.txt)
+RewriteRule ^(.*)$ index.php/$1 [L]
+
+# Protect .env
+
+<Files ".env">
+Require all denied
+</Files>

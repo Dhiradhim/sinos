@@ -1,65 +1,144 @@
-# [Start Bootstrap - SB Admin 2](https://startbootstrap.com/theme/sb-admin-2/)
+# SINOS — Sistem Informasi Nomor Surat (CodeIgniter 3 + Tailwind CSS)
 
-[SB Admin 2](https://startbootstrap.com/theme/sb-admin-2/) is an open source admin dashboard theme for [Bootstrap](https://getbootstrap.com/) created by [Start Bootstrap](https://startbootstrap.com/).
+Versi migrasi dari aplikasi SINOS (procedural PHP + SB Admin 2) menjadi
+**CodeIgniter 3 (MVC)** dengan tampilan modern **Tailwind CSS**.
 
-For the legacy Bootstrap 3 version of this theme, you can view the [last stable release](https://github.com/StartBootstrap/startbootstrap-sb-admin-2/releases/tag/v3.3.7%2B1) of SB Admin 2 for Bootstrap 3.
+## ✨ Yang Berubah
 
-## Preview
+| Sebelum                                             | Sesudah                                         |
+| --------------------------------------------------- | ----------------------------------------------- |
+| PHP prosedural, logika + query + HTML tercampur     | Pola MVC (Controller / Model / View)            |
+| `mysqli` + interpolasi string (rawan SQL Injection) | CI3 Query Builder (aman, ter-escape otomatis)   |
+| Kredensial hardcoded di `koneksi.php`               | File `.env` + `config/database.php`             |
+| Bootstrap 4 / SB Admin 2 + jQuery + DataTables      | Tailwind CSS + Alpine-less vanilla JS (ringan)  |
+| `vendor/fontawesome`, DataTables                    | Tanpa dependensi berat front-end                |
+| `display_errors` menyala di produksi                | Error hanya muncul di environment `development` |
+| Sidebar/topbar/footer di-copy tiap halaman          | Layout terpusat (`views/layouts/*`)             |
 
-[![SB Admin 2 Preview](https://assets.startbootstrap.com/img/screenshots/themes/sb-admin-2.png)](https://startbootstrap.github.io/startbootstrap-sb-admin-2/)
+Fitur tetap lengkap: Autentikasi, Ganti Password, Surat Keluar (ambil/sisip/daftar/edit/upload),
+Surat Masuk (input/daftar/edit/disposisi/hapus), Manajemen User, Laporan PDF (mPDF).
 
-**[Launch Live Preview](https://startbootstrap.github.io/startbootstrap-sb-admin-2/)**
+## 📁 Struktur
 
-## Status
+Aplikasi ini terpasang di **root** folder `htdocs/sinos` (bukan subfolder `ci3`).
 
-[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/StartBootstrap/startbootstrap-sb-admin-2/master/LICENSE)
-[![npm version](https://img.shields.io/npm/v/startbootstrap-sb-admin-2.svg)](https://www.npmjs.com/package/startbootstrap-sb-admin-2)
-[![Build Status](https://travis-ci.org/StartBootstrap/startbootstrap-sb-admin-2.svg?branch=master)](https://travis-ci.org/StartBootstrap/startbootstrap-sb-admin-2)
-[![dependencies Status](https://david-dm.org/StartBootstrap/startbootstrap-sb-admin-2/status.svg)](https://david-dm.org/StartBootstrap/startbootstrap-sb-admin-2)
-[![devDependencies Status](https://david-dm.org/StartBootstrap/startbootstrap-sb-admin-2/dev-status.svg)](https://david-dm.org/StartBootstrap/startbootstrap-sb-admin-2?type=dev)
+```
+sinos/
+├── application/
+│   ├── config/          # config.php, database.php, routes.php, autoload.php
+│   ├── controllers/     # Auth, Dashboard, Surat_keluar, Surat_masuk, User, Laporan
+│   ├── core/            # MY_Controller, MY_Model
+│   ├── helpers/         # sinos_helper.php (getRomawi, tanggal_indonesia, dll)
+│   ├── libraries/       # Pdf.php (wrapper mPDF)
+│   ├── models/          # M_user, M_nosur, M_surmas, M_jabatan, M_klasifikasi
+│   └── views/           # layouts/, auth/, dashboard/, surat_keluar/, surat_masuk/, user/, laporan/
+├── assets/              # css/app.css (hasil build Tailwind), js/app.js, img/, klasifikasi.pdf
+├── db/migration_extra.sql
+├── file/ file/sm/       # penyimpanan berkas PDF
+├── system/              # core CodeIgniter 3.1.13
+├── vendor/              # composer (mpdf)
+├── .env.example
+├── router.php           # router untuk `php -S` (development)
+├── tailwind.config.js
+└── package.json
+```
 
-## Download and Installation
+## 🚀 Instalasi
 
-To begin using this template, choose one of the following options to get started:
+### 1. Database
 
-* [Download the latest release on Start Bootstrap](https://startbootstrap.com/theme/sb-admin-2/)
-* Install via npm: `npm i startbootstrap-sb-admin-2`
-* Clone the repo: `git clone https://github.com/StartBootstrap/startbootstrap-sb-admin-2.git`
-* [Fork, Clone, or Download on GitHub](https://github.com/StartBootstrap/startbootstrap-sb-admin-2)
+Database `sinos` yang sudah ada **dapat langsung dipakai** (tabel: `user`, `nosur`,
+`surmas`, `jabatan`, `ref_klasifikasi`). Bila instalasi baru:
 
-## Usage
+```bash
+mysql -u root sinos < db/migration_extra.sql
+```
 
-After installation, run `npm install` and then run `npm start` which will open up a preview of the template in your default browser, watch for changes to core template files, and live reload the browser when changes are saved. You can view the `gulpfile.js` to see which tasks are included with the dev environment.
+> Catatan: dump lama `../db/sinos.sql` hanya memuat tabel `nosur` & `user` dengan skema
+> berbeda. Untuk instalasi baru gunakan `db/migration_extra.sql` yang sesuai skema aplikasi.
 
-### Gulp Tasks
+### 2. Konfigurasi
 
-* `gulp` the default task that builds everything
-* `gulp watch` browserSync opens the project in your default browser and live reloads when changes are made
-* `gulp css` compiles SCSS files into CSS and minifies the compiled CSS
-* `gulp js` minifies the themes JS file
-* `gulp vendor` copies dependencies from node_modules to the vendor directory
+Salin `.env.example` menjadi `.env` lalu sesuaikan:
 
-You must have npm installed globally in order to use this build environment. This theme was built using node v11.6.0 and the Gulp CLI v2.0.1. If Gulp is not running properly after running `npm install`, you may need to update node and/or the Gulp CLI locally.
+```
+DB_HOSTNAME=localhost
+DB_USERNAME=root
+DB_PASSWORD=
+DB_DATABASE=sinos
+```
 
-## Bugs and Issues
+Sesuaikan `base_url` di `application/config/config.php` (default: `http://localhost/sinos/`).
 
-Have a bug or an issue with this template? [Open a new issue](https://github.com/StartBootstrap/startbootstrap-sb-admin-2/issues) here on GitHub or leave a comment on the [template overview page at Start Bootstrap](https://startbootstrap.com/theme/sb-admin-2/).
+### 3. Dependency PHP (mPDF)
 
-## About
+```bash
+composer install
+```
 
-Start Bootstrap is an open source library of free Bootstrap templates and themes. All of the free templates and themes on Start Bootstrap are released under the MIT license, which means you can use them for any purpose, even for commercial projects.
+### 4. Asset Tailwind CSS
 
-* <https://startbootstrap.com>
-* <https://twitter.com/SBootstrap>
+```bash
+npm install
+npm run build      # sekali
+npm run watch      # saat pengembangan
+```
 
-Start Bootstrap was created by and is maintained by **[David Miller](https://davidmiller.io/)**.
+Hasil build: `assets/css/app.css`.
 
-* <https://davidmiller.io>
-* <https://twitter.com/davidmillerhere>
-* <https://github.com/davidtmiller>
+### 5. Folder tulis
 
-Start Bootstrap is based on the [Bootstrap](https://getbootstrap.com/) framework created by [Mark Otto](https://twitter.com/mdo) and [Jacob Thorton](https://twitter.com/fat).
+Pastikan folder berikut dapat ditulis web server:
+`file/`, `file/sm/`, `application/cache/`, `application/cache/sessions/`, `tmp/`.
 
-## Copyright and License
+### 6. Jalankan
 
-Copyright 2013-2020 Start Bootstrap LLC. Code released under the [MIT](https://github.com/StartBootstrap/startbootstrap-resume/blob/gh-pages/LICENSE) license.
+- **XAMPP**: buka `http://localhost/sinos/`
+- **Dev server PHP**:
+  ```bash
+  php -S localhost:8899 -t . router.php
+  ```
+
+## 🔐 Login
+
+Akun mengikuti tabel `user`. Password mendukung **bcrypt** (`password_hash`) dan
+**md5 lama** (akan otomatis di-upgrade ke bcrypt saat login berhasil).
+Ganti password admin lama dengan:
+
+```sql
+UPDATE user SET pass = '$2y$...' WHERE nip='admin';
+```
+
+Atau gunakan menu **Ganti Password**.
+
+## 🧭 Peta URL Utama
+
+| URL                                                         | Fungsi                 |
+| ----------------------------------------------------------- | ---------------------- |
+| `/login`, `/logout`, `/ganti-password`                      | Autentikasi            |
+| `/dashboard`                                                | Beranda / ringkasan    |
+| `/surat-keluar/ambil`, `/sisip`, `/daftar`, `/daftar-semua` | Surat Keluar           |
+| `/surat-keluar/edit/{id}`, `/upload/{id}`                   | Edit & upload berkas   |
+| `/surat-masuk`, `/surat-masuk/daftar?tahun=2026`            | Surat Masuk            |
+| `/surat-masuk/edit/{id}`, `/disposisi/{id}`, `/hapus/{id}`  | Kelola surat masuk     |
+| `/user`, `/user/tambah`, `/user/edit/{id}`                  | Manajemen user (admin) |
+| `/laporan`, `/laporan/cetak`                                | Laporan PDF (admin)    |
+
+## 🎨 Kustomisasi Tema
+
+Warna & font di `tailwind.config.js` (palet `brand`). Komponen (`.btn`, `.card`,
+`.form-input`, `.table-modern`) didefinisikan di `assets/css/input.css` pada `@layer components`.
+Setelah mengubah, jalankan `npm run build`.
+
+## 🛠️ Catatan Kompatibilitas
+
+- Diuji pada **PHP 8.5**. Dilakukan patch kecil pada core CI3 untuk PHP 8.2+:
+  penanganan `E_DEPRECATED` (dynamic property), `E_STRICT` (removed di PHP 8.4),
+  dan `is_really_writable`/`mkdir()`. Patch ditandai komentar di
+  `system/core/Common.php` dan `system/core/Exceptions.php`.
+- Keamanan: seluruh query memakai Query Builder (prepared statement), redirect
+  memakai helper CI3, dan proteksi login dipusatkan di `MY_Controller`.
+
+## 📄 Lisensi
+
+CodeIgniter 3 dirilis dengan lisensi MIT. Aplikasi SINOS milik Pengadilan Agama Kupang.
