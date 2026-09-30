@@ -5,16 +5,17 @@ if (! $pesan) {
     return;
 }
 $styles = array(
-    'success' => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-    'error'   => 'bg-rose-50 text-rose-700 ring-rose-200',
-    'warning' => 'bg-amber-50 text-amber-700 ring-amber-200',
-    'info'    => 'bg-brand-50 text-brand-700 ring-brand-200',
+    'success' => array('alert-success', 'circle-check', 'Berhasil'),
+    'error'   => array('alert-destructive', 'octagon-x', 'Gagal'),
+    'warning' => array('alert-warning', 'triangle-alert', 'Perhatian'),
+    'info'    => array('alert-info', 'info', 'Informasi'),
 );
-$icon = array('success' => '✅', 'error' => '⛔', 'warning' => '⚠️', 'info' => 'ℹ️');
-$cls = isset($styles[$tipe]) ? $styles[$tipe] : $styles['info'];
-$ic  = isset($icon[$tipe]) ? $icon[$tipe] : $icon['info'];
+$cfg = isset($styles[$tipe]) ? $styles[$tipe] : $styles['info'];
 ?>
-<div data-flash class="mb-4 flex items-center gap-3 rounded-xl px-4 py-3 text-sm ring-1 <?= $cls; ?>">
-    <span><?= $ic; ?></span>
-    <span><?= html_escape($pesan); ?></span>
+<div data-flash class="<?= $cfg[0]; ?> mb-4 animate-fade-in" role="alert">
+    <span class="mt-0.5 shrink-0"><?= svg_icon($cfg[1], 'h-4 w-4'); ?></span>
+    <div class="flex-1">
+        <p class="alert-title"><?= $cfg[2]; ?></p>
+        <p class="alert-description"><?= html_escape($pesan); ?></p>
+    </div>
 </div>

@@ -21,4 +21,45 @@ class M_surmas extends MY_Model
         $this->db->order_by('tgl_surat', 'DESC');
         return $this->db->get('surmas')->result();
     }
+
+    /**
+     * Set status surat (mis. 'diarsipkan').
+     */
+    public function set_status($id, $status)
+    {
+        return $this->update($id, array('status' => $status));
+    }
+
+    /**
+     * Nomor agenda surat masuk berikutnya.
+     * Format: {no-urut}/SM/PA.Kp/{Tahun}
+     * No. urut diambil dari nilai tertinggi yang pernah tersimpan pada
+     * tahun berjalan, lalu ditambah 1.
+     *
+     * @param int|null $tahun  Tahun acuan (default: tahun berjalan)
+     * @return string
+     */
+    public function next_no_agenda($tahun = NULL)
+    {
+        $tahun = $tahun ? (int) $tahun : (int) date('Y');
+
+        // Ambil kolom no_agenda tahun terkait
+        $this->db->select('no_agenda');
+        $this->db->where('YEAR(tgl_diterima)', $tahun);
+        $this->db->order_by('id', 'DESC');
+        $rows = $this->db->get('surmas')->result();
+
+        $max = 0;
+        foreach ($rows as $r) {
+            // Ambil angka pertama sebelum '/' sebagai nomor urut
+            if (preg_match('/^\s*(\d+)/', (string) $r->no_agenda, $m)) {
+                $n = (int) $m[1];
+                if ($n > $max) {
+                    $max = $n;
+                }
+            }
+        }
+
+        return ($max + 1) . '/SM/PA.Kp/' . $tahun;
+    }
 }

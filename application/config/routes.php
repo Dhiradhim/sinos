@@ -23,7 +23,10 @@ $route['surat-masuk/simpan'] = 'surat_masuk/simpan';
 $route['surat-masuk/edit/(:num)'] = 'surat_masuk/edit/$1';
 $route['surat-masuk/update/(:num)'] = 'surat_masuk/update/$1';
 $route['surat-masuk/hapus/(:num)'] = 'surat_masuk/hapus/$1';
+$route['surat-masuk/detail/(:num)'] = 'surat_masuk/detail/$1';
 $route['surat-masuk/disposisi/(:num)'] = 'surat_masuk/disposisi/$1';
+$route['surat-masuk/arsipkan/(:num)'] = 'surat_masuk/arsipkan/$1';
+$route['surat-masuk/batal-arsip/(:num)'] = 'surat_masuk/batal_arsip/$1';
 
 // Disposisi
 $route['disposisi'] = 'disposisi/index';
@@ -31,6 +34,7 @@ $route['disposisi/form/(:num)'] = 'disposisi/form/$1';
 $route['disposisi/form-ajax/(:num)'] = 'disposisi/form_ajax/$1';
 $route['disposisi/kirim'] = 'disposisi/kirim';
 $route['disposisi/detail/(:num)'] = 'disposisi/detail/$1';
+$route['disposisi/arsipkan/(:num)'] = 'disposisi/arsipkan/$1';
 $route['disposisi/hapus/(:num)'] = 'disposisi/hapus/$1';
 
 // Surat Keluar

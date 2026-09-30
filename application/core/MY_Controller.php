@@ -23,12 +23,16 @@ class MY_Controller extends CI_Controller
         }
 
         $this->load->model('M_user');
-        $nama = $this->M_user->get_nama($this->session->userdata('nip'));
+        $nip  = $this->session->userdata('nip');
+        $nama = $this->M_user->get_nama($nip);
+        $is_admin = ($nip === 'admin');
+        $is_operator = $is_admin || $this->M_user->is_operator($nip);
 
         $this->user = array(
-            'nip'  => $this->session->userdata('nip'),
-            'nama' => $nama ? $nama : $this->session->userdata('nip'),
-            'is_admin' => ($this->session->userdata('nip') === 'admin'),
+            'nip'         => $nip,
+            'nama'        => $nama ? $nama : $nip,
+            'is_admin'    => $is_admin,
+            'is_operator' => $is_operator,
         );
     }
 

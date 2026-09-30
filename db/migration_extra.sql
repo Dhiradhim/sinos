@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS `surmas` (
   `keterangan` varchar(200) NOT NULL,
   `file` varchar(2000) NOT NULL,
   `pengolah` varchar(30) NOT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'aktif',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -85,6 +86,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   `nama` varchar(50) NOT NULL,
   `pass` varchar(100) NOT NULL,
   `aktif` int(11) NOT NULL DEFAULT 0,
+  `operator` int(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -102,6 +104,8 @@ CREATE TABLE IF NOT EXISTS `disposisi` (
   `dari` varchar(20) NOT NULL,
   `tanggal` datetime NOT NULL,
   `dibaca` int(1) NOT NULL DEFAULT 0,
+  `dikembalikan` int(1) NOT NULL DEFAULT 0,
+  `tgl_dikembalikan` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `surmas_id` (`surmas_id`),
   KEY `nip_tujuan` (`nip_tujuan`)

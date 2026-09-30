@@ -35,12 +35,26 @@ class M_user extends MY_Model
      */
     public function daftar()
     {
-        $this->db->select('u.id, u.nip, u.nama, u.aktif, j.subbag, j.jabatan');
+        $this->db->select('u.id, u.nip, u.nama, u.aktif, u.operator, j.subbag, j.jabatan');
         $this->db->from('user u');
         $this->db->join('jabatan j', 'u.id_jabatan = j.id', 'left');
         $this->db->order_by('u.aktif', 'ASC');
         $this->db->order_by('j.id', 'ASC');
         return $this->db->get()->result();
+    }
+
+    /**
+     * Cek apakah NIP tergolong operator surat.
+     */
+    public function is_operator($nip)
+    {
+        if (empty($nip)) {
+            return FALSE;
+        }
+        $this->db->select('operator');
+        $this->db->where('nip', $nip);
+        $row = $this->db->get('user')->row();
+        return ($row && (int) $row->operator === 1);
     }
 
     /**

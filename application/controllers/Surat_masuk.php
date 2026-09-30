@@ -13,12 +13,18 @@ class Surat_masuk extends MY_Controller
     }
 
     /**
-     * Form input surat masuk.
+     * Form input surat masuk (khusus operator surat).
      */
     public function index()
     {
+        if (empty($this->user['is_operator'])) {
+            show_error('Halaman ini hanya untuk operator surat.', 403);
+        }
+
         $data = array(
             'klasifikasi' => $this->M_klasifikasi->get_all(),
+            // Nomor agenda otomatis: {no-urut}/SM/PA.Kp/{Tahun}
+            'next_agenda' => $this->M_surmas->next_no_agenda(),
         );
 
         $this->render('surat_masuk/input', $data, array(
@@ -33,9 +39,20 @@ class Surat_masuk extends MY_Controller
      */
     public function simpan()
     {
+        if (empty($this->user['is_operator'])) {
+            show_error('Hanya operator surat yang dapat menambah surat masuk.', 403);
+        }
+
+        // Nomor agenda dibuat otomatis di sisi server agar tidak dapat diubah
+        // dari sisi klien: {no-urut}/SM/PA.Kp/{Tahun}
+        $tahun_agenda = (int) date('Y', strtotime($this->input->post('tgl_diterima')));
+        if (! $tahun_agenda) {
+            $tahun_agenda = (int) date('Y');
+        }
+
         $data = array(
             'kode'         => $this->input->post('kode'),
-            'no_agenda'    => $this->input->post('no_agenda'),
+            'no_agenda'    => $this->M_surmas->next_no_agenda($tahun_agenda),
             'no_surat'     => $this->input->post('no_surat'),
             'tgl_surat'    => $this->input->post('tgl_surat'),
             'pengirim'     => $this->input->post('pengirim'),
@@ -45,6 +62,13 @@ class Surat_masuk extends MY_Controller
             'keterangan'   => $this->input->post('keterangan'),
             'file'         => '',
         );
+
+        // Dokumen wajib diunggah pada input surat masuk baru
+        if (empty($_FILES['file']['name'])) {
+            $this->flash('error', 'Dokumen surat (PDF) wajib diunggah.');
+            redirect('surat-masuk');
+            return;
+        }
 
         if (! empty($_FILES['file']['name'])) {
             $this->load->library('upload', array(
@@ -80,11 +104,36 @@ class Surat_masuk extends MY_Controller
         $tahun = (int) $this->input->get('tahun');
         $tahun = $tahun ? $tahun : date('Y');
 
+        $rows = $this->M_surmas->daftar_tahun($tahun);
+
+        // Ambil status disposisi untuk seluruh surat pada tahun ini
+        $this->load->model('M_disposisi');
+        $surmas_ids = array();
+        foreach ($rows as $r) {
+            $surmas_ids[] = (int) $r->id;
+        }
+        $status_disposisi = $this->M_disposisi->status_by_surmas($surmas_ids);
+
+        // Tentukan siapa yang berhak mengirim/meneruskan disposisi per surat:
+        // operator (semua surat kecuali yang sudah diarsipkan) atau penerima
+        // disposisi surat tersebut. Surat yang sudah diarsipkan tidak dapat
+        // lagi didisposisikan.
+        $can_send_map = array();
+        foreach ($rows as $r) {
+            $diarsipkan = ($r->status === 'diarsipkan');
+            $can_send_map[(int) $r->id] = ! $diarsipkan && (
+                ! empty($this->user['is_operator'])
+                || $this->M_disposisi->can_send((int) $r->id, $this->user['nip'], FALSE)
+            );
+        }
+
         $data = array(
-            'tahun'          => $tahun,
-            'tahun_list'     => tahun_tersedia(),
-            'use_datatables' => TRUE,
-            'rows'           => $this->M_surmas->daftar_tahun($tahun),
+            'tahun'            => $tahun,
+            'tahun_list'       => tahun_tersedia(),
+            'use_datatables'   => TRUE,
+            'rows'             => $rows,
+            'status_disposisi' => $status_disposisi,
+            'can_send_map'     => $can_send_map,
         );
 
         $this->render('surat_masuk/daftar', $data, array(
@@ -126,9 +175,9 @@ class Surat_masuk extends MY_Controller
             show_404();
         }
 
+        // no_agenda tidak disertakan agar nomor agenda lama tidak berubah.
         $data = array(
             'kode'         => $this->input->post('kode'),
-            'no_agenda'    => $this->input->post('no_agenda'),
             'no_surat'     => $this->input->post('no_surat'),
             'tgl_surat'    => $this->input->post('tgl_surat'),
             'pengirim'     => $this->input->post('pengirim'),
@@ -138,6 +187,8 @@ class Surat_masuk extends MY_Controller
             'keterangan'   => $this->input->post('keterangan'),
         );
 
+        // Nilai kolom `file` hanya diubah bila ada dokumen baru yang diunggah;
+        // jika tidak, berkas lama di database tetap dipertahankan.
         if (! empty($_FILES['file']['name'])) {
             $this->load->library('upload', array(
                 'upload_path'   => FCPATH . 'file/sm',
@@ -180,6 +231,96 @@ class Surat_masuk extends MY_Controller
         $this->M_surmas->delete($id);
         $this->flash('success', 'Surat masuk berhasil dihapus.');
         redirect('surat-masuk/daftar?tahun=' . date('Y', strtotime($row->tgl_surat)));
+    }
+
+    /**
+     * Arsipkan surat masuk (hanya operator surat, setelah disposisi dikembalikan).
+     */
+    public function arsipkan($id)
+    {
+        if (empty($this->user['is_operator'])) {
+            show_error('Hanya operator surat yang dapat mengarsipkan surat.', 403);
+        }
+
+        $row = $this->M_surmas->get($id);
+        if (! $row) {
+            show_404();
+        }
+
+        $this->load->model('M_disposisi');
+
+        // Surat yang sudah pernah didisposisi hanya boleh diarsipkan
+        // setelah semua disposisi dikembalikan ke operator.
+        $disposisi_ada = $this->db->where('surmas_id', $id)->count_all_results('disposisi');
+        if ($disposisi_ada > 0 && ! $this->M_disposisi->semua_dikembalikan($id)) {
+            $this->flash('error', 'Surat belum dapat diarsipkan. Menunggu disposisi dikembalikan ke operator.');
+            redirect('surat-masuk/daftar?tahun=' . date('Y', strtotime($row->tgl_surat)));
+            return;
+        }
+
+        $this->M_surmas->set_status($id, 'diarsipkan');
+        $this->flash('success', 'Surat masuk berhasil diarsipkan.');
+        redirect('surat-masuk/daftar?tahun=' . date('Y', strtotime($row->tgl_surat)));
+    }
+
+    /**
+     * Batalkan arsip surat masuk.
+     * Status dikembalikan ke posisi disposisi terakhir (user terakhir yang
+     * menerima disposisi), sehingga surat kembali terlihat di menu Disposisi
+     * bagi operator maupun penerima disposisi terakhir.
+     */
+    public function batal_arsip($id)
+    {
+        if (empty($this->user['is_operator'])) {
+            show_error('Hanya operator surat yang dapat mengubah status arsip.', 403);
+        }
+
+        $row = $this->M_surmas->get($id);
+        if (! $row) {
+            show_404();
+        }
+
+        $this->load->model('M_disposisi');
+
+        // Tentukan status tujuan: bila surat sudah pernah didisposisikan,
+        // kembalikan ke status 'didiposisi' (posisi ada di penerima terakhir);
+        // jika belum pernah didisposisikan, kembalikan ke 'aktif'.
+        $ada = $this->db->where('surmas_id', $id)->count_all_results('disposisi');
+        $status = ($ada > 0) ? 'didiposisi' : 'aktif';
+
+        $this->M_surmas->set_status($id, $status);
+        $this->flash('success', 'Status arsip surat dibatalkan.');
+        redirect('surat-masuk/daftar?tahun=' . date('Y', strtotime($row->tgl_surat)));
+    }
+
+    /**
+     * Detail surat masuk (dapat dilihat oleh semua user yang login).
+     */
+    public function detail($id)
+    {
+        $row = $this->M_surmas->get($id);
+        if (! $row) {
+            show_404();
+        }
+
+        $this->load->model('M_disposisi');
+
+        // Riwayat disposisi surat ini
+        $riwayat = $this->db->order_by('tanggal', 'ASC')
+            ->get_where('disposisi', array('surmas_id' => $id))->result();
+
+        // Posisi disposisi saat ini (disposisi terakhir)
+        $posisi = ! empty($riwayat) ? end($riwayat) : NULL;
+
+        $this->render('surat_masuk/detail', array(
+            'row'     => $row,
+            'riwayat' => $riwayat,
+            'posisi'  => $posisi,
+        ), array(
+            'title'    => 'Detail Surat Masuk',
+            'subtitle' => $row->no_surat,
+            'active'   => 'surat-masuk',
+        ));
     }
 
     /**

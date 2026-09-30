@@ -63,6 +63,7 @@ class User extends MY_Controller
             'nama'       => trim($this->input->post('nama')),
             'pass'       => password_hash($pass1, PASSWORD_BCRYPT),
             'aktif'      => $this->input->post('aktif'),
+            'operator'   => $this->input->post('operator') ? 1 : 0,
         ));
 
         $this->flash('success', 'User baru berhasil didaftarkan.');
@@ -98,6 +99,7 @@ class User extends MY_Controller
             'nip'        => trim($this->input->post('nip')),
             'id_jabatan' => $this->input->post('jabatan'),
             'aktif'      => $this->input->post('aktif'),
+            'operator'   => $this->input->post('operator') ? 1 : 0,
         );
 
         $pass1 = $this->input->post('pass1');

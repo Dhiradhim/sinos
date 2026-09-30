@@ -17,28 +17,99 @@ class Disposisi extends MY_Controller
      */
     public function index()
     {
-        $tahun = (int) $this->input->get('tahun');
-        $tahun = $tahun ? $tahun : date('Y');
-
-        // Admin melihat semua disposisi; user biasa hanya yang ditujukan kepadanya.
-        if ($this->user['is_admin']) {
-            $rows = $this->M_disposisi->daftar_tahun($tahun);
+        // Operator (atau admin) melihat seluruh surat yang sedang/pernah
+        // didisposisi, termasuk yang sudah diarsipkan. User lain hanya melihat
+        // surat yang posisi disposisinya sedang ada padanya.
+        if (! empty($this->user['is_operator'])) {
+            $rows = $this->M_disposisi->daftar_operator();
+            $subtitle = 'Seluruh surat yang didisposisikan (termasuk yang sudah diarsipkan).';
         } else {
-            $rows = $this->M_disposisi->daftar_untuk($this->user['nip'], $tahun);
+            $rows = $this->M_disposisi->daftar_atas_nama($this->user['nip']);
+            $subtitle = 'Disposisi yang posisinya sedang ada pada Anda.';
+        }
+
+        // Daftar NIP user yang bertag operator, untuk menentukan apakah posisi
+        // disposisi surat saat ini berada pada seorang operator.
+        $operator_nips = array();
+        foreach ($this->db->select('nip')->where('operator', 1)->get('user')->result() as $ou) {
+            $operator_nips[(string) $ou->nip] = TRUE;
+        }
+
+        // Sertakan lokasi & status posisi disposisi (user/arsip tempat surat berada)
+        foreach ($rows as $r) {
+            $r->lokasi = ((string) $r->kepada === 'Arsip' || empty($r->nip_tujuan))
+                ? 'Arsip'
+                : $r->kepada;
+
+            // Posisi surat berada di operator bila penerima disposisi terakhir
+            // adalah user bertag operator (dan belum dikembalikan / diarsip).
+            $r->posisi_di_operator = ($r->status_surat !== 'diarsipkan'
+                && (int) $r->dikembalikan === 0
+                && ! empty($r->nip_tujuan)
+                && isset($operator_nips[(string) $r->nip_tujuan]));
         }
 
         $data = array(
-            'tahun'          => $tahun,
-            'tahun_list'     => tahun_tersedia(),
             'use_datatables' => TRUE,
             'rows'           => $rows,
+            'is_operator'    => ! empty($this->user['is_operator']),
         );
 
         $this->render('disposisi/index', $data, array(
             'title'    => 'Disposisi Surat',
-            'subtitle' => 'Daftar disposisi surat masuk tahun ' . $tahun,
+            'subtitle' => $subtitle,
             'active'   => 'disposisi',
         ));
+    }
+
+    /**
+     * Arsipkan surat masuk dari menu disposisi.
+     * Bila sebuah surat sudah didisposisikan kepada user lain, setiap user
+     * yang memiliki tag operator berhak mengarsipkan surat tersebut.
+     */
+    public function arsipkan($surmas_id)
+    {
+        if (empty($this->user['is_operator'])) {
+            show_error('Hanya operator surat yang dapat mengarsipkan surat.', 403);
+        }
+
+        $surat = $this->M_surmas->get($surmas_id);
+        if (! $surat) {
+            show_404();
+        }
+
+        if ($surat->status === 'diarsipkan') {
+            $this->flash('warning', 'Surat sudah diarsipkan.');
+            redirect('disposisi');
+            return;
+        }
+
+        // Wajib sudah pernah didisposisikan
+        $ada = $this->db->where('surmas_id', $surmas_id)->count_all_results('disposisi');
+        if ($ada === 0) {
+            $this->flash('error', 'Surat belum pernah didisposisikan.');
+            redirect('disposisi');
+            return;
+        }
+
+        // Surat hanya dapat diarsipkan bila posisi disposisi saat ini berada
+        // pada seorang operator (penerima disposisi terakhir bertag operator).
+        $posisi = $this->M_disposisi->posisi_terakhir(array($surmas_id));
+        $last = isset($posisi[$surmas_id]) ? $posisi[$surmas_id] : NULL;
+        $posisi_di_operator = ($last
+            && (int) $last->dikembalikan === 0
+            && ! empty($last->nip_tujuan)
+            && $this->M_disposisi->is_operator_nip($last->nip_tujuan));
+
+        if (! $posisi_di_operator) {
+            $this->flash('error', 'Surat hanya dapat diarsipkan ketika posisinya berada di operator.');
+            redirect('disposisi');
+            return;
+        }
+
+        $this->M_surmas->set_status($surmas_id, 'diarsipkan');
+        $this->flash('success', 'Surat berhasil diarsipkan.');
+        redirect('disposisi');
     }
 
     /**
@@ -50,6 +121,13 @@ class Disposisi extends MY_Controller
         $surat = $this->M_surmas->get($surmas_id);
         if (! $surat) {
             show_404();
+        }
+
+        if (
+            empty($this->user['is_operator'])
+            && ! $this->M_disposisi->can_send($surmas_id, $this->user['nip'], FALSE)
+        ) {
+            show_error('Anda tidak berhak mengirim disposisi surat ini.', 403);
         }
 
         $data = array(
@@ -77,6 +155,13 @@ class Disposisi extends MY_Controller
             show_404();
         }
 
+        if (
+            empty($this->user['is_operator'])
+            && ! $this->M_disposisi->can_send($surmas_id, $this->user['nip'], FALSE)
+        ) {
+            show_error('Anda tidak berhak mengirim disposisi surat ini.', 403);
+        }
+
         $this->load->view('disposisi/_form_ajax', array(
             'surat'    => $surat,
             'penerima' => $this->M_user->penerima_aktif(),
@@ -94,6 +179,15 @@ class Disposisi extends MY_Controller
         $surat = $this->M_surmas->get($surmas_id);
         if (! $surat) {
             show_404();
+        }
+
+        // Operator surat boleh mengirim disposisi awal; penerima disposisi
+        // berhak meneruskan disposisi surat tersebut.
+        if (
+            empty($this->user['is_operator'])
+            && ! $this->M_disposisi->can_send($surmas_id, $this->user['nip'], FALSE)
+        ) {
+            show_error('Hanya operator surat atau penerima disposisi yang dapat mengirim disposisi.', 403);
         }
 
         $target = $this->input->post('target'); // single value: id user atau "Arsip"
@@ -132,6 +226,8 @@ class Disposisi extends MY_Controller
         $n = $this->M_disposisi->simpan_batch($surmas_id, $rows, $this->user['nip'], $instruksi, $catatan);
 
         if ($n > 0) {
+            // Tandai surat sedang dalam proses disposisi
+            $this->M_surmas->set_status($surmas_id, 'didiposisi');
             $this->flash('success', 'Disposisi berhasil dikirim kepada ' . $n . ' penerima.');
         } else {
             $this->flash('error', 'Tidak ada penerima valid yang dipilih.');
@@ -156,9 +252,14 @@ class Disposisi extends MY_Controller
 
         $surat = $this->M_surmas->get($row->surmas_id);
 
+        // Berhak meneruskan bila operator surat atau penerima disposisi surat ini
+        $can_forward = ! empty($this->user['is_operator'])
+            || $this->M_disposisi->can_send($row->surmas_id, $this->user['nip'], FALSE);
+
         $this->render('disposisi/detail', array(
-            'row'   => $row,
-            'surat' => $surat,
+            'row'         => $row,
+            'surat'       => $surat,
+            'can_forward' => $can_forward,
         ), array(
             'title'    => 'Detail Disposisi',
             'subtitle' => $surat ? $surat->no_surat : '',

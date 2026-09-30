@@ -1,14 +1,26 @@
 <div class="card">
-    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 class="text-base font-semibold text-slate-700">Daftar Pengguna</h2>
-        <a href="<?= base_url('user/tambah'); ?>" class="btn-primary whitespace-nowrap">+ Tambah User</a>
+    <div class="flex flex-col gap-4 border-b border-border px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h2 class="text-base font-semibold tracking-tight text-foreground">Daftar Pengguna</h2>
+            <p class="text-xs text-muted-foreground">Kelola akun pengguna aplikasi SINOS.</p>
+        </div>
+        <a href="<?= base_url('user/tambah'); ?>" class="btn-primary btn-sm">
+            <?= svg_icon('plus'); ?>
+            <span>Tambah User</span>
+        </a>
     </div>
 
     <?php if (empty($rows)): ?>
-        <p class="py-10 text-center text-sm text-slate-400">Belum ada data user.</p>
+        <div class="flex flex-col items-center justify-center gap-2 px-6 py-14 text-center">
+            <span class="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <?= svg_icon('users', 'h-5 w-5'); ?>
+            </span>
+            <p class="text-sm font-medium text-foreground">Belum ada data user</p>
+            <p class="text-sm text-muted-foreground">Tambahkan user baru untuk memulai.</p>
+        </div>
     <?php else: ?>
-        <div class="overflow-x-auto">
-            <table class="table-modern" id="tblUser" data-datatable data-nosort="5">
+        <div class="table-wrap p-2">
+            <table class="table" id="tblUser" data-datatable data-nosort="5">
                 <thead>
                     <tr>
                         <th>No.</th>
@@ -16,29 +28,40 @@
                         <th>Nama</th>
                         <th>Jabatan</th>
                         <th>Status</th>
-                        <th>Aksi</th>
+                        <th class="col-aksi">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php $i = 1;
                     foreach ($rows as $r): ?>
                         <tr>
-                            <td><?= $i++; ?></td>
-                            <td class="font-medium text-slate-700"><?= html_escape($r->nip); ?></td>
+                            <td class="text-muted-foreground"><?= $i++; ?></td>
+                            <td class="font-medium"><?= html_escape($r->nip); ?></td>
                             <td><?= html_escape($r->nama); ?></td>
-                            <td><?= html_escape(isset($r->jabatan) ? $r->jabatan : '-'); ?><?= ! empty($r->subbag) ? ' / ' . html_escape($r->subbag) : ''; ?></td>
-                            <td>
-                                <?php if ((int) $r->aktif === 0): ?>
-                                    <span class="badge bg-emerald-100 text-emerald-700">Aktif</span>
-                                <?php else: ?>
-                                    <span class="badge bg-slate-200 text-slate-600">Nonaktif</span>
-                                <?php endif; ?>
+                            <td class="text-muted-foreground">
+                                <?= html_escape(isset($r->jabatan) ? $r->jabatan : '—'); ?><?= ! empty($r->subbag) ? ' / ' . html_escape($r->subbag) : ''; ?>
                             </td>
                             <td>
-                                <div class="flex gap-1">
-                                    <a href="<?= base_url('user/edit/' . $r->id); ?>" class="btn-icon bg-sky-600 hover:bg-sky-700" title="Edit">✎</a>
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    <?php if ((int) $r->aktif === 0): ?>
+                                        <span class="badge-success">Aktif</span>
+                                    <?php else: ?>
+                                        <span class="badge-secondary">Nonaktif</span>
+                                    <?php endif; ?>
+                                    <?php if ((int) $r->operator === 1): ?>
+                                        <span class="badge-default">Operator</span>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                            <td class="col-aksi">
+                                <div class="flex justify-end gap-1.5">
+                                    <a href="<?= base_url('user/edit/' . $r->id); ?>" class="btn-icon" title="Edit">
+                                        <?= svg_icon('edit', 'h-4 w-4'); ?>
+                                    </a>
                                     <?php if ($r->nip !== 'admin'): ?>
-                                        <a href="<?= base_url('user/hapus/' . $r->id); ?>" data-confirm="Hapus user ini?" class="btn-icon bg-rose-600 hover:bg-rose-700" title="Hapus">🗑</a>
+                                        <a href="<?= base_url('user/hapus/' . $r->id); ?>" data-confirm="Hapus user ini?" class="btn-icon text-destructive hover:bg-destructive/10 hover:text-destructive" title="Hapus">
+                                            <?= svg_icon('trash', 'h-4 w-4'); ?>
+                                        </a>
                                     <?php endif; ?>
                                 </div>
                             </td>

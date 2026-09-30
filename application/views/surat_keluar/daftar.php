@@ -1,18 +1,30 @@
 <div class="card">
-    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex flex-wrap items-center gap-3">
-            <h2 class="text-base font-semibold text-slate-700">Daftar Nomor Surat</h2>
+    <div class="flex flex-col gap-4 border-b border-border px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h2 class="text-base font-semibold tracking-tight text-foreground">Daftar Nomor Surat</h2>
+            <p class="text-xs text-muted-foreground">Nomor surat keluar yang Anda ambil pada periode terpilih.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
             <?php $tahun_action = base_url('surat-keluar/daftar');
             $this->load->view('layouts/_tahun_selector'); ?>
+            <a href="<?= base_url('surat-keluar/ambil'); ?>" class="btn-primary btn-sm">
+                <?= svg_icon('plus'); ?>
+                <span>Ambil Nomor</span>
+            </a>
         </div>
-        <a href="<?= base_url('surat-keluar/ambil'); ?>" class="btn-primary whitespace-nowrap">+ Ambil Nomor</a>
     </div>
 
     <?php if (empty($rows)): ?>
-        <p class="py-10 text-center text-sm text-slate-400">Belum ada data nomor surat untuk tahun <?= (int) $tahun; ?>.</p>
+        <div class="flex flex-col items-center justify-center gap-2 px-6 py-14 text-center">
+            <span class="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <?= svg_icon('file-text', 'h-5 w-5'); ?>
+            </span>
+            <p class="text-sm font-medium text-foreground">Belum ada data</p>
+            <p class="text-sm text-muted-foreground">Tidak ada nomor surat untuk tahun <?= (int) $tahun; ?>.</p>
+        </div>
     <?php else: ?>
-        <div class="overflow-x-auto">
-            <table class="table-modern" id="tblKeluar" data-datatable data-nosort="7">
+        <div class="table-wrap p-2">
+            <table class="table" id="tblKeluar" data-datatable data-nosort="7">
                 <thead>
                     <tr>
                         <th>No.</th>
@@ -22,32 +34,36 @@
                         <th>Perihal</th>
                         <th>Tujuan</th>
                         <th>Berkas</th>
-                        <th>Aksi</th>
+                        <th class="col-aksi">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php $i = 1;
                     foreach ($rows as $r): ?>
-                        <tr class="<?= $r->file == '1' ? 'bg-rose-50/60' : ''; ?>">
-                            <td><?= $i++; ?></td>
-                            <td class="font-medium text-slate-700"><?= html_escape($r->no); ?></td>
+                        <tr>
+                            <td class="text-muted-foreground"><?= $i++; ?></td>
+                            <td class="font-medium"><?= html_escape($r->no); ?></td>
                             <td><?= html_escape($r->nama); ?></td>
-                            <td data-order="<?= html_escape($r->tanggal); ?>"><?= tanggal_indonesia($r->tanggal); ?></td>
+                            <td class="whitespace-nowrap text-muted-foreground" data-order="<?= html_escape($r->tanggal); ?>"><?= tanggal_indonesia($r->tanggal); ?></td>
                             <td><?= html_escape($r->hal); ?></td>
-                            <td><?= html_escape($r->tujuan); ?></td>
+                            <td class="text-muted-foreground"><?= html_escape($r->tujuan); ?></td>
                             <td>
                                 <?php if ($r->file == '1'): ?>
-                                    <span class="badge bg-amber-100 text-amber-700">Belum ada</span>
+                                    <span class="badge-warning">Belum ada</span>
                                 <?php elseif (empty($r->file)): ?>
-                                    <span class="badge bg-slate-100 text-slate-500">-</span>
+                                    <span class="badge-muted">&mdash;</span>
                                 <?php else: ?>
-                                    <a href="<?= base_url($r->file); ?>" target="_blank" class="badge bg-emerald-100 text-emerald-700">Lihat</a>
+                                    <a href="<?= base_url($r->file); ?>" target="_blank" rel="noopener" class="badge-success">Lihat</a>
                                 <?php endif; ?>
                             </td>
-                            <td>
-                                <div class="flex gap-1">
-                                    <a href="<?= base_url('surat-keluar/upload/' . $r->id); ?>" class="btn-icon bg-brand-600 hover:bg-brand-700" title="Upload Berkas">⬆</a>
-                                    <a href="<?= base_url('surat-keluar/edit/' . $r->id); ?>" class="btn-icon bg-sky-600 hover:bg-sky-700" title="Edit">✎</a>
+                            <td class="col-aksi">
+                                <div class="flex justify-end gap-1.5">
+                                    <a href="<?= base_url('surat-keluar/upload/' . $r->id); ?>" class="btn-icon" title="Upload Berkas">
+                                        <?= svg_icon('upload', 'h-4 w-4'); ?>
+                                    </a>
+                                    <a href="<?= base_url('surat-keluar/edit/' . $r->id); ?>" class="btn-icon" title="Edit">
+                                        <?= svg_icon('edit', 'h-4 w-4'); ?>
+                                    </a>
                                 </div>
                             </td>
                         </tr>
