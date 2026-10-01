@@ -55,6 +55,16 @@ class M_nosur extends MY_Model
     }
 
     /**
+     * Jumlah seluruh nomor surat keluar pada tahun tertentu.
+     */
+    public function count_tahun($tahun)
+    {
+        $this->db->from('nosur');
+        $this->db->where('YEAR(tanggal)', $tahun);
+        return $this->db->count_all_results();
+    }
+
+    /**
      * Jumlah surat yang belum di-upload berkasnya.
      */
     public function count_belum_upload($nip, $tahun)

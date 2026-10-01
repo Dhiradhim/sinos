@@ -23,6 +23,16 @@ class M_surmas extends MY_Model
     }
 
     /**
+     * Jumlah seluruh surat masuk pada tahun tertentu.
+     */
+    public function count_tahun($tahun)
+    {
+        $this->db->from('surmas');
+        $this->db->where('YEAR(tgl_surat)', $tahun);
+        return $this->db->count_all_results();
+    }
+
+    /**
      * Set status surat (mis. 'diarsipkan').
      */
     public function set_status($id, $status)

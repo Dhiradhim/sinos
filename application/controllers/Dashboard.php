@@ -18,8 +18,8 @@ class Dashboard extends MY_Controller
         $tahun = date('Y');
 
         $data = array(
-            'total_surat_keluar' => $this->nilai_total('nosur'),
-            'total_surat_masuk'  => $this->nilai_total('surmas'),
+            'total_surat_keluar' => $this->M_nosur->count_tahun($tahun),
+            'total_surat_masuk'  => $this->M_surmas->count_tahun($tahun),
             'total_user'         => $this->M_user->count_all(),
             'belum_upload'       => $this->M_nosur->count_belum_upload($nip, $tahun),
             'surat_keluar_saya'  => count($this->M_nosur->daftar_user($nip, $tahun)),
@@ -32,13 +32,5 @@ class Dashboard extends MY_Controller
             'subtitle' => 'Ringkasan aktivitas persuratan tahun ' . $tahun,
             'active'   => 'dashboard',
         ));
-    }
-
-    /**
-     * Hitung total baris sebuah tabel dengan aman.
-     */
-    private function nilai_total($tabel)
-    {
-        return $this->db->count_all($tabel);
     }
 }
