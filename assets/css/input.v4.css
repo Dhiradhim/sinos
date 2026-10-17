@@ -259,6 +259,9 @@
     border-radius: var(--radius-control);
     background-color: var(--color-surface);
     padding: 0.625rem 0.75rem;
+    /* Line-height eksplisit: tanpa ini tinggi isi bergantung pada font dan
+       bisa melebihi kotak kontrol sehingga huruf terpotong di bagian bawah. */
+    line-height: 1.25rem;
     color: var(--color-ink);
     transition-property: border-color, box-shadow;
     transition-duration: 150ms;
@@ -282,9 +285,24 @@
     border-color: var(--color-brand-900);
   }
 
+  /* Tinggi kontrol 38px = 1px border x2 + 8px padding x2 + 20px line-height.
+     `height` tetap dipakai (bukan min-height) agar semua kontrol sejajar,
+     dan padding-block diturunkan dari 10px ke 8px supaya isi tidak terpotong. */
   .input,
   .select {
     height: 38px;
+    padding-block: 0.5rem;
+  }
+
+  /* Input file tidak boleh memakai tinggi tetap: tombol native
+     ::file-selector-button punya padding sendiri yang lebih tinggi
+     daripada area isi, sehingga label "Choose File" ikut terpotong. */
+  .input[type="file"] {
+    height: auto;
+    min-height: 38px;
+    padding-block: 0.25rem;
+    line-height: 1.5;
+    cursor: pointer;
   }
 
   .textarea {
@@ -294,6 +312,7 @@
     line-height: 1.5;
   }
 
+  :where(.input, .textarea)::file-selector-button,
   :where(.input, .textarea)::-webkit-file-upload-button {
     margin-right: 0.75rem;
     border: 0;
@@ -301,8 +320,10 @@
     background-color: var(--color-brand-900);
     padding: 0.375rem 0.75rem;
     font-size: 0.75rem;
+    line-height: 1rem;
     font-weight: 600;
     color: #ffffff;
+    cursor: pointer;
   }
 
   .select {
@@ -330,7 +351,10 @@
     border: 1px solid var(--color-line);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-card);
-    overflow: hidden;
+    /* JANGAN `overflow: hidden`. Preline menaruh panel advanced-select dan
+       dropdown di dalam alur kartu; clipping memotong panel tersebut
+       (mis. dropdown "Kode Surat" di form sisip nomor). Sudut tetap rapi
+       lewat aturan radius pada anak pertama/terakhir di bawah. */
   }
 
   .card-header {
@@ -362,6 +386,18 @@
     padding: 0.875rem 1.5rem;
     background-color: var(--color-surface-muted);
     border-top: 1px solid var(--color-line);
+  }
+
+  /* Pengganti `overflow: hidden` pada .card: anak pertama & terakhir ikut
+     melengkung agar sudut header/footer/tabel tidak menonjol keluar kartu. */
+  .card > :first-child {
+    border-top-left-radius: calc(var(--radius-card) - 1px);
+    border-top-right-radius: calc(var(--radius-card) - 1px);
+  }
+
+  .card > :last-child {
+    border-bottom-left-radius: calc(var(--radius-card) - 1px);
+    border-bottom-right-radius: calc(var(--radius-card) - 1px);
   }
 
   /* Section heading inside a page (Preline style) */
@@ -486,6 +522,7 @@
     @apply inline-flex;
   }
 
+  /* Scroll horizontal untuk tabel lebar di layar kecil. */
   .table-wrap {
     @apply w-full overflow-x-auto;
   }

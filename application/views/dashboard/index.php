@@ -68,7 +68,7 @@ $stats = array(
     </div>
 
     <!-- Tabel terbaru -->
-    <div class="card overflow-hidden">
+    <div class="card">
         <div class="card-header">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div class="min-w-0">

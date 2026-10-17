@@ -26,30 +26,57 @@ body.ui-v3 {
 }
 
 /* ------------------------------- Container -------------------------------- */
+/* Tabel sengaja "bleed" ke tepi kartu, jadi padding horizontal harus
+   disediakan di sini — kalau tidak, toolbar dan paging menempel ke border. */
 .dt-container {
     width: 100%;
     font-size: 0.875rem;
     color: var(--color-ink-muted);
 }
 
-.dt-container .dt-layout-row {
+/* `div.dt-container div.dt-layout-row` (0,2,2) — sama seperti aturan DataTables
+   sendiri, dan dimuat belakangan, sehingga margin bawaan benar-benar
+   di-reset. Tanpa prefix `div.` margin default (~1em per sisi) tetap
+   berlaku dan menumpuk di atas padding kita, membuat jarak jadi terlalu
+   lebar. */
+div.dt-container div.dt-layout-row {
     align-items: center;
     gap: 1rem;
-    margin: 0 0 0.875rem;
+    margin: 0 !important;
+    padding: 0 1.5rem;
 }
 
-.dt-container .dt-layout-row:last-child {
-    margin: 0.875rem 0 0;
+/* Baris pertama (length + search) — rapat ke header kartu. */
+div.dt-container div.dt-layout-row:first-child {
+    padding-top: 0.75rem;
+    padding-bottom: 0.5rem;
+}
+
+/* Baris terakhir (info + paging) — rapat ke tepi bawah kartu. */
+div.dt-container div.dt-layout-row:last-child {
+    padding-top: 0.5rem;
+    padding-bottom: 0.75rem;
 }
 
 /* --------------------------- Length + search ------------------------------ */
-.dt-container .dt-length,
-.dt-container .dt-search {
+/* `div.dt-container div.dt-length` (0,2,2) juga didefinisikan DataTables 2,
+   jadi prefix `div.dt-container div.*` dipakai agar layout kita menang. */
+div.dt-container div.dt-length,
+div.dt-container div.dt-search {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     color: var(--color-ink-subtle);
     font-size: 0.8125rem;
+}
+
+/* Label "Tampilkan … data" jangan dipecah ke dua baris. */
+div.dt-container div.dt-length label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    white-space: nowrap;
 }
 
 .dt-container .dt-length select,
@@ -80,7 +107,11 @@ body.ui-v3 {
 
 /* --------------------------------- Table ---------------------------------- */
 /* DataTables memakai `table.dataTable` (0,1,1) — selector ini menyamai
-   specificity-nya dan dimuat belakangan, jadi tidak perlu `!important`. */
+   specificity-nya dan dimuat belakangan, jadi tidak perlu `!important`.
+
+   Tabel dibuat "bleed" ke tepi kartu: border horizontal atas/bawah penuh,
+   tapi sel pertama/terakhir diberi padding ekstra agar isi tidak menempel
+   ke border kartu. */
 table.dataTable {
     width: 100%;
     margin: 0;
@@ -98,12 +129,25 @@ table.dataTable thead th {
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
+    vertical-align: middle;
 }
 
 table.dataTable tbody td {
     border-bottom: 1px solid var(--color-line);
     padding: 0.75rem 1rem;
     color: var(--color-ink-muted);
+    vertical-align: middle;
+}
+
+/* Sel tepi: samakan dengan padding horizontal toolbar/paging (1.5rem). */
+table.dataTable thead th:first-child,
+table.dataTable tbody td:first-child {
+    padding-left: 1.5rem;
+}
+
+table.dataTable thead th:last-child,
+table.dataTable tbody td:last-child {
+    padding-right: 1.5rem;
 }
 
 table.dataTable tbody tr:hover > * {
@@ -115,41 +159,113 @@ table.dataTable tbody tr:last-child td {
 }
 
 /* --------------------------------- Info ----------------------------------- */
-.dt-container .dt-info {
+div.dt-container div.dt-info {
     color: var(--color-ink-subtle);
     font-size: 0.8125rem;
+    line-height: 1.25rem;
+    padding-block: 0.25rem;
+}
+
+/* Baris bawah: info di kiri, paging di kanan. `flex-wrap` wajib agar di
+   layar sempit paging turun ke baris berikutnya, bukan meluber. */
+div.dt-container div.dt-layout-row:last-child {
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+}
+
+/* Di layar sempit, paging rata kiri agar tidak menggantung di tepi. */
+@media (max-width: 639px) {
+    div.dt-container div.dt-paging {
+        justify-content: flex-start;
+    }
 }
 
 /* -------------------------------- Paging ---------------------------------- */
-/* `div.dt-container .dt-paging .dt-paging-button` (0,3,1) lebih spesifik
-   daripada selector di bawah, jadi `!important` dipertahankan di sini. */
+/* PENTING: DataTables 2 punya aturan sendiri
+     div.dt-container div.dt-paging  (0,2,2)
+   yang mengeset `display`, `flex-wrap`, dan `justify-content`. Selector di
+   bawah HARUS menyamai atau melebihi specificity itu, kalau tidak `gap`
+   tidak akan pernah berlaku sementara `margin: 0` pada tombol tetap menang
+   — hasilnya tombol justru saling menempel. Karena itu dipakai prefix
+   `div.dt-container div.dt-paging`. */
+div.dt-container div.dt-paging {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.375rem;
+    margin: 0;
+    padding: 0;
+}
+
 .dt-container .dt-paging .dt-paging-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.25rem;
+    height: 2.25rem;
     border: 1px solid var(--color-line) !important;
     border-radius: var(--radius-control) !important;
     background: var(--color-surface) !important;
-    padding: 0.25rem 0.625rem !important;
-    margin: 0 0.125rem;
+    padding: 0 0.5rem !important;
+    margin: 0 !important;
     color: var(--color-ink-muted) !important;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
     box-shadow: var(--shadow-card);
+    transition: background-color 150ms, border-color 150ms, color 150ms;
 }
 
-.dt-container .dt-paging .dt-paging-button:hover:not(.disabled) {
+.dt-container .dt-paging .dt-paging-button:hover:not(.disabled):not(.current) {
     background: var(--color-surface-sunken) !important;
+    border-color: var(--color-line-strong) !important;
     color: var(--color-ink) !important;
 }
 
-.dt-container .dt-paging .dt-paging-button.current,
-.dt-container .dt-paging .dt-paging-button.current:hover {
+/* Halaman aktif: isi penuh navy + teks putih tebal + ring luar, sehingga
+   terbaca jelas walau bersebelahan dengan angka lain.
+
+   Selector sengaja diberi prefix `div.dt-container` agar specificity-nya
+   (0,5,1) mengalahkan aturan DataTables 2 sendiri
+   `div.dt-container .dt-paging .dt-paging-button.current` (0,4,1) — bukan
+   hanya mengandalkan urutan muat. `color` juga dipaksa pada anak teks
+   karena DataTables kadang mewariskan warna dari `.dt-paging`. */
+div.dt-container .dt-paging .dt-paging-button.current,
+div.dt-container .dt-paging .dt-paging-button.current:hover,
+div.dt-container .dt-paging .dt-paging-button.current:focus,
+div.dt-container .dt-paging .dt-paging-button.current:active {
     border-color: var(--color-brand-900) !important;
     background: var(--color-brand-900) !important;
-    color: #fff !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    opacity: 1 !important;
+    box-shadow:
+        0 0 0 2px var(--color-surface),
+        0 0 0 3px color-mix(in oklab, var(--color-brand-900) 45%, transparent);
+}
+
+/* Jaga-jaga: pastikan digit di dalam tombol aktif benar-benar putih. */
+div.dt-container .dt-paging .dt-paging-button.current * {
+    color: #ffffff !important;
 }
 
 .dt-container .dt-paging .dt-paging-button.disabled,
 .dt-container .dt-paging .dt-paging-button.disabled:hover {
     background: var(--color-surface) !important;
+    border-color: var(--color-line) !important;
     color: var(--color-line-strong) !important;
+    box-shadow: none;
     opacity: 1;
+    cursor: not-allowed;
+}
+
+/* Tombol "…" (ellipsis) tidak perlu kotak penuh. */
+.dt-container .dt-paging .dt-paging-button.ellipsis {
+    min-width: 1.5rem;
+    border-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none;
 }
 
 /* ------------------------------ Ordering ---------------------------------- */

@@ -1,4 +1,4 @@
-<div class="card overflow-hidden">
+<div class="card">
     <div class="card-header">
         <h2 class="card-title">Daftar Disposisi Surat</h2>
         <p class="card-description">
@@ -95,7 +95,10 @@
                                     ?>
 
                                     <?php if (! empty($aksi_lain)): ?>
-                                        <div class="hs-dropdown relative inline-flex [--placement:bottom-right]">
+                                        <?php /* `strategy: fixed` membuat panel dirender relatif viewport,
+                                                 sehingga tidak terpotong `overflow-x: auto` pada .table-wrap. */ ?>
+                                        <div class="hs-dropdown relative inline-flex [--placement:bottom-right]"
+                                            data-hs-dropdown-options='{"strategy":"fixed"}'>
                                             <button type="button" class="hs-dropdown-toggle btn-icon" aria-haspopup="menu" aria-expanded="false" title="Aksi lainnya">
                                                 <?= svg_icon('ellipsis', 'h-4 w-4'); ?>
                                             </button>
