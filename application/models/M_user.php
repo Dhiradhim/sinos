@@ -2,27 +2,69 @@
 defined('BASEPATH') or exit('No direct script access allowed');
 
 /**
- * M_user - model tabel `user`
+ * M_user - akses BACA-SAJAR ke data pegawai.
+ *
+ * Sumber data: schema `pegawai_db` milik aplikasi `pegawai/`.
+ * SINOS TIDAK memiliki tabel pegawai dan TIDAK boleh menulis apa pun ke sana.
+ *
+ * Batas yang ditegakkan GRANT MySQL (bukan sekadar kesepakatan):
+ *   - hanya kolom id, nip, nama, aktif, is_operator, id_jabatan yang terbaca;
+ *   - kolom `pass` TIDAK dapat dibaca maupun ditulis.
+ * Karena itu setiap query di sini WAJIB menyebut kolom secara eksplisit.
+ * `SELECT *` akan gagal dengan "SELECT command denied".
+ *
+ * Untuk perubahan data pegawai (termasuk ganti password), arahkan pengguna
+ * ke aplikasi `pegawai/` (lihat config `pegawai_app_url`).
+ *
+ * Makna kolom `aktif` pada master: 1 = AKTIF (standar).
  */
 class M_user extends MY_Model
 {
+    /** Nama tabel terkualifikasi (schema pegawai_db). */
+    const T_PEGAWAI = 'pegawai_db.pegawai';
+
+    /** Nama tabel role terkualifikasi. */
+    const T_ROLE = 'pegawai_db.pegawai_role';
+
+    /** Nama tabel jabatan terkualifikasi. */
+    const T_JABATAN = 'pegawai_db.ref_jabatan';
+
+    /**
+     * Kolom identitas yang boleh dibaca SINOS.
+     * Harus sama dengan daftar pada GRANT SELECT.
+     */
+    const KOLOM = 'p.id, p.nip, p.nama, p.aktif, p.is_operator, p.id_jabatan';
+
     public function __construct()
     {
         parent::__construct();
-        $this->table = 'user';
+
+        // `table` dipakai oleh MY_Model::get()/insert()/update(). SINOS tidak
+        // pernah memanggil operasi tulis, tetapi nilai ini harus benar agar
+        // tidak ada query yang jatuh ke schema lokal.
+        $this->table = self::T_PEGAWAI;
         $this->primary_key = 'id';
     }
 
     /**
-     * Ambil user berdasarkan NIP/username.
+     * Ambil pegawai berdasarkan NIP/username.
+     *
+     * @return object|null
      */
     public function get_by_nip($nip)
     {
-        return $this->db->get_where('user', array('nip' => $nip))->row();
+        return $this->db
+            ->select('p.id, p.nip, p.nama, p.aktif, p.is_operator, p.id_jabatan')
+            ->from(self::T_PEGAWAI . ' p')
+            ->where('p.nip', $nip)
+            ->get()
+            ->row();
     }
 
     /**
-     * Ambil nama user berdasarkan NIP.
+     * Ambil nama pegawai berdasarkan NIP.
+     *
+     * @return string|null
      */
     public function get_nama($nip)
     {
@@ -31,16 +73,26 @@ class M_user extends MY_Model
     }
 
     /**
-     * Daftar user beserta info jabatan.
+     * Daftar kode role pegawai.
+     *
+     * Dipertahankan karena dipakai untuk kebutuhan internal (mis. audit),
+     * meskipun halaman daftar pegawai sudah dipindah ke aplikasi Pegawai.
+     *
+     * @return array
      */
-    public function daftar()
+    public function roles_of($pegawai_id)
     {
-        $this->db->select('u.id, u.nip, u.nama, u.aktif, u.operator, j.subbag, j.jabatan');
-        $this->db->from('user u');
-        $this->db->join('jabatan j', 'u.id_jabatan = j.id', 'left');
-        $this->db->order_by('u.aktif', 'ASC');
-        $this->db->order_by('j.id', 'ASC');
-        return $this->db->get()->result();
+        $rows = $this->db
+            ->select('role_kode')
+            ->where('pegawai_id', $pegawai_id)
+            ->get(self::T_ROLE)
+            ->result();
+
+        $out = array();
+        foreach ($rows as $r) {
+            $out[] = $r->role_kode;
+        }
+        return $out;
     }
 
     /**
@@ -51,38 +103,44 @@ class M_user extends MY_Model
         if (empty($nip)) {
             return FALSE;
         }
-        $this->db->select('operator');
-        $this->db->where('nip', $nip);
-        $row = $this->db->get('user')->row();
-        return ($row && (int) $row->operator === 1);
+
+        $row = $this->db
+            ->select('is_operator')
+            ->where('nip', $nip)
+            ->get(self::T_PEGAWAI)
+            ->row();
+
+        return ($row && (int) $row->is_operator === 1);
     }
 
     /**
-     * User yang berpotensi mengambil nomor surat (aktif = 0).
+     * Pegawai yang berpotensi mengambil nomor surat.
+     *
+     * @return array
      */
     public function pengambil_nomor()
     {
-        $this->db->select('nip, nama');
-        $this->db->where('aktif', 0);
-        $this->db->order_by('id_jabatan', 'ASC');
-        return $this->db->get('user')->result();
+        return $this->db
+            ->select('nip, nama')
+            ->where('aktif', 1)
+            ->order_by('id_jabatan', 'ASC')
+            ->get(self::T_PEGAWAI)
+            ->result();
     }
 
     /**
-     * Penerima disposisi berupa daftar user AKTIF, dengan label "Jabatan (Nama)".
-     * Hanya user dengan aktif = 1 yang ditampilkan.
+     * Penerima disposisi berupa daftar pegawai AKTIF, label "Jabatan (Nama)".
      *
      * @return array of object {id, nip, nama, jabatan, label}
      */
     public function penerima_aktif()
     {
-        $this->db->select('u.id, u.nip, u.nama, j.jabatan, j.subbag');
-        $this->db->from('user u');
-        $this->db->join('jabatan j', 'u.id_jabatan = j.id', 'left');
-        // Pada aplikasi ini, user AKTIF ditandai dengan kolom aktif = 0.
-        $this->db->where('u.aktif', 0);
+        $this->db->select('p.id, p.nip, p.nama, j.jabatan, j.subbag');
+        $this->db->from(self::T_PEGAWAI . ' p');
+        $this->db->join(self::T_JABATAN . ' j', 'p.id_jabatan = j.id', 'left');
+        $this->db->where('p.aktif', 1);
         $this->db->order_by('j.id', 'ASC');
-        $this->db->order_by('u.nama', 'ASC');
+        $this->db->order_by('p.nama', 'ASC');
         $rows = $this->db->get()->result();
 
         foreach ($rows as $r) {
@@ -94,11 +152,10 @@ class M_user extends MY_Model
     }
 
     /**
-     * Penerima disposisi, dikelompokkan berdasarkan kategori jabatan.
-     * Kategori: Ketua, Wakil Ketua, Hakim, Para Kepala Sub Bagian,
-     *           Para Panitera Muda, dan Arsip (statis).
+     * Penerima disposisi dikelompokkan berdasarkan kategori jabatan.
+     * Kunci array adalah nama kategori, nilainya daftar objek pegawai.
      *
-     * @return array  ['Ketua' => [obj,...], 'Wakil Ketua' => [...], ...]
+     * @return array
      */
     public function penerima_disposisi()
     {
@@ -123,12 +180,12 @@ class M_user extends MY_Model
             'Para Panitera Muda',
         );
 
-        $this->db->select('u.nip, u.nama, u.id_jabatan, j.jabatan, j.subbag');
-        $this->db->from('user u');
-        $this->db->join('jabatan j', 'u.id_jabatan = j.id', 'left');
-        $this->db->where_in('u.id_jabatan', array_keys($map));
-        $this->db->order_by('u.id_jabatan', 'ASC');
-        $this->db->order_by('u.nama', 'ASC');
+        $this->db->select('p.nip, p.nama, p.id_jabatan, j.jabatan, j.subbag');
+        $this->db->from(self::T_PEGAWAI . ' p');
+        $this->db->join(self::T_JABATAN . ' j', 'p.id_jabatan = j.id', 'left');
+        $this->db->where_in('p.id_jabatan', array_keys($map));
+        $this->db->order_by('p.id_jabatan', 'ASC');
+        $this->db->order_by('p.nama', 'ASC');
         $rows = $this->db->get()->result();
 
         $result = array();

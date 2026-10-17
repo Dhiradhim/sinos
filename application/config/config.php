@@ -205,3 +205,13 @@ $config['rewrite_short_tags'] = FALSE;
 |--------------------------------------------------------------------------
 */
 $config['proxy_ips'] = '';
+
+/*
+|--------------------------------------------------------------------------
+| Aplikasi Pegawai (master data pegawai terpusat)
+|--------------------------------------------------------------------------
+| URL aplikasi `pegawai/` yang menjadi pemilik data pegawai. Dipakai untuk
+| menautkan admin dari SINOS ke pengelolaan pegawai.
+| Lihat plans/sistem-pegawai.md.
+*/
+$config['pegawai_app_url'] = 'http://localhost/pegawai/';

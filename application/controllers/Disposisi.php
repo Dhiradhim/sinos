@@ -30,8 +30,17 @@ class Disposisi extends MY_Controller
 
         // Daftar NIP user yang bertag operator, untuk menentukan apakah posisi
         // disposisi surat saat ini berada pada seorang operator.
+        //
+        // Sumber: schema `pegawai_db` (baca-saja). Kolom `operator` pada tabel
+        // legacy `user` sudah digantikan `is_operator` pada master pegawai.
         $operator_nips = array();
-        foreach ($this->db->select('nip')->where('operator', 1)->get('user')->result() as $ou) {
+        $rows_op = $this->db
+            ->select('nip')
+            ->where('is_operator', 1)
+            ->get('pegawai_db.pegawai')
+            ->result();
+
+        foreach ($rows_op as $ou) {
             $operator_nips[(string) $ou->nip] = TRUE;
         }
 

@@ -19,11 +19,11 @@ class M_nosur extends MY_Model
      */
     public function daftar_user($nip, $tahun)
     {
-        $this->db->select('nosur.*, user.nama');
+        $this->db->select('nosur.*, u.nama');
         $this->db->from('nosur');
-        $this->db->join('user', 'nosur.nip = user.nip', 'inner');
+        $this->db->join('pegawai_db.pegawai u', 'nosur.nip = u.nip', 'inner');
         $this->db->where('YEAR(nosur.tanggal)', $tahun);
-        $this->db->where('user.nip', $nip);
+        $this->db->where('u.nip', $nip);
         $this->db->order_by('nosur.id', 'DESC');
         return $this->db->get()->result();
     }
@@ -33,9 +33,9 @@ class M_nosur extends MY_Model
      */
     public function daftar_tahun($tahun)
     {
-        $this->db->select('nosur.*, user.nama');
+        $this->db->select('nosur.*, u.nama');
         $this->db->from('nosur');
-        $this->db->join('user', 'nosur.nip = user.nip', 'inner');
+        $this->db->join('pegawai_db.pegawai u', 'nosur.nip = u.nip', 'inner');
         $this->db->where('YEAR(nosur.tanggal)', $tahun);
         $this->db->order_by('nosur.id', 'DESC');
         return $this->db->get()->result();

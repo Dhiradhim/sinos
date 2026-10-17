@@ -40,10 +40,10 @@ $subtitle = isset($subtitle) ? $subtitle : '';
                 <p class="truncate text-xs text-muted-foreground"><?= html_escape($user['nip']); ?></p>
             </div>
             <div class="dropdown-separator"></div>
-            <a href="<?= base_url('ganti-password'); ?>" class="dropdown-item">
-                <?= svg_icon('key'); ?>
-                <span>Ganti Password</span>
-            </a>
+            <?php
+            // Ganti Password sengaja TIDAK tersedia di SINOS.
+            // Fitur tersebut akan disediakan terpusat oleh SSO Gateway.
+            ?>
             <a href="<?= base_url('assets/klasifikasi.pdf'); ?>" target="_blank" rel="noopener" class="dropdown-item">
                 <?= svg_icon('book'); ?>
                 <span>Panduan Klasifikasi</span>

@@ -30,17 +30,11 @@ $nav_on   = 'nav-item nav-item-active';
             <span>Beranda</span>
         </a>
 
-        <?php if ($is_admin): ?>
-            <p class="nav-group-label">Manajemen User</p>
-            <a href="<?= base_url('user'); ?>" class="<?= $active === 'user' ? $nav_on : $nav_item; ?>">
-                <?= svg_icon('users'); ?>
-                <span>Daftar User</span>
-            </a>
-            <a href="<?= base_url('user/tambah'); ?>" class="<?= $nav_item; ?>">
-                <?= svg_icon('user-plus'); ?>
-                <span>Tambah User</span>
-            </a>
-        <?php endif; ?>
+        <?php
+        // Menu Pegawai sengaja TIDAK ditampilkan di SINOS.
+        // Pengelolaan pegawai adalah wewenang aplikasi `pegawai/` (pemilik
+        // schema pegawai_db). Pengguna diarahkan ke sana lewat launcher SSO.
+        ?>
 
         <p class="nav-group-label">Surat Masuk</p>
         <?php if (! empty($user['is_operator'])): ?>

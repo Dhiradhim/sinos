@@ -18,15 +18,26 @@ class MY_Controller extends CI_Controller
 
         // Proteksi: wajib login
         if (! $this->session->userdata('nip')) {
-            redirect('login');
+            $this->redirect_to_login();
             exit;
         }
 
+        // Pastikan sesi gateway SSO masih aktif (single logout). Bila pengguna
+        // sudah logout dari gateway, sesi lokal SINOS juga harus berakhir.
+        $this->enforce_sso_session();
+
         $this->load->model('M_user');
         $nip  = $this->session->userdata('nip');
-        $nama = $this->M_user->get_nama($nip);
-        $is_admin = ($nip === 'admin');
-        $is_operator = $is_admin || $this->M_user->is_operator($nip);
+        $nama = $this->session->userdata('nama');
+        if (empty($nama)) {
+            $nama = $this->M_user->get_nama($nip);
+        }
+
+        // Peran: kombinasi sumber lokal (admin/operator) dan roles dari SSO.
+        $sso_roles   = $this->session->userdata('sso_roles');
+        $sso_roles   = is_array($sso_roles) ? $sso_roles : array();
+        $is_admin    = ($nip === 'admin') || in_array('admin', $sso_roles, TRUE);
+        $is_operator = $is_admin || in_array('operator', $sso_roles, TRUE) || $this->M_user->is_operator($nip);
 
         $this->user = array(
             'nip'         => $nip,
@@ -34,6 +45,46 @@ class MY_Controller extends CI_Controller
             'is_admin'    => $is_admin,
             'is_operator' => $is_operator,
         );
+    }
+
+    /**
+     * Validasi sesi SSO gateway. Bila grup sesi sudah tidak aktif (logout dari
+     * gateway / single logout), hancurkan sesi lokal lalu arahkan ke login.
+     * Login lokal murni (tanpa sso_session_group) dilewati.
+     */
+    protected function enforce_sso_session()
+    {
+        $group = $this->session->userdata('sso_session_group');
+        if (empty($group)) {
+            return;
+        }
+
+        $this->config->load('sso', TRUE);
+        if (! $this->config->item('sso_enabled', 'sso')) {
+            return;
+        }
+
+        $this->load->library('sso_client');
+        if (! $this->sso_client->session_alive($group)) {
+            $this->session->sess_destroy();
+            redirect('sso/login?redirect=' . urlencode(current_url()));
+            exit;
+        }
+    }
+
+    /**
+     * Arahkan ke SSO bila aktif, jika tidak ke login lokal.
+     */
+    protected function redirect_to_login()
+    {
+        $this->config->load('sso', TRUE);
+        $sso_enabled = $this->config->item('sso_enabled', 'sso');
+
+        if ($sso_enabled) {
+            redirect('sso/login?redirect=' . urlencode(current_url()));
+            return;
+        }
+        redirect('login');
     }
 
     /**

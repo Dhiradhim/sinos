@@ -47,17 +47,20 @@ class M_disposisi extends MY_Model
     }
 
     /**
-     * Cek apakah NIP tergolong operator surat (kolom `operator` = 1).
+     * Cek apakah NIP tergolong operator surat.
+     *
+     * Sumber: schema `pegawai_db` (baca-saja). Kolom `operator` pada tabel
+     * legacy `user` sudah digantikan `is_operator` pada master pegawai.
      */
     public function is_operator_nip($nip)
     {
         if (empty($nip)) {
             return FALSE;
         }
-        $this->db->select('operator');
+        $this->db->select('is_operator');
         $this->db->where('nip', $nip);
-        $row = $this->db->get('user')->row();
-        return ($row && (int) $row->operator === 1);
+        $row = $this->db->get('pegawai_db.pegawai')->row();
+        return ($row && (int) $row->is_operator === 1);
     }
 
     /**
@@ -95,7 +98,7 @@ class M_disposisi extends MY_Model
         $this->db->select('d.*, s.no_surat, s.no_agenda, s.perihal, s.pengirim, s.tgl_surat, s.tgl_diterima, s.pengolah, s.file, s.status AS status_surat, u.nama AS pengirim_nama');
         $this->db->from('disposisi d');
         $this->db->join('surmas s', 'd.surmas_id = s.id', 'inner');
-        $this->db->join('user u', 'd.dari = u.nip', 'left');
+        $this->db->join('pegawai_db.pegawai u', 'd.dari = u.nip', 'left');
         $this->db->where('YEAR(s.tgl_surat)', $tahun);
         $this->db->order_by('d.tanggal', 'DESC');
         return $this->db->get()->result();
@@ -149,10 +152,6 @@ class M_disposisi extends MY_Model
      */
     public function daftar_atas_nama($nip)
     {
-        $this->db->select('d.*, s.no_surat, s.no_agenda, s.perihal, s.pengirim, s.tgl_surat, s.tgl_diterima, s.pengolah, s.file, s.status AS status_surat, u.nama AS pengirim_nama');
-        $this->db->from('disposisi d');
-        $this->db->join('surmas s', 'd.surmas_id = s.id', 'inner');
-        $this->db->join('user u', 'd.dari = u.nip', 'left');
         $this->db->where('d.nip_tujuan', $nip);
         $this->db->where('d.dikembalikan', 0);
         // Sembunyikan surat yang sudah diarsipkan
@@ -177,7 +176,7 @@ class M_disposisi extends MY_Model
         $this->db->join('disposisi d', 'd.id = (
             SELECT MAX(d2.id) FROM disposisi d2 WHERE d2.surmas_id = s.id
         )', 'inner', FALSE);
-        $this->db->join('user u', 'd.dari = u.nip', 'left');
+        $this->db->join('pegawai_db.pegawai u', 'd.dari = u.nip', 'left');
         $this->db->where('s.status', 'didiposisi');
         $this->db->order_by('d.tanggal', 'DESC');
         return $this->db->get()->result();

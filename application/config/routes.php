@@ -14,7 +14,11 @@ $route['translate_uri_dashes'] = FALSE;
 // Auth
 $route['login'] = 'auth/login';
 $route['logout'] = 'auth/logout';
-$route['ganti-password'] = 'auth/changepassword';
+// Ganti password tidak tersedia di SINOS; akan dipusatkan di SSO Gateway.
+
+// SSO (klien)
+$route['sso/login'] = 'sso/login';
+$route['sso/callback'] = 'sso/callback';
 
 // Surat Masuk
 $route['surat-masuk'] = 'surat_masuk/index';
@@ -49,13 +53,9 @@ $route['surat-keluar/update/(:num)'] = 'surat_keluar/update/$1';
 $route['surat-keluar/upload/(:num)'] = 'surat_keluar/upload/$1';
 $route['surat-keluar/upload-simpan'] = 'surat_keluar/upload_simpan';
 
-// User (admin)
-$route['user'] = 'user/index';
-$route['user/tambah'] = 'user/tambah';
-$route['user/simpan'] = 'user/simpan';
-$route['user/edit/(:num)'] = 'user/edit/$1';
-$route['user/update/(:num)'] = 'user/update/$1';
-$route['user/hapus/(:num)'] = 'user/hapus/$1';
+// Catatan: rute `/user` (kelola pegawai) sudah DIHAPUS.
+// Pengelolaan pegawai hanya tersedia di aplikasi `pegawai/` (pemilik
+// schema pegawai_db), sehingga tidak ada jalur masuk dari SINOS.
 
 // Laporan
 $route['laporan'] = 'laporan/index';

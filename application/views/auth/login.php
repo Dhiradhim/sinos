@@ -55,6 +55,19 @@
                     <span>Masuk</span>
                 </button>
             </form>
+
+            <?php
+            // Tautan cadangan: login lokal saat gateway SSO bermasalah.
+            $CI = &get_instance();
+            $CI->config->load('sso', TRUE);
+            if ($CI->config->item('sso_enabled', 'sso')):
+            ?>
+                <div class="mt-4 border-t border-border pt-4 text-center">
+                    <a href="<?= base_url('login?local=1'); ?>" class="text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+                        Login lokal (cadangan)
+                    </a>
+                </div>
+            <?php endif; ?>
         </div>
 
         <p class="mt-6 text-center text-xs text-muted-foreground">

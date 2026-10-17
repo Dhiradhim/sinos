@@ -1,5 +1,5 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+defined('BASEPATH') or exit('No direct script access allowed');
 
 /**
  * Auth - login, logout, ganti password.
@@ -14,6 +14,12 @@ class Auth extends CI_Controller
 
     /**
      * Halaman login + proses autentikasi.
+     *
+     * Bila SSO aktif, arahkan ke gateway terlebih dahulu.
+     *
+     * Login lokal TIDAK lagi memverifikasi password di SINOS: kolom `pass`
+     * berada di schema `pegawai_db` dan tidak termasuk grant SELECT untuk
+     * SINOS. Verifikasi kredensial adalah tanggung jawab gateway SSO.
      */
     public function login()
     {
@@ -21,92 +27,69 @@ class Auth extends CI_Controller
             redirect('dashboard');
         }
 
+        $this->config->load('sso', TRUE);
+        $sso_enabled = $this->config->item('sso_enabled', 'sso');
+        $sso_force   = $this->config->item('sso_force', 'sso');
+
+        // Penanda bahwa baru saja gagal dari alur SSO. Dipakai untuk memutus
+        // redirect loop: jangan lempar kembali ke /sso/login, tampilkan form
+        // login lokal sebagai fallback.
+        $sso_failed = (bool) $this->session->flashdata('sso_failed');
+
+        // Arahkan ke SSO kecuali pengguna memilih login lokal (fallback)
+        // atau SSO baru saja gagal.
+        if ($sso_enabled && ! $this->input->get('local') && ! $sso_failed) {
+            redirect('sso/login');
+            return;
+        }
+
+        // sso_force: login lokal dimatikan sepenuhnya. Namun bila SSO gagal,
+        // tetap tampilkan form lokal agar tidak terjadi loop tak berujung.
+        if ($sso_force && ! $this->input->get('local') && ! $sso_failed) {
+            redirect('sso/login');
+            return;
+        }
+
         $data = array('title' => 'Login');
 
         if ($this->input->post('login')) {
-            $nip  = trim($this->input->post('nip'));
-            $pass = $this->input->post('pass');
-
-            if ($nip === '' || $pass === '') {
-                $data['error'] = 'Username dan password wajib diisi.';
-            } else {
-                $user = $this->M_user->get_by_nip($nip);
-                // Verifikasi password modern (bcrypt). Mendukung juga hash md5 lama (32 char).
-                if ($user && $this->verify_password($pass, $user->pass)) {
-                    // Upgrade transparan hash md5 lama -> bcrypt
-                    if (strlen($user->pass) === 32 && ctype_xdigit($user->pass)) {
-                        $this->M_user->update($user->id, array('pass' => password_hash($pass, PASSWORD_BCRYPT)));
-                    }
-
-                    $this->session->set_userdata('nip', $user->nip);
-                    $this->session->sess_regenerate(TRUE);
-                    redirect('dashboard');
-                    return;
-                }
-                $data['error'] = 'Username atau Password salah!';
-            }
+            $data['error'] = 'Login lokal dinonaktifkan. Silakan masuk melalui SSO.';
         }
 
         $this->load->view('auth/login', $data);
     }
 
     /**
-     * Verifikasi password: bcrypt atau md5 (legacy).
-     */
-    private function verify_password($plain, $hash)
-    {
-        if (password_verify($plain, $hash)) {
-            return TRUE;
-        }
-        // Dukungan hash md5 lama (32 karakter heksadesimal)
-        if (strlen($hash) === 32 && ctype_xdigit($hash) && md5($plain) === $hash) {
-            return TRUE;
-        }
-        return FALSE;
-    }
-
-    /**
      * Logout.
+     *
+     * Bila SSO aktif, lakukan single logout ke gateway (hapus seluruh token
+     * pada session_group) lalu hancurkan sesi lokal.
      */
     public function logout()
     {
+        $this->config->load('sso', TRUE);
+        $sso_enabled = $this->config->item('sso_enabled', 'sso');
+        $group       = $this->session->userdata('sso_session_group');
+
+        if ($sso_enabled && ! empty($group)) {
+            $this->load->library('sso_client');
+            // Single logout global: hapus semua token grup sesi login ini.
+            $this->sso_client->logout($group, TRUE);
+        }
+
         $this->session->sess_destroy();
+
+        if ($sso_enabled) {
+            // Minta gateway menghapus sesi login-nya lalu kembali ke login SINOS.
+            redirect(rtrim($this->config->item('sso_gateway', 'sso'), '/')
+                . '/logout?redirect=' . urlencode(site_url('login')));
+            return;
+        }
+
         redirect('login');
     }
 
-    /**
-     * Ganti password user yang sedang login.
-     */
-    public function changepassword()
-    {
-        if ( ! $this->session->userdata('nip')) {
-            redirect('login');
-        }
-
-        $nip  = $this->session->userdata('nip');
-        $data = array('user' => array('nip' => $nip), 'title' => 'Ganti Password', 'active' => '');
-
-        if ($this->input->post('simpan')) {
-            $old = $this->input->post('old');
-            $new = $this->input->post('new');
-            $rep = $this->input->post('rep');
-
-            $user = $this->M_user->get_by_nip($nip);
-
-            if ( ! $user || ! $this->verify_password($old, $user->pass)) {
-                $data['error'] = 'Password Lama Salah';
-            } elseif ($new !== $rep) {
-                $data['error'] = 'Password Baru Tidak Cocok';
-            } elseif (strlen($new) < 6) {
-                $data['error'] = 'Password baru minimal 6 karakter.';
-            } else {
-                $this->M_user->update($user->id, array('pass' => password_hash($new, PASSWORD_BCRYPT)));
-                $this->session->sess_destroy();
-                redirect('login');
-                return;
-            }
-        }
-
-        $this->load->view('auth/changepassword', $data);
-    }
+    // Catatan: fitur ganti password SENGAJA tidak tersedia di SINOS.
+    // Fitur tersebut akan dipusatkan di SSO Gateway. SINOS juga tidak
+    // memiliki akses tulis ke kolom `pass` pada schema pegawai_db.
 }

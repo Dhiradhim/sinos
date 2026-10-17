@@ -3,11 +3,19 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 /*
 |--------------------------------------------------------------------------
-| DATABASE CONNECTIVITY SETTINGS
+| DATABASE CONNECTIVITY SETTINGS (schema: sinos)
 |--------------------------------------------------------------------------
 | Konfigurasi ini mengambil nilai dari file .env bila tersedia, sehingga
 | kredensial tidak lagi hardcoded. Salin file .env.example menjadi .env
 | lalu sesuaikan nilainya.
+|
+| SINOS adalah PEMILIK schema `sinos`:
+|   nosur, surmas, disposisi, ref_klasifikasi
+|
+| Data pegawai berada di schema `pegawai_db` (milik aplikasi pegawai/) dan
+| hanya DIBACA lewat nama tabel terkualifikasi, mis. `pegawai_db.pegawai`.
+| Grant MySQL untuk user `sinos_app` TIDAK mencakup kolom `pass`, sehingga
+| SINOS tidak dapat membaca maupun mengubah password.
 */
 
 $env = array();
