@@ -215,3 +215,54 @@ $config['proxy_ips'] = '';
 | Lihat plans/sistem-pegawai.md.
 */
 $config['pegawai_app_url'] = 'http://localhost/pegawai/';
+
+/*
+|--------------------------------------------------------------------------
+| SURAT KELUAR - Kode Penetapan
+|--------------------------------------------------------------------------
+| Pilihan jenis naskah dinas pada form ambil/sisip nomor surat.
+| Kunci dipakai sebagai nilai `kode_penetapan` pada tabel `nosur`;
+| label tampil di dropdown. Urutan array = urutan tampil.
+|
+| `-` dipakai untuk surat biasa yang bukan penetapan.
+*/
+$config['kode_penetapan'] = array(
+    '-'    => 'Surat Lainnya',
+    'SK'   => 'Surat Keputusan',
+    'SP'   => 'Surat Perintah',
+    'ST'   => 'Surat Tugas',
+    'SKET' => 'Surat Keterangan',
+    'PENG' => 'Pengumuman',
+    'UND'  => 'Undangan',
+);
+
+/*
+|--------------------------------------------------------------------------
+| SURAT KELUAR - Penandatangan Surat
+|--------------------------------------------------------------------------
+| Daftar jabatan yang berhak menandatangani surat. Urutan array menentukan
+| urutan grup pada dropdown. Nilai adalah `ref_jabatan.id` di schema
+| `pegawai_db`. Semua pegawai aktif yang menduduki jabatan tersebut akan
+| muncul sebagai pilihan, dengan label:
+|
+|   "<nama> [<kode jabatan>]"     mis. "Dahron, S.Ag., M.S.I. [KPA]"
+|
+| Jabatan `Administrator` (id 1) sengaja TIDAK dimasukkan karena bukan
+| pejabat penanda tangan.
+*/
+$config['penandatangan_jabatan'] = array(
+    'Ketua'                     => array(2),
+    'Wakil Ketua'               => array(3),
+    'Panitera'                  => array(5),
+    'Sekretaris'                => array(9),
+    'Para Panitera Muda'        => array(6, 7, 8),
+    'Para Kepala Sub Bagian'    => array(10, 11, 12),
+);
+
+/*
+|--------------------------------------------------------------------------
+| SURAT KELUAR - Batas jumlah nomor
+|--------------------------------------------------------------------------
+| Jumlah nomor yang boleh diambil dalam satu transaksi (default 1).
+*/
+$config['surat_keluar_max_jumlah'] = 20;

@@ -4,37 +4,23 @@
             <h2 class="card-title">Ambil Nomor Surat</h2>
             <p class="card-description">Daftarkan nomor surat keluar baru beserta klasifikasinya.</p>
         </div>
-        <div class="card-content">
-            <form method="post" action="<?= base_url('surat-keluar/ambil-simpan'); ?>" class="space-y-5">
-                <?php $this->load->view('surat_keluar/_pengambil_field'); ?>
+        <form method="post" action="<?= base_url('surat-keluar/ambil-simpan'); ?>">
+            <div class="card-content">
+                <?php $this->load->view('surat_keluar/_form_nomor_fields'); ?>
+            </div>
 
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div>
-                        <label class="label" for="kj">Derajat Surat (KJ)</label>
-                        <input class="input" type="text" id="kj" name="kj" placeholder="mis. A1" required>
-                    </div>
-                </div>
-
-                <?php $this->load->view('surat_keluar/_klasifikasi_fields'); ?>
-
-                <div>
-                    <label class="label" for="hal">Perihal</label>
-                    <input class="input" type="text" id="hal" name="hal" placeholder="Perihal surat" required>
-                </div>
-
-                <div>
-                    <label class="label" for="tujuan">Tujuan</label>
-                    <input class="input" type="text" id="tujuan" name="tujuan" placeholder="Tujuan surat" required>
-                </div>
-
-                <div class="flex justify-end gap-2 border-t border-border pt-5">
+            <div class="card-footer flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 px-5 py-3">
+                <p class="text-xs text-gray-500">
+                    Nomor melanjutkan nomor terakhir pada tanggal hari ini.
+                </p>
+                <div class="flex gap-2">
                     <button type="reset" class="btn-outline">Ulang</button>
                     <button type="submit" class="btn-primary">
                         <?= svg_icon('hash'); ?>
                         <span>Ambil Nomor</span>
                     </button>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
 </div>

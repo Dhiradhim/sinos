@@ -1,0 +1,177 @@
+/*
+ * SINOS — skin DataTables 2.x.
+ *
+ * Satu berkas dipakai oleh BOTH varian:
+ *   - v4 : token semantik sudah didefinisikan oleh app.v4.css (@theme).
+ *   - v3 : blok `body.ui-v3` di bawah menyediakan nilai hex v3 sebagai
+ *          fallback, karena app.css (Tailwind v3) belum punya token ini.
+ *
+ * Dimuat SETELAH app.css / app.v4.css dan setelah CSS DataTables CDN,
+ * sehingga deklarasi di sini menang tanpa perlu banyak `!important`.
+ */
+
+body.ui-v3 {
+    --color-surface: #ffffff;
+    --color-surface-muted: #f9fafb;
+    --color-surface-sunken: #f9fafb;
+    --color-line: #e5e7eb;
+    --color-line-strong: #d1d5db;
+    --color-ink: #111827;
+    --color-ink-muted: #374151;
+    --color-ink-subtle: #6b7280;
+    --color-brand-900: #0a2463;
+    --radius-control: 0.5rem;
+    --radius-card: 0.75rem;
+    --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.05);
+}
+
+/* ------------------------------- Container -------------------------------- */
+.dt-container {
+    width: 100%;
+    font-size: 0.875rem;
+    color: var(--color-ink-muted);
+}
+
+.dt-container .dt-layout-row {
+    align-items: center;
+    gap: 1rem;
+    margin: 0 0 0.875rem;
+}
+
+.dt-container .dt-layout-row:last-child {
+    margin: 0.875rem 0 0;
+}
+
+/* --------------------------- Length + search ------------------------------ */
+.dt-container .dt-length,
+.dt-container .dt-search {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-ink-subtle);
+    font-size: 0.8125rem;
+}
+
+.dt-container .dt-length select,
+.dt-container .dt-search input {
+    height: 2.25rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-control);
+    background-color: var(--color-surface);
+    padding: 0.375rem 0.625rem;
+    font-size: 0.875rem;
+    color: var(--color-ink);
+    box-shadow: var(--shadow-card);
+    transition: border-color 150ms, box-shadow 150ms;
+}
+
+/* DataTables memberi `width: auto` + padding sendiri pada input search. */
+.dt-container .dt-search input {
+    min-width: 14rem;
+    margin-left: 0;
+}
+
+.dt-container .dt-length select:focus,
+.dt-container .dt-search input:focus {
+    outline: none;
+    border-color: var(--color-brand-900);
+    box-shadow: 0 0 0 1px var(--color-brand-900);
+}
+
+/* --------------------------------- Table ---------------------------------- */
+/* DataTables memakai `table.dataTable` (0,1,1) — selector ini menyamai
+   specificity-nya dan dimuat belakangan, jadi tidak perlu `!important`. */
+table.dataTable {
+    width: 100%;
+    margin: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+table.dataTable thead th {
+    border-top: 0;
+    border-bottom: 1px solid var(--color-line);
+    background-color: var(--color-surface-muted);
+    padding: 0.625rem 1rem;
+    color: var(--color-ink-subtle);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+table.dataTable tbody td {
+    border-bottom: 1px solid var(--color-line);
+    padding: 0.75rem 1rem;
+    color: var(--color-ink-muted);
+}
+
+table.dataTable tbody tr:hover > * {
+    background-color: var(--color-surface-muted);
+}
+
+table.dataTable tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+/* --------------------------------- Info ----------------------------------- */
+.dt-container .dt-info {
+    color: var(--color-ink-subtle);
+    font-size: 0.8125rem;
+}
+
+/* -------------------------------- Paging ---------------------------------- */
+/* `div.dt-container .dt-paging .dt-paging-button` (0,3,1) lebih spesifik
+   daripada selector di bawah, jadi `!important` dipertahankan di sini. */
+.dt-container .dt-paging .dt-paging-button {
+    border: 1px solid var(--color-line) !important;
+    border-radius: var(--radius-control) !important;
+    background: var(--color-surface) !important;
+    padding: 0.25rem 0.625rem !important;
+    margin: 0 0.125rem;
+    color: var(--color-ink-muted) !important;
+    box-shadow: var(--shadow-card);
+}
+
+.dt-container .dt-paging .dt-paging-button:hover:not(.disabled) {
+    background: var(--color-surface-sunken) !important;
+    color: var(--color-ink) !important;
+}
+
+.dt-container .dt-paging .dt-paging-button.current,
+.dt-container .dt-paging .dt-paging-button.current:hover {
+    border-color: var(--color-brand-900) !important;
+    background: var(--color-brand-900) !important;
+    color: #fff !important;
+}
+
+.dt-container .dt-paging .dt-paging-button.disabled,
+.dt-container .dt-paging .dt-paging-button.disabled:hover {
+    background: var(--color-surface) !important;
+    color: var(--color-line-strong) !important;
+    opacity: 1;
+}
+
+/* ------------------------------ Ordering ---------------------------------- */
+table.dataTable thead .dt-orderable-asc,
+table.dataTable thead .dt-orderable-desc {
+    cursor: pointer;
+}
+
+/* ----------------------------- Kolom aksi --------------------------------- */
+table.dataTable th.col-aksi,
+table.dataTable td.col-aksi {
+    width: 1% !important;
+    white-space: nowrap !important;
+    text-align: right;
+}
+
+table.dataTable th.col-aksi::before,
+table.dataTable th.col-aksi::after {
+    display: none !important;
+}
+
+.table-wrap .dt-container,
+.table-wrap .dt-container .dt-layout-row {
+    width: 100% !important;
+}

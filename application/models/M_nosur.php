@@ -55,6 +55,115 @@ class M_nosur extends MY_Model
     }
 
     /**
+     * Nomor urut terakhir pada SATU tanggal tertentu.
+     *
+     * Dipakai penomoran "ambil" dan "sisip": nomor baru melanjutkan nomor
+     * terakhir di tanggal itu, bukan nomor terakhir setahun.
+     *
+     * @param  string $tanggal Y-m-d
+     * @return int
+     */
+    public function last_no_urut_tanggal($tanggal)
+    {
+        $row = $this->db
+            ->select('no_urut')
+            ->where('tanggal', $tanggal)
+            ->order_by('no_urut', 'DESC')
+            ->limit(1)
+            ->get('nosur')
+            ->row();
+
+        return $row ? (int) $row->no_urut : 0;
+    }
+
+    /**
+     * Semua nomor yang sudah terpakai pada satu tanggal, dikelompokkan
+     * per nomor urut. Hasil: [no_urut => ['', 'A', 'B'], ...]
+     *
+     * Dipakai untuk menentukan huruf sisip berikutnya.
+     *
+     * @param  string $tanggal Y-m-d
+     * @return array
+     */
+    public function huruf_terpakai($tanggal)
+    {
+        $rows = $this->db
+            ->select('no_urut, huruf')
+            ->where('tanggal', $tanggal)
+            ->get('nosur')
+            ->result();
+
+        $map = array();
+        foreach ($rows as $r) {
+            $map[(int) $r->no_urut][] = (string) $r->huruf;
+        }
+        return $map;
+    }
+
+    /**
+     * Nomor urut terakhir sebelum (atau sama dengan) tanggal tertentu.
+     *
+     * Dipakai bila pada tanggal tersebut belum ada nomor sama sekali, sehingga
+     * penomoran melanjutkan tanggal terakhir yang sudah terpakai.
+     *
+     * @param  string $tanggal Y-m-d
+     * @return int
+     */
+    public function last_no_urut_sebelum($tanggal)
+    {
+        $row = $this->db
+            ->select('no_urut')
+            ->where('tanggal <=', $tanggal)
+            ->order_by('tanggal', 'DESC')
+            ->order_by('no_urut', 'DESC')
+            ->limit(1)
+            ->get('nosur')
+            ->row();
+
+        return $row ? (int) $row->no_urut : 0;
+    }
+
+    /**
+     * Cek apakah kombinasi tanggal + no_urut + huruf sudah ada.
+     *
+     * @param  string      $tanggal
+     * @param  int         $no_urut
+     * @param  string|null $huruf
+     * @return bool
+     */
+    public function nomor_terpakai($tanggal, $no_urut, $huruf = NULL)
+    {
+        $this->db->where('tanggal', $tanggal);
+        $this->db->where('no_urut', (int) $no_urut);
+
+        if ($huruf === NULL || $huruf === '') {
+            $this->db->group_start();
+            $this->db->where('huruf IS NULL', NULL, FALSE);
+            $this->db->or_where('huruf', '');
+            $this->db->group_end();
+        } else {
+            $this->db->where('huruf', $huruf);
+        }
+
+        return ($this->db->count_all_results('nosur') > 0);
+    }
+
+    /**
+     * Simpan banyak nomor sekaligus.
+     *
+     * @param  array $rows
+     * @return int jumlah baris tersimpan
+     */
+    public function insert_batch_nomor(array $rows)
+    {
+        if (empty($rows)) {
+            return 0;
+        }
+        $this->db->insert_batch('nosur', $rows);
+        return count($rows);
+    }
+
+    /**
      * Jumlah seluruh nomor surat keluar pada tahun tertentu.
      */
     public function count_tahun($tahun)

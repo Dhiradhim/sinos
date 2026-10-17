@@ -40,6 +40,28 @@ class Surat_keluar extends MY_Controller
     }
 
     /**
+     * Data pendukung form ambil/sisip nomor.
+     *
+     * @return array
+     */
+    private function data_form_nomor()
+    {
+        $grup_penandatangan = $this->config->item('penandatangan_jabatan');
+        if (empty($grup_penandatangan)) {
+            $grup_penandatangan = array();
+        }
+
+        return array(
+            'pengambil'      => $this->M_user->pengambil_nomor(),
+            'penandatangan'  => $this->M_user->penandatangan_grup($grup_penandatangan),
+            'klasifikasi'    => $this->M_klasifikasi->get_all(),
+            'kode_penetapan' => $this->config->item('kode_penetapan'),
+            'max_jumlah'     => (int) $this->config->item('surat_keluar_max_jumlah'),
+            'instansi_kode'  => 'W23-A1',
+        );
+    }
+
+    /**
      * Form ambil nomor surat.
      */
     public function ambil()
@@ -54,11 +76,8 @@ class Surat_keluar extends MY_Controller
             return;
         }
 
-        $data = array(
-            'pengambil' => $this->M_user->pengambil_nomor(),
-            'klasifikasi' => $this->M_klasifikasi->get_all(),
-            'tahun' => $tahun,
-        );
+        $data = $this->data_form_nomor();
+        $data['tahun'] = $tahun;
 
         $this->render('surat_keluar/ambil', $data, array(
             'title'    => 'Ambil Nomor Surat',
@@ -68,45 +87,185 @@ class Surat_keluar extends MY_Controller
     }
 
     /**
+     * Validasi input form nomor surat.
+     *
+     * @param  bool $butuh_tanggal TRUE untuk form sisip
+     * @return array [string|null $error, array $input]
+     */
+    private function validasi_input_nomor($butuh_tanggal = FALSE)
+    {
+        $input = array(
+            'nip'              => trim((string) $this->input->post('nip')),
+            'penandatangan_nip' => trim((string) $this->input->post('penandatangan_nip')),
+            'kode_penetapan'   => trim((string) $this->input->post('kode_penetapan')),
+            'ks'               => trim((string) $this->input->post('ks')),
+            'hal'              => trim((string) $this->input->post('hal')),
+            'tujuan'           => trim((string) $this->input->post('tujuan')),
+            // Field jumlah tidak lagi ditampilkan di form; selalu 1.
+            'jumlah'           => 1,
+            'tanggal'          => trim((string) $this->input->post('tanggal')),
+        );
+
+        if ($input['nip'] === '') {
+            return array('Pengambil nomor wajib dipilih.', $input);
+        }
+        if ($input['penandatangan_nip'] === '') {
+            return array('Penandatangan surat wajib dipilih.', $input);
+        }
+        if ($input['ks'] === '') {
+            return array('Kode surat wajib dipilih.', $input);
+        }
+        if ($input['hal'] === '') {
+            return array('Perihal wajib diisi.', $input);
+        }
+        if ($input['tujuan'] === '') {
+            return array('Tujuan wajib diisi.', $input);
+        }
+        if ($butuh_tanggal) {
+            if ($input['tanggal'] === '' || strtotime($input['tanggal']) === FALSE) {
+                return array('Tanggal surat wajib diisi dengan format yang benar.', $input);
+            }
+            if (strtotime($input['tanggal']) > strtotime(date('Y-m-d'))) {
+                return array('Sisip nomor hanya untuk tanggal mundur (tidak boleh melebihi hari ini).', $input);
+            }
+        }
+
+        return array(NULL, $input);
+    }
+
+    /**
+     * Ambil data penandatangan dari NIP (nama + kode jabatan).
+     *
+     * @param  string $nip
+     * @return array|null ['nama' => ..., 'label' => ..., 'kode' => ...]
+     */
+    private function ambil_penandatangan($nip)
+    {
+        if ($nip === '') {
+            return NULL;
+        }
+
+        $row = $this->db
+            ->select('p.nip, p.nama, j.kode AS kode_jabatan, j.jabatan')
+            ->from('pegawai_db.pegawai p')
+            ->join('pegawai_db.ref_jabatan j', 'p.id_jabatan = j.id', 'left')
+            ->where('p.nip', $nip)
+            ->where('p.aktif', 1)
+            ->get()
+            ->row();
+
+        if (! $row) {
+            return NULL;
+        }
+
+        return array(
+            'nip'   => $row->nip,
+            'nama'  => $row->nama,
+            'kode'  => (string) $row->kode_jabatan,
+            'label' => label_penandatangan($row->nama, $row->kode_jabatan),
+        );
+    }
+
+    /**
      * Simpan nomor surat baru.
+     *
+     * Nomor melanjutkan nomor terakhir pada tanggal hari ini. Bila ada lebih
+     * dari satu nomor yang diambil, nomor berikutnya tetap memakai nomor urut
+     * yang sama dengan akhiran huruf A, B, C, dst. agar tidak duplikat.
      */
     public function ambil_simpan()
     {
-        $nip_x = $this->user['is_admin'] ? $this->input->post('nip') : $this->user['nip'];
-        $kj    = $this->input->post('kj');
-        $kp    = $this->input->post('kp');
-        $ks    = $this->input->post('ks');
-        $kd1   = $this->input->post('kd1');
-        $kd2   = $this->input->post('kd2');
-        $kd3   = $this->input->post('kd3');
-        $hal   = $this->input->post('hal');
-        $tujuan = $this->input->post('tujuan');
+        list($error, $input) = $this->validasi_input_nomor(FALSE);
 
-        $tahun     = date('Y');
-        $no_urut   = $this->M_nosur->last_no_urut($tahun) + 1;
-        $kode      = $this->build_kode($kp, $ks, $kd1, $kd2, $kd3);
-        $bulan     = getRomawi(date('n'));
-        $no        = $no_urut . '/' . $kj . '.W23-A1/' . $kode . '/' . $bulan . '/' . $tahun;
-        $tanggal   = date('Y-m-d');
-
-        $this->M_nosur->insert(array(
-            'no'       => $no,
-            'kode'     => $ks,
-            'no_urut'  => $no_urut,
-            'nip'      => $nip_x,
-            'kj'       => $kj,
-            'tanggal'  => $tanggal,
-            'hal'      => $hal,
-            'tujuan'   => $tujuan,
-        ));
-
-        $this->flash('success', 'Nomor surat dibuat: ' . $no . ' | Perihal: ' . $hal);
-
-        if ($this->user['is_admin']) {
-            redirect('surat-keluar/daftar-semua?tahun=' . $tahun);
-        } else {
-            redirect('surat-keluar/daftar?tahun=' . $tahun);
+        if ($error !== NULL) {
+            $this->flash('error', $error);
+            redirect('surat-keluar/ambil');
+            return;
         }
+
+        $penandatangan = $this->ambil_penandatangan($input['penandatangan_nip']);
+        if (! $penandatangan) {
+            $this->flash('error', 'Penandatangan tidak ditemukan atau tidak aktif.');
+            redirect('surat-keluar/ambil');
+            return;
+        }
+
+        $tanggal = date('Y-m-d');
+        $tahun   = date('Y', strtotime($tanggal));
+        $bulan   = getRomawi(date('n', strtotime($tanggal)));
+        $kode    = $input['ks'];
+        $kj      = $penandatangan['kode'];
+
+        // Lanjutkan nomor terakhir pada tanggal tersebut.
+        $dasar = $this->M_nosur->last_no_urut_tanggal($tanggal);
+
+        if ($dasar === 0) {
+            // Belum ada nomor hari ini: lanjutkan dari tanggal terakhir.
+            $dasar = $this->M_nosur->last_no_urut_sebelum($tanggal);
+        }
+
+        $no_urut = $dasar + 1;
+
+        $terpakai = $this->M_nosur->huruf_terpakai($tanggal);
+        $dipakai  = isset($terpakai[$no_urut]) ? $terpakai[$no_urut] : array();
+
+        $rows = array();
+        $daftar_no = array();
+
+        for ($i = 0; $i < $input['jumlah']; $i++) {
+            // Nomor pertama tanpa huruf, berikutnya A, B, C, ...
+            $index = $i;
+            $huruf = huruf_sisip($index);
+
+            // Hindari bentrok dengan nomor yang sudah ada.
+            $pengaman = 0;
+            while ($this->M_nosur->nomor_terpakai($tanggal, $no_urut, $huruf) && $pengaman < 200) {
+                $index++;
+                $huruf = huruf_sisip($index);
+                $pengaman++;
+            }
+
+            $no = format_no_surat(
+                $no_urut,
+                $huruf,
+                $penandatangan['kode'],
+                $this->config->item('instansi_kode') ?: 'W23-A1',
+                $input['kode_penetapan'],
+                $kode,
+                $bulan,
+                $tahun
+            );
+
+            $rows[] = array(
+                'no'                 => $no,
+                'kode'               => $kode,
+                'no_urut'            => $no_urut,
+                'huruf'              => $huruf,
+                'nip'                => $input['nip'],
+                'penandatangan_nip'  => $penandatangan['nip'],
+                'penandatangan_nama' => $penandatangan['label'],
+                'kj'                 => $kj,
+                'kode_penetapan'     => $input['kode_penetapan'],
+                'tanggal'            => $tanggal,
+                'hal'                => $input['hal'],
+                'tujuan'             => $input['tujuan'],
+                'jumlah'             => $input['jumlah'],
+            );
+
+            $daftar_no[] = $no;
+        }
+
+        $this->M_nosur->insert_batch_nomor($rows);
+
+        $pesan = count($daftar_no) === 1
+            ? 'Nomor surat dibuat: ' . $daftar_no[0]
+            : count($daftar_no) . ' nomor surat dibuat: ' . implode(', ', $daftar_no);
+
+        $this->flash('success', $pesan . ' | Perihal: ' . $input['hal']);
+
+        redirect($this->user['is_admin']
+            ? 'surat-keluar/daftar-semua?tahun=' . $tahun
+            : 'surat-keluar/daftar?tahun=' . $tahun);
     }
 
     /**
@@ -114,73 +273,115 @@ class Surat_keluar extends MY_Controller
      */
     public function sisip()
     {
-        $data = array(
-            'pengambil'   => $this->M_user->pengambil_nomor(),
-            'klasifikasi' => $this->M_klasifikasi->get_all(),
-        );
+        $data = $this->data_form_nomor();
+        $data['tanggal_hari_ini'] = date('Y-m-d');
 
         $this->render('surat_keluar/sisip', $data, array(
             'title'    => 'Sisip Nomor Surat',
-            'subtitle' => 'Menyisipkan nomor surat pada tanggal tertentu.',
+            'subtitle' => 'Menyisipkan nomor surat pada tanggal mundur.',
             'active'   => 'surat-keluar',
         ));
     }
 
     /**
      * Simpan sisip nomor surat.
+     *
+     * Aturan:
+     *   - Tanggal wajib tanggal mundur (tidak boleh melebihi hari ini).
+     *   - Nomor melanjutkan nomor terakhir pada tanggal tersebut.
+     *   - Bila nomor tersebut sudah terpakai, ditambahkan huruf A, B, C, dst.
+     *     agar tidak terjadi duplikasi.
      */
     public function sisip_simpan()
     {
-        $nip_x   = $this->user['is_admin'] ? $this->input->post('nip') : $this->user['nip'];
-        $kj      = $this->input->post('kj');
-        $kp      = $this->input->post('kp');
-        $ks      = $this->input->post('ks');
-        $kd1     = $this->input->post('kd1');
-        $kd2     = $this->input->post('kd2');
-        $kd3     = $this->input->post('kd3');
-        $tanggal = $this->input->post('tanggal');
-        $hal     = $this->input->post('hal');
-        $tujuan  = $this->input->post('tujuan');
+        list($error, $input) = $this->validasi_input_nomor(TRUE);
 
+        if ($error !== NULL) {
+            $this->flash('error', $error);
+            redirect('surat-keluar/sisip');
+            return;
+        }
+
+        $penandatangan = $this->ambil_penandatangan($input['penandatangan_nip']);
+        if (! $penandatangan) {
+            $this->flash('error', 'Penandatangan tidak ditemukan atau tidak aktif.');
+            redirect('surat-keluar/sisip');
+            return;
+        }
+
+        $tanggal = $input['tanggal'];
         $ts      = strtotime($tanggal);
         $tahun   = date('Y', $ts);
         $bulan   = getRomawi(date('n', $ts));
-        $kode    = $this->build_kode($kp, $ks, $kd1, $kd2, $kd3);
+        $kode    = $input['ks'];
+        $kj      = $penandatangan['kode'];
 
-        // Cari nomor urut pada tanggal yang sama, jika tidak ada ambil terakhir sebelum tanggal tersebut
-        $this->db->select('no_urut');
-        $this->db->where('tanggal', $tanggal);
-        $this->db->order_by('no_urut', 'DESC');
-        $this->db->limit(1);
-        $row = $this->db->get('nosur')->row();
-
-        if ($row) {
-            $no_urut = (int) $row->no_urut + 1;
-        } else {
-            $this->db->select('no_urut');
-            $this->db->where('tanggal <=', $tanggal);
-            $this->db->order_by('tanggal', 'DESC');
-            $this->db->order_by('id', 'DESC');
-            $this->db->limit(1);
-            $prev = $this->db->get('nosur')->row();
-            $no_urut = $prev ? ((int) $prev->no_urut + 1) : 1;
+        // Nomor terakhir pada tanggal tersebut; bila belum ada, lanjutkan dari
+        // tanggal terakhir sebelum tanggal sisip.
+        $dasar = $this->M_nosur->last_no_urut_tanggal($tanggal);
+        if ($dasar === 0) {
+            $dasar = $this->M_nosur->last_no_urut_sebelum($tanggal);
         }
 
-        $no = $no_urut . '/' . $kj . '.W23-A1/' . $kode . '/' . $bulan . '/' . $tahun;
+        $no_urut = $dasar + 1;
 
-        $this->M_nosur->insert(array(
-            'no'      => $no,
-            'kode'    => $ks,
-            'no_urut' => $no_urut,
-            'nip'     => $nip_x,
-            'kj'      => $kj,
-            'tanggal' => $tanggal,
-            'hal'     => $hal,
-            'tujuan'  => $tujuan,
-        ));
+        $rows      = array();
+        $daftar_no = array();
 
-        $this->flash('success', 'Nomor surat disisipkan: ' . $no);
-        redirect($this->user['is_admin'] ? 'surat-keluar/daftar-semua?tahun=' . $tahun : 'surat-keluar/daftar?tahun=' . $tahun);
+        for ($i = 0; $i < $input['jumlah']; $i++) {
+            $index = $i;
+            $huruf = huruf_sisip($index);
+
+            // Bila nomor urut ini sudah dipakai pada tanggal tsb, beri huruf
+            // berikutnya sampai menemukan yang kosong.
+            $pengaman = 0;
+            while ($this->M_nosur->nomor_terpakai($tanggal, $no_urut, $huruf) && $pengaman < 200) {
+                $index++;
+                $huruf = huruf_sisip($index);
+                $pengaman++;
+            }
+
+            $no = format_no_surat(
+                $no_urut,
+                $huruf,
+                $penandatangan['kode'],
+                $this->config->item('instansi_kode') ?: 'W23-A1',
+                $input['kode_penetapan'],
+                $kode,
+                $bulan,
+                $tahun
+            );
+
+            $rows[] = array(
+                'no'                 => $no,
+                'kode'               => $kode,
+                'no_urut'            => $no_urut,
+                'huruf'              => $huruf,
+                'nip'                => $input['nip'],
+                'penandatangan_nip'  => $penandatangan['nip'],
+                'penandatangan_nama' => $penandatangan['label'],
+                'kj'                 => $kj,
+                'kode_penetapan'     => $input['kode_penetapan'],
+                'tanggal'            => $tanggal,
+                'hal'                => $input['hal'],
+                'tujuan'             => $input['tujuan'],
+                'jumlah'             => $input['jumlah'],
+            );
+
+            $daftar_no[] = $no;
+        }
+
+        $this->M_nosur->insert_batch_nomor($rows);
+
+        $pesan = count($daftar_no) === 1
+            ? 'Nomor surat disisipkan: ' . $daftar_no[0]
+            : count($daftar_no) . ' nomor surat disisipkan: ' . implode(', ', $daftar_no);
+
+        $this->flash('success', $pesan);
+
+        redirect($this->user['is_admin']
+            ? 'surat-keluar/daftar-semua?tahun=' . $tahun
+            : 'surat-keluar/daftar?tahun=' . $tahun);
     }
 
     /**
@@ -237,10 +438,16 @@ class Surat_keluar extends MY_Controller
             show_404();
         }
 
-        $data = array(
-            'row'         => $row,
-            'pengambil'   => $this->M_user->pengambil_nomor(),
-            'klasifikasi' => $this->M_klasifikasi->get_all(),
+        $data = $this->data_form_nomor();
+        $data['row'] = $row;
+        $data['nilai'] = array(
+            'nip'               => $row->nip,
+            'penandatangan_nip' => $row->penandatangan_nip,
+            'kode_penetapan'    => $row->kode_penetapan,
+            'ks'                => $row->kode,
+            'hal'               => $row->hal,
+            'tujuan'            => $row->tujuan,
+            'jumlah'            => 1,
         );
 
         $this->render('surat_keluar/edit', $data, array(
@@ -262,27 +469,45 @@ class Surat_keluar extends MY_Controller
 
         $tanggal = $this->input->post('tanggal');
         $ts      = strtotime($tanggal);
-        $no_urut = $this->input->post('no_urut');
-        $huruf   = $this->input->post('huruf');
-        $kj      = $this->input->post('kj');
-        $kp      = $this->input->post('kp');
-        $ks      = $this->input->post('ks');
-        $kode    = $this->build_kode($kp, $ks, $this->input->post('kd1'), $this->input->post('kd2'), $this->input->post('kd3'));
+        $no_urut = (int) $row->no_urut;
+        $huruf   = (string) $row->huruf;
+        $ks      = trim((string) $this->input->post('ks'));
+        $kode_penetapan = trim((string) $this->input->post('kode_penetapan'));
+
+        // Penandatangan bisa diubah; simpan snapshot nama + kode jabatan.
+        $penandatangan = $this->ambil_penandatangan(trim((string) $this->input->post('penandatangan_nip')));
+        if (! $penandatangan) {
+            $this->flash('error', 'Penandatangan tidak ditemukan atau tidak aktif.');
+            redirect('surat-keluar/edit/' . $id);
+            return;
+        }
 
         $bulan = getRomawi(date('n', $ts));
         $tahun = date('Y', $ts);
-        $no    = $no_urut . $huruf . '/' . $kj . '.W23-A1/' . $kode . '/' . $bulan . '/' . $tahun;
+        $no    = format_no_surat(
+            $no_urut,
+            $huruf,
+            $penandatangan['kode'],
+            $this->config->item('instansi_kode') ?: 'W23-A1',
+            $kode_penetapan,
+            $ks,
+            $bulan,
+            $tahun
+        );
 
         $this->M_nosur->update($id, array(
-            'nip'     => $this->input->post('nip'),
-            'no'      => $no,
-            'kode'    => $ks,
-            'no_urut' => $no_urut,
-            'huruf'   => $huruf,
-            'hal'     => $this->input->post('hal'),
-            'kj'      => $kj,
-            'tujuan'  => $this->input->post('tujuan'),
-            'tanggal' => $tanggal,
+            'nip'                => $this->input->post('nip'),
+            'penandatangan_nip'  => $penandatangan['nip'],
+            'penandatangan_nama' => $penandatangan['label'],
+            'no'                 => $no,
+            'kode'               => $ks,
+            'no_urut'            => $no_urut,
+            'huruf'              => $huruf,
+            'kode_penetapan'     => $kode_penetapan,
+            'hal'                => $this->input->post('hal'),
+            'kj'                 => $penandatangan['kode'],
+            'tujuan'             => $this->input->post('tujuan'),
+            'tanggal'            => $tanggal,
         ));
 
         $this->flash('success', 'Data nomor surat berhasil diperbarui.');

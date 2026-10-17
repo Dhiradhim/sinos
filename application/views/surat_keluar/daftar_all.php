@@ -1,35 +1,35 @@
-<div class="card">
-    <div class="flex flex-col gap-4 border-b border-border px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-            <h2 class="text-base font-semibold tracking-tight text-foreground">Seluruh Surat Keluar</h2>
-            <p class="text-xs text-muted-foreground">Rekap seluruh nomor surat keluar pada periode terpilih.</p>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-            <?php $tahun_action = base_url('surat-keluar/daftar-semua');
-            $this->load->view('layouts/_tahun_selector'); ?>
+<div class="card overflow-hidden">
+    <div class="card-header">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0">
+                <h2 class="card-title">Seluruh Surat Keluar</h2>
+                <p class="card-description">Rekap seluruh nomor surat keluar pada periode terpilih.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <?php $tahun_action = base_url('surat-keluar/daftar-semua');
+                $this->load->view('layouts/_tahun_selector'); ?>
+            </div>
         </div>
     </div>
 
     <?php if (empty($rows)): ?>
-        <div class="flex flex-col items-center justify-center gap-2 px-6 py-14 text-center">
-            <span class="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                <?= svg_icon('folder', 'h-5 w-5'); ?>
-            </span>
-            <p class="text-sm font-medium text-foreground">Belum ada data</p>
-            <p class="text-sm text-muted-foreground">Tidak ada surat keluar untuk tahun <?= (int) $tahun; ?>.</p>
+        <div class="empty-state">
+            <span class="empty-state-icon"><?= svg_icon('folder', 'h-5 w-5'); ?></span>
+            <p class="text-sm font-medium text-gray-900">Belum ada data</p>
+            <p class="text-sm text-gray-500">Tidak ada surat keluar untuk tahun <?= (int) $tahun; ?>.</p>
         </div>
     <?php else: ?>
-        <div class="table-wrap p-2">
+        <div class="table-wrap">
             <table class="table" id="tblKeluarAll" data-datatable data-nosort="7">
                 <thead>
                     <tr>
-                        <th>No.</th>
+                        <th class="w-10">No.</th>
                         <th>No. Surat</th>
                         <th>Nama</th>
-                        <th>Tanggal</th>
-                        <th>Perihal</th>
-                        <th>Tujuan</th>
-                        <th>Berkas</th>
+                        <th class="col-nowrap">Tanggal</th>
+                        <th class="col-prose">Perihal</th>
+                        <th class="col-prose">Tujuan</th>
+                        <th class="col-nowrap">Berkas</th>
                         <th class="col-aksi">Aksi</th>
                     </tr>
                 </thead>
@@ -37,12 +37,12 @@
                     <?php $i = 1;
                     foreach ($rows as $r): ?>
                         <tr>
-                            <td class="text-muted-foreground"><?= $i++; ?></td>
-                            <td class="font-medium"><?= html_escape($r->no); ?></td>
+                            <td class="tabular-nums text-xs text-gray-400"><?= $i++; ?></td>
+                            <td class="whitespace-nowrap font-medium tabular-nums text-gray-900"><?= html_escape($r->no); ?></td>
                             <td><?= html_escape($r->nama); ?></td>
-                            <td class="whitespace-nowrap text-muted-foreground" data-order="<?= html_escape($r->tanggal); ?>"><?= tanggal_indonesia($r->tanggal); ?></td>
-                            <td><?= html_escape($r->hal); ?></td>
-                            <td class="text-muted-foreground"><?= html_escape($r->tujuan); ?></td>
+                            <td class="whitespace-nowrap text-gray-500" data-order="<?= html_escape($r->tanggal); ?>"><?= tanggal_indonesia($r->tanggal); ?></td>
+                            <td class="col-prose"><?= html_escape($r->hal); ?></td>
+                            <td class="col-prose text-gray-500"><?= html_escape($r->tujuan); ?></td>
                             <td>
                                 <?php if ($r->file == '1'): ?>
                                     <span class="badge-warning">Belum ada</span>
@@ -54,7 +54,7 @@
                             </td>
                             <td class="col-aksi">
                                 <div class="flex justify-end gap-1.5">
-                                    <a href="<?= base_url('surat-keluar/upload/' . $r->id); ?>" class="btn-icon" title="Upload Berkas">
+                                    <a href="<?= base_url('surat-keluar/upload/' . $r->id); ?>" class="btn-icon" title="Upload berkas">
                                         <?= svg_icon('upload', 'h-4 w-4'); ?>
                                     </a>
                                     <a href="<?= base_url('surat-keluar/edit/' . $r->id); ?>" class="btn-icon" title="Edit">

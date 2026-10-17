@@ -6,75 +6,48 @@ module.exports = {
     "./assets/js/**/*.js"
   ],
   theme: {
-    container: {
-      center: true,
-      padding: '1.5rem',
-      screens: { '2xl': '1400px' }
-    },
     extend: {
       colors: {
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
-        primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))'
-        },
-        secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))'
-        },
-        destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))'
-        },
-        muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))'
+        // Palet merek SINOS: primer #0A2463, aksen merah #FB3640.
+        brand: {
+          50: "#eef2fb",
+          100: "#dbe3f7",
+          200: "#b9c7ee",
+          300: "#8ea4e0",
+          400: "#5d7dcc",
+          500: "#3b5cb2",
+          600: "#2b4795",
+          700: "#1f3579",
+          800: "#152a63",
+          900: "#0a2463",
+          950: "#071a45"
         },
         accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))'
-        },
-        popover: {
-          DEFAULT: 'hsl(var(--popover))',
-          foreground: 'hsl(var(--popover-foreground))'
-        },
-        card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))'
+          50: "#fff1f1",
+          100: "#ffe0e1",
+          200: "#ffc6c8",
+          300: "#ff9ea2",
+          400: "#ff656b",
+          500: "#fb3640",
+          600: "#e81c28",
+          700: "#c4131e",
+          800: "#a2141d",
+          900: "#86171f"
         }
-      },
-      borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)'
       },
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif']
+        sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "sans-serif"]
       },
-      keyframes: {
-        'fade-in': {
-          from: { opacity: '0' },
-          to: { opacity: '1' }
-        },
-        'zoom-in': {
-          from: { opacity: '0', transform: 'translate(-50%, -48%) scale(.96)' },
-          to: { opacity: '1', transform: 'translate(-50%, -50%) scale(1)' }
-        },
-        'slide-in-right': {
-          from: { opacity: '0', transform: 'translateX(0.5rem)' },
-          to: { opacity: '1', transform: 'translateX(0)' }
-        }
+      borderRadius: {
+        xl: "0.75rem"
       },
-      animation: {
-        'fade-in': 'fade-in 150ms ease-out',
-        'zoom-in': 'zoom-in 150ms ease-out',
-        'slide-in-right': 'slide-in-right 150ms ease-out'
+      boxShadow: {
+        card: "0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06)"
       }
     }
   },
-  plugins: []
-}
+  plugins: [
+    // preline v2 plugin (alias) — v3 pipeline only. Preline 5 has no Tailwind plugin.
+    (() => { try { return require("preline2/plugin"); } catch (e) { return { handler() {} }; } })(),
+  ]
+};

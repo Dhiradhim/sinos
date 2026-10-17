@@ -1,0 +1,19 @@
+{
+	"servers": {
+		"preline": {
+			"type": "http",
+			"url": "https://mcp.preline.co",
+			"headers": {
+				"Authorization": "Bearer ${input:preline-token}"
+			}
+		}
+	},
+	"inputs": [
+		{
+			"id": "preline-token",
+			"type": "promptString",
+			"description": "Preline MCP bearer token (mcp.preline.co)",
+			"password": true
+		}
+	]
+}

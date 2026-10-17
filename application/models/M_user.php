@@ -35,6 +35,9 @@ class M_user extends MY_Model
      */
     const KOLOM = 'p.id, p.nip, p.nama, p.aktif, p.is_operator, p.id_jabatan';
 
+    /** ID jabatan `Administrator` pada `ref_jabatan`. */
+    const ID_JABATAN_ADMIN = 1;
+
     public function __construct()
     {
         parent::__construct();
@@ -116,16 +119,94 @@ class M_user extends MY_Model
     /**
      * Pegawai yang berpotensi mengambil nomor surat.
      *
-     * @return array
+     * Hanya pegawai AKTIF, dan akun `admin` (jabatan Administrator) dikecualikan
+     * karena bukan pegawai yang mengambil nomor surat.
+     *
+     * @return array of object {nip, nama, jabatan, kode_jabatan, label}
      */
     public function pengambil_nomor()
     {
-        return $this->db
-            ->select('nip, nama')
-            ->where('aktif', 1)
-            ->order_by('id_jabatan', 'ASC')
-            ->get(self::T_PEGAWAI)
-            ->result();
+        // ID jabatan Administrator pada `ref_jabatan`.
+        // Memakai ID (bukan nama) karena grant SINOS hanya mencakup kolom
+        // id/jabatan/subbag/kode pada ref_jabatan, dan menghindari masalah
+        // escaping string pada Query Builder.
+        $id_admin = self::ID_JABATAN_ADMIN;
+
+        $this->db->select('p.nip, p.nama, j.jabatan, j.kode AS kode_jabatan');
+        $this->db->from(self::T_PEGAWAI . ' p');
+        $this->db->join(self::T_JABATAN . ' j', 'p.id_jabatan = j.id', 'left');
+        $this->db->where('p.aktif', 1);
+        // Kecualikan akun administrator.
+        $this->db->where('p.nip !=', 'admin');
+        $this->db->where('p.id_jabatan IS NULL OR p.id_jabatan !=', $id_admin, FALSE);
+        $this->db->order_by('j.id', 'ASC');
+        $this->db->order_by('p.nama', 'ASC');
+        $rows = $this->db->get()->result();
+
+        foreach ($rows as $r) {
+            $r->label = ! empty($r->jabatan)
+                ? $r->jabatan . ' — ' . $r->nama
+                : $r->nama;
+        }
+        return $rows;
+    }
+
+    /**
+     * Daftar pejabat penanda tangan, dikelompokkan sesuai config
+     * `penandatangan_jabatan`.
+     *
+     * Setiap pegawai aktif pada jabatan tersebut menjadi satu pilihan dengan
+     * label "Nama [KODE_JABATAN]", mis. "Dahron, S.Ag., M.S.I. [KPA]".
+     *
+     * @param  array $grup  ['Ketua' => [2], 'Wakil Ketua' => [3], ...]
+     * @return array        [ ['grup' => 'Ketua', 'items' => [obj, ...]], ... ]
+     */
+    public function penandatangan_grup(array $grup)
+    {
+        $ids = array();
+        foreach ($grup as $list) {
+            foreach ((array) $list as $id) {
+                $ids[] = (int) $id;
+            }
+        }
+        $ids = array_values(array_unique(array_filter($ids)));
+
+        if (empty($ids)) {
+            return array();
+        }
+
+        $this->db->select('p.nip, p.nama, p.id_jabatan, j.jabatan, j.kode AS kode_jabatan');
+        $this->db->from(self::T_PEGAWAI . ' p');
+        $this->db->join(self::T_JABATAN . ' j', 'p.id_jabatan = j.id', 'left');
+        $this->db->where('p.aktif', 1);
+        $this->db->where_in('p.id_jabatan', $ids);
+        $this->db->order_by('j.id', 'ASC');
+        $this->db->order_by('p.nama', 'ASC');
+        $rows = $this->db->get()->result();
+
+        // Kelompokkan per id_jabatan.
+        $per_jabatan = array();
+        foreach ($rows as $r) {
+            $r->label = label_penandatangan($r->nama, $r->kode_jabatan);
+            $per_jabatan[(int) $r->id_jabatan][] = $r;
+        }
+
+        // Susun ulang mengikuti urutan grup pada config.
+        $hasil = array();
+        foreach ($grup as $nama_grup => $list_id) {
+            $items = array();
+            foreach ((array) $list_id as $id) {
+                if (! empty($per_jabatan[(int) $id])) {
+                    foreach ($per_jabatan[(int) $id] as $row) {
+                        $items[] = $row;
+                    }
+                }
+            }
+            if (! empty($items)) {
+                $hasil[] = array('grup' => $nama_grup, 'items' => $items);
+            }
+        }
+        return $hasil;
     }
 
     /**

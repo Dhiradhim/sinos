@@ -4,10 +4,17 @@
   "description": "SINOS - Sistem Informasi Nomor Surat (CodeIgniter 3 + Tailwind CSS)",
   "private": true,
   "scripts": {
-    "build": "tailwindcss -i ./assets/css/input.css -o ./assets/css/app.css --minify",
-    "watch": "tailwindcss -i ./assets/css/input.css -o ./assets/css/app.css --watch"
+    "build": "node ./node_modules/tailwindcss3/lib/cli.js -i ./assets/css/input.css -o ./assets/css/app.css --minify",
+    "watch": "node ./node_modules/tailwindcss3/lib/cli.js -i ./assets/css/input.css -o ./assets/css/app.css --watch",
+    "build:v4": "node ./node_modules/@tailwindcss/cli/dist/index.mjs -i ./assets/css/input.v4.css -o ./assets/css/app.v4.css --minify",
+    "watch:v4": "node ./node_modules/@tailwindcss/cli/dist/index.mjs -i ./assets/css/input.v4.css -o ./assets/css/app.v4.css --watch",
+    "copy:preline": "copy /Y node_modules\\preline\\dist\\index.js assets\\js\\preline.v5.js"
   },
   "devDependencies": {
-    "tailwindcss": "^3.4.17"
+    "@tailwindcss/cli": "^4.3.3",
+    "preline": "^5.0.0",
+    "preline2": "npm:preline@^2.7.0",
+    "tailwindcss": "^4.3.3",
+    "tailwindcss3": "npm:tailwindcss@^3.4.17"
   }
 }

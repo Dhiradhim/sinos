@@ -202,3 +202,154 @@ if (! function_exists('tahun_tersedia')) {
         return $tahun;
     }
 }
+
+if (! function_exists('huruf_sisip')) {
+    /**
+     * Ubah urutan ke-0 menjadi '' (tanpa huruf), 1 menjadi 'A', 2 'B', dst.
+     *
+     * Dipakai HANYA untuk nomor sisip: nomor pertama pada suatu tanggal tetap
+     * memakai nomor urut apa adanya, sedangkan nomor berikutnya pada tanggal
+     * yang sama diberi akhiran huruf agar tidak duplikat.
+     *
+     * @param  int    $index 0 = tanpa huruf
+     * @return string
+     */
+    function huruf_sisip($index)
+    {
+        $index = (int) $index;
+        if ($index <= 0) {
+            return '';
+        }
+
+        // 1..26 -> A..Z, lalu AA, AB, ... (jarang terpakai, tetapi aman).
+        $out = '';
+        while ($index > 0) {
+            $index--;
+            $out = chr(65 + ($index % 26)) . $out;
+            $index = intdiv($index, 26);
+        }
+        return $out;
+    }
+}
+
+if (! function_exists('hs_select_attr')) {
+    /**
+     * Atribut `data-hs-select` untuk Preline Select (advanced select).
+     *
+     * Preline mengganti <select> native dengan panel pencarian. Semua kelas
+     * permukaan (toggle, dropdown, opsi) dikumpulkan di sini agar seragam dan
+     * tidak perlu diulang di setiap view.
+     *
+     * @param  string $placeholder  Teks saat belum ada pilihan.
+     * @param  string $search       Placeholder kolom pencarian (kosong = tanpa pencarian).
+     * @param  bool   $emptyOption  Izinkan opsi kosong (untuk filter "Semua").
+     * @return string               Siap dicetak di dalam atribut HTML.
+     */
+    function hs_select_attr($placeholder = 'Pilih…', $search = 'Cari…', $emptyOption = FALSE)
+    {
+        $cfg = array(
+            'placeholder' => $placeholder,
+            // `hs-select-toggle` dipakai app.js untuk memfokuskan toggle saat
+            // validasi klien gagal (select asli disembunyikan Preline).
+            'toggleClasses' => 'hs-select-toggle relative py-2 ps-3 pe-9 flex gap-x-2 text-nowrap w-full cursor-pointer bg-white border border-gray-300 rounded-lg text-start text-sm text-gray-900 focus:outline-none focus:border-brand-900 focus:ring-1 focus:ring-brand-900 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-red-500 disabled:pointer-events-none disabled:opacity-50',
+            'dropdownClasses' => 'mt-2 max-h-72 pb-1 px-1 space-y-0.5 z-50 w-full bg-white border border-gray-200 rounded-lg overflow-hidden overflow-y-auto shadow-lg',
+            'optionClasses' => 'py-2 px-3 w-full text-sm text-gray-800 cursor-pointer rounded-md hover:bg-gray-100 focus:outline-none focus:bg-gray-100',
+            'optionTemplate' => '<div class="flex items-center justify-between"><span data-title></span><span class="hidden hs-selected:block"><svg class="shrink-0 size-4 text-brand-900" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></div>',
+            'extraMarkup' => '<button type="button" class="absolute top-1/2 end-3 -translate-y-1/2" aria-label="Buka pilihan"><svg class="shrink-0 size-3.5 text-gray-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></button>',
+        );
+
+        if ($search !== '' && $search !== NULL) {
+            $cfg['hasSearch'] = TRUE;
+            $cfg['searchPlaceholder'] = $search;
+            $cfg['searchWrapperClasses'] = 'bg-white p-2 sticky top-0 z-10 border-b border-gray-100';
+            $cfg['searchClasses'] = 'block w-full text-sm border border-gray-300 rounded-lg py-2 px-3 focus:border-brand-900 focus:outline-none focus:ring-1 focus:ring-brand-900';
+            $cfg['searchNoResultText'] = 'Tidak ditemukan';
+            $cfg['searchNoResultClasses'] = 'px-3 py-2 text-sm text-gray-500';
+        }
+
+        if ($emptyOption) {
+            $cfg['optionAllowEmptyOption'] = TRUE;
+        }
+
+        return 'data-hs-select=\'' . json_encode($cfg, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '\'';
+    }
+}
+
+if (! function_exists('format_no_surat')) {
+    /**
+     * Susun nomor surat lengkap.
+     *
+     * Format: {no_urut}{huruf}/{penandatangan}.{instansi}/{kode_penetapan}.{kode_klasifikasi}/{bulan}/{tahun}
+     *
+     * Contoh:
+     *   1500/KPA.W23-A1/-.KU1.1.2/IX/2026
+     *   1500A/KPA.W23-A1/SK.HK1.2.5/IX/2026
+     *
+     * Bagian kode penetapan `-` dilewati agar nomor tetap rapi bila surat
+     * bukan penetapan.
+     *
+     * @param  int    $no_urut
+     * @param  string $huruf            '' bila tanpa huruf
+     * @param  string $penandatangan    kode jabatan, mis. 'KPA'
+     * @param  string $instansi         mis. 'W23-A1'
+     * @param  string $kode_penetapan   '-', 'SK', 'ST', ...
+     * @param  string $kode_klasifikasi mis. 'KU1.1.2'
+     * @param  string $bulan            romawi
+     * @param  int    $tahun
+     * @return string
+     */
+    function format_no_surat($no_urut, $huruf, $penandatangan, $instansi, $kode_penetapan, $kode_klasifikasi, $bulan, $tahun)
+    {
+        $urut = (int) $no_urut . (string) $huruf;
+
+        $penandatangan = trim((string) $penandatangan);
+        $instansi      = trim((string) $instansi);
+
+        $pejabat = $penandatangan !== ''
+            ? $penandatangan . ($instansi !== '' ? '.' . $instansi : '')
+            : $instansi;
+
+        $kode_penetapan = trim((string) $kode_penetapan);
+        $kode_klas      = trim((string) $kode_klasifikasi);
+
+        if ($kode_penetapan !== '' && $kode_penetapan !== '-' && $kode_klas !== '') {
+            $kode = $kode_penetapan . '.' . $kode_klas;
+        } elseif ($kode_penetapan !== '' && $kode_penetapan !== '-') {
+            $kode = $kode_penetapan;
+        } else {
+            $kode = $kode_klas;
+        }
+
+        $bagian = array_filter(array(
+            $urut,
+            $pejabat,
+            $kode,
+            (string) $bulan,
+            (string) $tahun,
+        ), function ($v) {
+            return $v !== '';
+        });
+
+        return implode('/', $bagian);
+    }
+}
+
+if (! function_exists('label_penandatangan')) {
+    /**
+     * Susun label penandatangan: "Nama, Gelar [KODE]".
+     *
+     * @param  string $nama
+     * @param  string $kode_jabatan
+     * @return string
+     */
+    function label_penandatangan($nama, $kode_jabatan)
+    {
+        $nama = trim((string) $nama);
+        $kode = trim((string) $kode_jabatan);
+
+        if ($kode === '' || $kode === '-') {
+            return $nama;
+        }
+        return $nama . ' [' . $kode . ']';
+    }
+}
