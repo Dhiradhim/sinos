@@ -1,0 +1,113 @@
+---
+import Base from "./Base.astro";
+import Sidebar from "../components/Sidebar.astro";
+import Topbar from "../components/Topbar.astro";
+import LogoutModal from "../components/LogoutModal.astro";
+import Flash from "../components/Flash.astro";
+import type { ApiUser } from "../lib/auth";
+
+interface Props {
+	/** Dipakai untuk `<title>` dan label topbar. Halaman dengan PageHead
+	 *  mengosongkan `subtitle` topbar agar tidak ada teks ganda. */
+	title: string;
+	subtitle?: string;
+	user: ApiUser;
+	/** Badge jumlah disposisi belum dibaca (dari GET /dashboard). */
+	disposisiCount?: number;
+	tahun?: number;
+	showTahun?: boolean;
+	/** Tampilkan judul di topbar. FALSE bila halaman memakai PageHead. */
+	topbarTitle?: boolean;
+	flash?: {
+		type: "success" | "error" | "warning" | "info";
+		message: string;
+	} | null;
+}
+
+const {
+	title,
+	subtitle = "",
+	user,
+	disposisiCount = 0,
+	tahun,
+	showTahun = false,
+	topbarTitle = true,
+	flash = null,
+} = Astro.props;
+
+const pathname = Astro.url.pathname;
+const footerYear = new Date().getFullYear();
+---
+
+<Base title={title}>
+	<!-- Rail navigasi (gelap) + backdrop slide-over di bawah lg -->
+	<Sidebar
+		user={user}
+		disposisiCount={disposisiCount}
+		pathname={pathname}
+		tahun={tahun}
+	/>
+
+	<div
+		id="sidebarOverlay"
+		class="fixed inset-0 z-30 hidden bg-[rgb(11_27_58_/_0.55)] backdrop-blur-[1px] lg:hidden"
+		aria-hidden="true"
+	>
+	</div>
+
+	<div class="flex min-h-dvh flex-col lg:pl-60">
+		<Topbar
+			title={topbarTitle ? title : ""}
+			subtitle={topbarTitle ? subtitle : ""}
+			user={user}
+			tahun={tahun ?? footerYear}
+			showTahun={showTahun}
+		/>
+
+		<main class="flex-1">
+			{
+				flash && (
+					<div class="px-6 pt-4">
+						<Flash type={flash.type} message={flash.message} />
+					</div>
+				)
+			}
+			<slot />
+		</main>
+
+		<footer
+			class="border-t border-[var(--color-line)] bg-[var(--color-canvas)] px-6 py-3"
+		>
+			<div
+				class="flex flex-col items-center justify-between gap-1 text-[0.6875rem] text-[var(--color-ink-subtle)] sm:flex-row"
+			>
+				<p>&copy; {footerYear} Pengadilan Agama Kupang</p>
+				<p class="sm:text-right">SINOS &mdash; Sistem Informasi Nomor Surat</p>
+			</div>
+		</footer>
+	</div>
+
+	<LogoutModal />
+
+	<script>
+		// Slide-over sidebar untuk < lg. Satu sumber transformasi: kelas rail di
+		// Sidebar.astro (-translate-x-full, lg:translate-x-0).
+		const sidebar = document.getElementById("sidebar");
+		const overlay = document.getElementById("sidebarOverlay");
+
+		const setOpen = (open: boolean) => {
+			if (!sidebar || !overlay) return;
+			sidebar.classList.toggle("-translate-x-full", !open);
+			overlay.classList.toggle("hidden", !open);
+			document.body.classList.toggle("overflow-hidden", open);
+		};
+
+		document.querySelectorAll("[data-sidebar-open]").forEach((el) => {
+			el.addEventListener("click", () => setOpen(true));
+		});
+		overlay?.addEventListener("click", () => setOpen(false));
+		document.addEventListener("keydown", (event) => {
+			if (event.key === "Escape") setOpen(false);
+		});
+	</script>
+</Base>

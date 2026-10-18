@@ -1,0 +1,477 @@
+---
+/**
+ * Detail Disposisi — `/disposisi/detail/{id}`.
+ *
+ * Sumber: sinos/application/views/disposisi/detail.php + Disposisi::detail().
+ * Data: `GET /disposisi/{id}` → field disposisi + `surat{}` + `aksi{}`.
+ *
+ * EFEK SAMPING GET (didokumentasikan backend, api/Disposisi.php:24-28):
+ * endpoint ini menandai disposisi sebagai dibaca bila ditujukan kepada
+ * pemanggil, persis seperti `Disposisi::detail()`. Respons memuat
+ * `ditandai_dibaca: true` HANYA pada request yang membalik status. Karena
+ * tidak ada pesan lain yang muncul, halaman menampilkan catatan kecil
+ * `aria-live="polite"` "Ditandai sudah dibaca." — satu-satunya umpan balik
+ * yang diterima pengguna.
+ *
+ * Tata letak dua kolom `lg:grid-cols-3`: 2/3 daftar field surat, 1/3
+ * informasi disposisi + aksi. Semua copy Bahasa Indonesia disalin dari view
+ * CI3 ("Detail Surat", "Informasi surat masuk yang didisposisikan.",
+ * "Informasi Disposisi", "Diteruskan Kepada", "Lihat Berkas Surat",
+ * "Teruskan Disposisi", "Kembali", "Sudah dibaca", "Belum dibaca").
+ *
+ * DEVIASI (dilaporkan): view CI3 memuat `$surat->kode` pada detail surat
+ * masuk, tetapi `disposisi/detail.php` TIDAK menampilkannya. Kolom Kode
+ * Klasifikasi tidak ditambahkan di sini — field list mengikuti view apa
+ * adanya, ditambah blok "Riwayat" (lihat komentar di bawah).
+ */
+import AppShell from "../../../layouts/AppShell.astro";
+import PageHead from "../../../components/PageHead.astro";
+import DisposisiModal from "../../../components/DisposisiModal.astro";
+import ConfirmModal from "../../../components/ConfirmModal.astro";
+import Icon from "../../../components/Icon.astro";
+import NotFoundState from "../../../components/NotFoundState.astro";
+import { requireUser } from "../../../lib/auth";
+import { apiFetch } from "../../../lib/api";
+import { getSession } from "../../../lib/session";
+import { takeFormFeedback } from "../../../lib/formFeedback";
+import { berkasUrl, formatDateTime, toneClass } from "../../../lib/format";
+import type { DisposisiDetail } from "../../../lib/disposisi";
+
+const auth = await requireUser(Astro);
+if (auth.redirect) return auth.redirect;
+const user = auth.user;
+const token = getSession(Astro.cookies);
+
+const id = Number(Astro.params.id);
+const idValid = Number.isInteger(id) && id > 0;
+
+const result = idValid
+  ? await apiFetch<DisposisiDetail>(`/disposisi/${id}`, { token })
+  : null;
+
+/**
+ * 404 dirender, bukan dialihkan: `Disposisi::detail()` memakai `show_404()`
+ * untuk id yang tidak ada. Status HTTP disetel eksplisit.
+ */
+const notFound = !result?.ok || !result.data;
+if (notFound) {
+  Astro.response.status = 404;
+}
+
+const row = (result?.data ?? null) as DisposisiDetail;
+const surat = row?.surat ?? null;
+const aksi = row?.aksi ?? {
+  can_view: false,
+  can_archive: false,
+  can_delete: false,
+  can_forward: false,
+};
+
+const tahun =
+  Number(String(surat?.tgl_surat.iso ?? "").slice(0, 4)) ||
+  new Date().getFullYear();
+
+const dashboard = await apiFetch<{ disposisi_belum_dibaca: number }>(
+  "/dashboard",
+  { token, query: { tahun } },
+);
+const disposisiCount = dashboard.data?.disposisi_belum_dibaca ?? 0;
+
+const feedback = takeFormFeedback(Astro.cookies);
+
+/**
+ * Field detail surat, urut seperti `disposisi/detail.php:28-57`.
+ * `span` = `sm:col-span-2` (Perihal).
+ */
+const suratFields: {
+  label: string;
+  value: string;
+  tabular?: boolean;
+  span?: boolean;
+}[] = surat
+  ? [
+      { label: "No. Surat", value: surat.no_surat },
+      { label: "No. Agenda", value: surat.no_agenda, tabular: true },
+      { label: "Tanggal Surat", value: surat.tgl_surat.teks },
+      { label: "Tanggal Diterima", value: surat.tgl_diterima.teks },
+      { label: "Perihal", value: surat.perihal, span: true },
+      { label: "Pengirim", value: surat.pengirim },
+      { label: "Pengolah", value: surat.pengolah },
+    ]
+  : [];
+
+/**
+ * Field informasi disposisi, urut seperti `disposisi/detail.php:67-98`.
+ * "Status" dirender sebagai badge, bukan teks, jadi ditangani terpisah.
+ *
+ * Pada cabang 404 `row` bernilai null; daftar kosong dipakai agar frontmatter
+ * tidak menyentuh field yang tidak ada.
+ */
+const disposisiFields: { label: string; value: string; tabular?: boolean }[] =
+  notFound
+    ? []
+    : [
+        { label: "Diteruskan Kepada", value: row.kepada },
+        { label: "Kategori", value: row.kategori },
+        { label: "Instruksi", value: row.instruksi ?? "—" },
+        { label: "Catatan", value: row.catatan ?? "—" },
+        {
+          label: "Tanggal Disposisi",
+          value: row.tanggal.teks || formatDateTime(row.tanggal.iso),
+          tabular: true,
+        },
+      ];
+
+const kembali = "/disposisi";
+---
+
+<AppShell
+  title={notFound ? "Disposisi tidak ditemukan" : (surat?.no_surat ?? "Detail Disposisi")}
+  user={user}
+  disposisiCount={disposisiCount}
+  tahun={tahun}
+  topbarTitle={false}
+>
+  {
+    notFound ? (
+      <NotFoundState
+        title="Disposisi tidak ditemukan"
+        description={`Disposisi dengan ID ${Astro.params.id} tidak ada atau sudah dihapus.`}
+        backHref="/disposisi"
+        backLabel="Kembali ke daftar disposisi"
+      />
+    ) : (
+      <>
+  <PageHead
+    title={surat?.no_surat ?? "Detail Disposisi"}
+    subtitle="Detail disposisi"
+  >
+    <div slot="actions" class="flex flex-wrap items-center gap-2">
+      {/* Status baca — badge yang sama dengan kartu CI3. */}
+      {
+        row.dibaca ? (
+          <span class="badge-success">Sudah dibaca</span>
+        ) : (
+          <span class="badge-warning">Belum dibaca</span>
+        )
+      }
+
+      {
+        surat?.file.state === "ready" && (
+          <a
+            href={berkasUrl(surat.file.path)}
+            target="_blank"
+            rel="noopener"
+            class="btn-outline btn-sm"
+          >
+            <Icon name="file-text" class="h-4 w-4" />
+            <span>Lihat Berkas Surat</span>
+          </a>
+        )
+      }
+
+      {
+        aksi.can_forward && (
+          <button
+            type="button"
+            class="btn-primary btn-sm"
+            data-disposisi-open={row.surmas_id}
+          >
+            <Icon name="send" class="h-4 w-4" />
+            <span>Teruskan Disposisi</span>
+          </button>
+        )
+      }
+
+      {
+        aksi.can_archive && (
+          <form
+            method="post"
+            action={`/api/disposisi/surmas/${row.surmas_id}/arsip?kembali=${encodeURIComponent(
+              `/disposisi/detail/${row.id}`,
+            )}`}
+            data-confirm="Arsipkan surat ini?"
+          >
+            <button type="submit" class="btn-outline btn-sm">
+              <Icon name="archive" class="h-4 w-4" />
+              <span>Arsipkan surat</span>
+            </button>
+          </form>
+        )
+      }
+
+      {
+        aksi.can_delete && (
+          <form
+            method="post"
+            action={`/api/disposisi/${row.id}?kembali=${encodeURIComponent(kembali)}`}
+            data-confirm="Hapus disposisi ini?"
+          >
+            <button type="submit" class="btn-outline btn-sm">
+              <Icon name="trash" class="h-4 w-4" />
+              <span>Hapus disposisi</span>
+            </button>
+          </form>
+        )
+      }
+
+      <a href={kembali} class="btn-outline btn-sm">
+        <Icon name="arrow-left" class="h-4 w-4" />
+        <span>Kembali</span>
+      </a>
+    </div>
+  </PageHead>
+
+  {/* Catatan satu kali: GET ini yang baru saja membalik status baca. */}
+  <div class="px-6 pt-3" aria-live="polite">
+    {
+      row.ditandai_dibaca && (
+        <p class="flex items-center gap-1.5 text-xs text-[var(--color-ok)]">
+          <Icon name="check" class="h-3.5 w-3.5" />
+          <span>Ditandai sudah dibaca.</span>
+        </p>
+      )
+    }
+  </div>
+
+  {
+    feedback?.message && (
+      <div class="px-6 pt-3">
+        <div class="alert alert-warning" role="status">
+          <span class="mt-0.5 shrink-0">
+            <Icon name="triangle-alert" class="h-4 w-4" />
+          </span>
+          <div class="flex-1">
+            <p class="alert-description">{feedback.message}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  <div class="grid grid-cols-1 gap-6 px-6 py-6 lg:grid-cols-3">
+    <!-- Detail surat (2/3) -->
+    <section class="min-w-0 lg:col-span-2" aria-labelledby="detail-surat-title">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="min-w-0">
+          <h2
+            id="detail-surat-title"
+            class="text-sm font-semibold text-[var(--color-ink)]"
+          >
+            Detail Surat
+          </h2>
+          <p class="text-xs text-[var(--color-ink-subtle)]">
+            Informasi surat masuk yang didisposisikan.
+          </p>
+        </div>
+        {
+          surat?.status === "diarsipkan" && (
+            <span class="badge-muted">Diarsipkan</span>
+          )
+        }
+      </div>
+
+      <div class="separator"></div>
+
+      {
+        surat ? (
+          <dl class="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+            {suratFields.map((f) => (
+              <div class={f.span ? "sm:col-span-2" : undefined}>
+                <dt class="text-xs uppercase tracking-wide text-[var(--color-ink-subtle)]">
+                  {f.label}
+                </dt>
+                <dd
+                  class:list={[
+                    "mt-0.5 text-sm font-medium text-[var(--color-ink)]",
+                    f.tabular && "tabular",
+                  ]}
+                >
+                  {f.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p class="text-sm text-[var(--color-ink-subtle)]">
+            Surat masuk tidak ditemukan.
+          </p>
+        )
+      }
+
+      {
+        /* Riwayat disposisi surat ini — sumber yang sama dengan isi modal CI3
+          (`_form_ajax.php:68-83`), ditampilkan permanen di halaman detail. */
+      }
+      {
+        surat && (
+          <div class="mt-8">
+            <h3 class="fieldset-legend">Riwayat</h3>
+            <p class="text-xs text-[var(--color-ink-subtle)]">
+              Seluruh disposisi yang tercatat untuk surat ini.
+            </p>
+            <div class="separator" />
+            <div id="riwayatDisposisi" data-surmas-id={surat.id}>
+              <p class="text-sm text-[var(--color-ink-subtle)]">Memuat…</p>
+            </div>
+          </div>
+        )
+      }
+    </section>
+
+    <!-- Informasi disposisi (1/3) -->
+    <aside class="min-w-0" aria-labelledby="info-disposisi-title">
+      <h2
+        id="info-disposisi-title"
+        class="text-sm font-semibold text-[var(--color-ink)]"
+      >
+        Informasi Disposisi
+      </h2>
+
+      <div class="separator"></div>
+
+      <dl class="space-y-4">
+        {
+          disposisiFields.map((f) => (
+            <div>
+              <dt class="text-xs uppercase tracking-wide text-[var(--color-ink-subtle)]">
+                {f.label}
+              </dt>
+              <dd
+                class:list={[
+                  "mt-0.5 text-sm text-[var(--color-ink)]",
+                  f.tabular && "tabular",
+                ]}
+              >
+                {f.value}
+              </dd>
+            </div>
+          ))
+        }
+        <div>
+          <dt
+            class="text-xs uppercase tracking-wide text-[var(--color-ink-subtle)]"
+          >
+            Status
+          </dt>
+          <dd class="mt-1">
+            <span class={toneClass(row.tone)}>{row.status}</span>
+          </dd>
+        </div>
+      </dl>
+
+      <div class="separator"></div>
+
+      <div class="space-y-2">
+        {
+          aksi.can_forward && (
+            <button
+              type="button"
+              class="btn-primary w-full"
+              data-disposisi-open={row.surmas_id}
+            >
+              <Icon name="send" />
+              <span>Teruskan Disposisi</span>
+            </button>
+          )
+        }
+        <a href={kembali} class="btn-outline w-full">
+          <Icon name="arrow-left" />
+          <span>Kembali</span>
+        </a>
+      </div>
+    </aside>
+  </div>
+      </>
+    )
+  }
+</AppShell>
+
+{
+  !notFound && (
+    <>
+      <DisposisiModal title="Teruskan Disposisi" />
+      <ConfirmModal title="Konfirmasi" />
+    </>
+  )
+}
+
+<script>
+  /**
+   * Riwayat disposisi surat ini.
+   *
+   * Data diambil dari `GET /api/disposisi/form/{surmas_id}` (proxy BFF) —
+   * payload yang sama yang dipakai modal, bagian `riwayat`. Endpoint dipilih
+   * karena tidak ada endpoint riwayat khusus; memakai ulang berarti tidak
+   * menambah rute baru hanya untuk satu daftar.
+   */
+  const box = document.getElementById("riwayatDisposisi");
+
+  type Riwayat = {
+    id: number;
+    kepada: string;
+    kategori: string;
+    instruksi: string | null;
+    catatan: string | null;
+    tanggal: { iso: string | null; teks: string };
+    dibaca: boolean;
+    dikembalikan: boolean;
+  };
+
+  const AMP = String.fromCharCode(38);
+  const LT = String.fromCharCode(60);
+  const GT = String.fromCharCode(62);
+  const QUOT = String.fromCharCode(34);
+
+  function esc(value: unknown): string {
+    return String(value ?? "")
+      .split(AMP)
+      .join(AMP + "amp;")
+      .split(LT)
+      .join(AMP + "lt;")
+      .split(GT)
+      .join(AMP + "gt;")
+      .split(QUOT)
+      .join(AMP + "quot;");
+  }
+
+  async function loadRiwayat() {
+    if (!box) return;
+    const surmasId = Number(box.dataset.surmasId ?? 0);
+    if (!(surmasId > 0)) return;
+
+    try {
+      const response = await fetch(`/api/disposisi/form/${surmasId}`, {
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) throw new Error("gagal");
+
+      const payload = await response.json();
+      const riwayat: Riwayat[] = payload?.data?.riwayat ?? [];
+
+      if (riwayat.length === 0) {
+        box.innerHTML =
+          '<p class="text-sm text-[var(--color-ink-subtle)]">Belum ada riwayat disposisi.</p>';
+        return;
+      }
+
+      box.innerHTML = `<ol class="relative ml-2 border-l border-[var(--color-line)] pl-5">${riwayat
+        .map(
+          (rw) => `
+          <li class="relative pb-4 last:pb-0">
+            <span class="absolute -left-[1.4375rem] top-1 flex h-2.5 w-2.5 items-center justify-center rounded-full border border-[var(--color-line-strong)] bg-[var(--color-canvas)]" aria-hidden="true"></span>
+            <p class="text-sm font-medium leading-snug text-[var(--color-ink)]">${esc(rw.kepada)}</p>
+            <p class="text-xs text-[var(--color-ink-subtle)]">${esc(rw.kategori)} &middot; ${esc(rw.tanggal?.teks ?? "")}</p>
+            ${rw.instruksi ? `<p class="mt-0.5 text-xs text-[var(--color-ink-muted)]">${esc(rw.instruksi)}</p>` : ""}
+            ${rw.catatan ? `<p class="mt-0.5 text-xs text-[var(--color-ink-subtle)]">${esc(rw.catatan)}</p>` : ""}
+          </li>`,
+        )
+        .join("")}</ol>`;
+    } catch {
+      box.innerHTML =
+        '<p class="text-sm text-[var(--color-danger)]">Gagal memuat riwayat disposisi.</p>';
+    }
+  }
+
+  void loadRiwayat();
+</script>

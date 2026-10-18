@@ -1,0 +1,155 @@
+---
+/**
+ * ConfirmModal.astro — Preline overlay konfirmasi untuk aksi destruktif.
+ *
+ * Menggantikan `data-confirm` + `window.confirm()` milik CI3
+ * (sinos/assets/js/app.js) dengan overlay Preline, sesuai larangan brief.
+ *
+ * Cara pakai: tandai `<form>` dengan `data-confirm="<teks>"`. Skrip di bawah
+ * mencegat submit, menampilkan overlay, lalu meneruskan submit setelah
+ * pengguna menekan tombol konfirmasi. Teks tombol dapat diatur lewat
+ * `data-confirm-ok`; default "Ya, lanjutkan".
+ *
+ *   <form method="post" action="/api/disposisi/12?kembali=/disposisi"
+ *         data-confirm="Hapus disposisi ini?">
+ *     <button type="submit" class="dropdown-item dropdown-item-destructive">…</button>
+ *   </form>
+ *
+ * Satu overlay per halaman; komponen ini mengelola satu form aktif saja.
+ */
+import Icon from "./Icon.astro";
+
+interface Props {
+  title?: string;
+}
+
+const { title = "Konfirmasi" } = Astro.props;
+---
+
+<div
+  id="confirmModal"
+  class="hs-overlay pointer-events-none fixed inset-0 z-[90] hidden size-full overflow-y-auto overflow-x-hidden"
+  data-hs-overlay-options='{"backdropClasses":"hs-overlay-backdrop transition duration fixed inset-0 bg-[rgb(11_27_58_/_0.45)]"}'
+  role="alertdialog"
+  aria-modal="true"
+  aria-labelledby="confirmTitle"
+  aria-describedby="confirmMessage"
+  tabindex="-1"
+>
+  <div
+    class="pointer-events-none m-3 mt-0 flex min-h-[calc(100%-1.5rem)] items-center opacity-0 transition-all duration-300 ease-out sm:mx-auto sm:w-full sm:max-w-sm hs-overlay-open:mt-7 hs-overlay-open:opacity-100"
+  >
+    <div
+      class="pointer-events-auto flex w-full flex-col rounded-[var(--radius-panel)] border border-[var(--color-line)] bg-[var(--color-canvas)] shadow-[var(--shadow-panel)]"
+    >
+      <div
+        class="flex items-center justify-between border-b border-[var(--color-line)] px-5 py-3"
+      >
+        <h3
+          id="confirmTitle"
+          class="flex items-center gap-2 text-sm font-semibold text-[var(--color-ink)]"
+        >
+          <span
+            class="flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)] bg-[color-mix(in_oklab,var(--color-danger)_8%,#ffffff)] text-[var(--color-danger)]"
+          >
+            <Icon name="triangle-alert" class="h-4 w-4" />
+          </span>
+          {title}
+        </h3>
+        <button
+          type="button"
+          class="btn-icon"
+          data-confirm-cancel
+          aria-label="Tutup"
+        >
+          <Icon name="x" class="h-4 w-4" />
+        </button>
+      </div>
+
+      <div
+        id="confirmMessage"
+        class="px-5 py-4 text-sm leading-relaxed text-[var(--color-ink-muted)]"
+      >
+        Lanjutkan tindakan ini?
+      </div>
+
+      <div
+        class="flex items-center justify-end gap-2 border-t border-[var(--color-line)] px-5 py-3"
+      >
+        <button type="button" class="btn-outline btn-sm" data-confirm-cancel>
+          Batal
+        </button>
+        <button type="button" class="btn-destructive btn-sm" data-confirm-ok>
+          Ya, lanjutkan
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /**
+   * Interceptor `data-confirm`.
+   *
+   * `form.dataset.confirmed` menandai bahwa submit sudah disetujui, sehingga
+   * `form.submit()` (yang TIDAK memicu event `submit`) tidak perlu dipakai —
+   * listener ini cukup meloloskan submit kedua.
+   */
+  const modal = document.getElementById("confirmModal");
+  const message = document.getElementById("confirmMessage");
+  const okBtn = document.querySelector<HTMLButtonElement>("[data-confirm-ok]");
+
+  let pending: HTMLFormElement | null = null;
+
+  function open() {
+    const HS = (window as any).HSOverlay;
+    if (HS && typeof HS.open === "function") {
+      HS.open(modal);
+    } else {
+      modal?.classList.remove("hidden");
+    }
+  }
+
+  function close() {
+    const HS = (window as any).HSOverlay;
+    if (HS && typeof HS.close === "function") {
+      HS.close(modal);
+    } else {
+      modal?.classList.add("hidden");
+    }
+    pending = null;
+  }
+
+  document
+    .querySelectorAll<HTMLFormElement>("form[data-confirm]")
+    .forEach((form) => {
+      form.addEventListener("submit", (event) => {
+        if (form.dataset.confirmed === "1") return;
+
+        event.preventDefault();
+        pending = form;
+
+        if (message) {
+          message.textContent =
+            form.dataset.confirm ?? "Lanjutkan tindakan ini?";
+        }
+        if (okBtn) {
+          okBtn.textContent = form.dataset.confirmOk ?? "Ya, lanjutkan";
+        }
+
+        open();
+      });
+    });
+
+  document.querySelectorAll("[data-confirm-cancel]").forEach((el) => {
+    el.addEventListener("click", close);
+  });
+
+  okBtn?.addEventListener("click", () => {
+    const form = pending;
+    close();
+    if (!form) return;
+    form.dataset.confirmed = "1";
+    form.submit();
+  });
+</script>

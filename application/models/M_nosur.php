@@ -42,6 +42,78 @@ class M_nosur extends MY_Model
     }
 
     /**
+     * Query dasar daftar nomor surat untuk API baca (paginasi server-side).
+     *
+     * Sengaja MENGULANG bentuk query `daftar_user()` / `daftar_tahun()` apa
+     * adanya (join inner ke pegawai_db.pegawai, urut id DESC) agar hasil JSON
+     * identik dengan yang dirender view. Bedanya hanya: LIMIT/OFFSET dan
+     * pencarian `q` yang dijalankan di server, bukan di DataTables.
+     *
+     * Method ini BARU; `daftar_user()` dan `daftar_tahun()` tidak diubah.
+     *
+     * @param  int         $tahun
+     * @param  string|null $nip  NULL = seluruh pegawai (tampilan admin)
+     * @param  string|null $q
+     * @return void
+     */
+    private function _api_query($tahun, $nip = NULL, $q = NULL)
+    {
+        $this->db->select('nosur.*, u.nama');
+        $this->db->from('nosur');
+        $this->db->join('pegawai_db.pegawai u', 'nosur.nip = u.nip', 'inner');
+        $this->db->where('YEAR(nosur.tanggal)', (int) $tahun);
+
+        if ($nip !== NULL && $nip !== '') {
+            $this->db->where('nosur.nip', $nip);
+        }
+
+        if ($q !== NULL && $q !== '') {
+            $this->db->group_start();
+            $this->db->like('nosur.no', $q);
+            $this->db->or_like('nosur.hal', $q);
+            $this->db->or_like('nosur.tujuan', $q);
+            $this->db->or_like('u.nama', $q);
+            $this->db->group_end();
+        }
+    }
+
+    /**
+     * Satu halaman daftar nomor surat (API).
+     *
+     * @param  int         $tahun
+     * @param  string|null $nip    NULL = semua pegawai
+     * @param  string|null $q
+     * @param  int         $limit
+     * @param  int         $offset
+     * @return array of object
+     */
+    public function api_daftar($tahun, $nip = NULL, $q = NULL, $limit = 25, $offset = 0)
+    {
+        $this->_api_query($tahun, $nip, $q);
+
+        // Urutan sama dengan daftar_user()/daftar_tahun(): id DESC (deterministik).
+        $this->db->order_by('nosur.id', 'DESC');
+        $this->db->limit(max(1, (int) $limit), max(0, (int) $offset));
+
+        return $this->db->get()->result();
+    }
+
+    /**
+     * Jumlah baris untuk filter yang sama dengan api_daftar().
+     *
+     * @param  int         $tahun
+     * @param  string|null $nip
+     * @param  string|null $q
+     * @return int
+     */
+    public function api_count($tahun, $nip = NULL, $q = NULL)
+    {
+        $this->_api_query($tahun, $nip, $q);
+
+        return $this->db->count_all_results();
+    }
+
+    /**
      * Nomor urut terakhir untuk penomoran otomatis.
      */
     public function last_no_urut($tahun)

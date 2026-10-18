@@ -1,0 +1,376 @@
+---
+/**
+ * SuratMasukForm.astro — form surat masuk, dipakai `input.astro` dan
+ * `edit.astro`.
+ *
+ * Sumber tata letak: sinos/application/views/surat_masuk/_form_fields.php.
+ * Urutan field, nama field, dan pembagian kolom disalin apa adanya:
+ *
+ *   pengirim          | pengolah
+ *   no_surat          | no_agenda (disabled)
+ *   tgl_surat         | tgl_diterima
+ *   kode              (sm:col-span-2, Preline advanced select)
+ *   perihal           (sm:col-span-2)
+ *   keterangan        | file
+ *
+ * `kode` WAJIB memakai Select.astro (advanced select) — jangan diganti
+ * <select> native: panel pencarian klasifikasi adalah bagian dari paritas.
+ *
+ * Nama field HARUS sama dengan kontrak API (`api_rules_surat_masuk()`):
+ *   kode, no_surat, tgl_surat, tgl_diterima, pengirim, perihal, pengolah,
+ *   keterangan, file. Salah nama = data hilang tanpa pesan.
+ *
+ * Arah B: form duduk di kanvas putih dengan `.page-head`; kelompok field
+ * dipisah `.separator`, BUKAN dibungkus kartu.
+ *
+ * `row` menerima dua bentuk:
+ *   - detail API (tgl_surat = { iso, teks }, file = { state, path, label })
+ *   - nilai yang baru dikirim (string biasa) untuk render ulang 422
+ */
+import Field from "./Field.astro";
+import Select from "./Select.astro";
+import Icon from "./Icon.astro";
+import { berkasUrl } from "../lib/format";
+
+interface Klasifikasi {
+  kode: string;
+  nama: string;
+}
+
+interface Props {
+  mode: "create" | "edit";
+  /** Baris detail API (edit) atau nilai terkirim (create + 422). */
+  row?: Record<string, unknown> | null;
+  klasifikasi: Klasifikasi[];
+  /** Peta `field => pesan` dari envelope error 422. */
+  errors?: Record<string, string> | null;
+  /** Pratinjau nomor agenda (create). Server tetap yang menetapkan nilai. */
+  nextAgenda?: string;
+  /** Pesan umum kegagalan non-field (mis. 403/500). */
+  message?: string;
+}
+
+const {
+  mode,
+  row = null,
+  klasifikasi,
+  errors = null,
+  nextAgenda = "",
+  message = "",
+} = Astro.props;
+
+const isEdit = mode === "edit";
+const id = row && row.id !== undefined && row.id !== null ? String(row.id) : "";
+
+/** Nilai satu field, menerima string maupun { iso, teks }. */
+function valueOf(field: string): string {
+  if (!row) return "";
+  const raw = row[field];
+  if (raw === null || raw === undefined) return "";
+  if (typeof raw === "object") {
+    const iso = (raw as { iso?: string | null }).iso;
+    return iso === null || iso === undefined ? "" : String(iso);
+  }
+  return String(raw);
+}
+
+/** Path berkas saat ini; `file` dapat berupa string atau objek meta API. */
+function currentFilePath(): string {
+  if (!row) return "";
+  const raw = row.file;
+  if (raw === null || raw === undefined) return "";
+  if (typeof raw === "object") {
+    const path = (raw as { path?: string | null }).path;
+    return path === null || path === undefined ? "" : String(path);
+  }
+  const text = String(raw);
+  return text === "1" ? "" : text;
+}
+
+const errorOf = (field: string): string | undefined =>
+  errors && typeof errors[field] === "string" ? errors[field] : undefined;
+
+const agendaValue = isEdit
+  ? valueOf("no_agenda")
+  : nextAgenda !== ""
+    ? nextAgenda
+    : "-";
+
+const pengolahOptions = [
+  "Kepaniteraan",
+  "Umum Keuangan",
+  "PTIP",
+  "Kepegawaian",
+];
+
+const kodeOptions = klasifikasi.map((k) => ({
+  value: String(k.kode),
+  label: k.nama ? `${k.kode} - ${k.nama}` : String(k.kode),
+}));
+
+const filePath = currentFilePath();
+
+/**
+ * Edit dikirim sebagai POST + `_method=PUT` karena PHP tidak mengisi $_FILES
+ * pada request PUT (lihat catatan di api/Surat_masuk.php). API memperlakukan
+ * keduanya sama.
+ */
+const action = isEdit ? `/api/surat-masuk/${id}` : "/api/surat-masuk";
+const submitLabel = isEdit ? "Simpan Perubahan" : "Simpan";
+const backHref = isEdit
+  ? `/surat-masuk/daftar?tahun=${(valueOf("tgl_surat") || "").slice(0, 4) || new Date().getFullYear()}`
+  : "/surat-masuk/daftar";
+---
+
+{
+  message !== "" && (
+    <div class="alert alert-danger mx-6 mt-4" role="alert">
+      <span class="mt-0.5 shrink-0">
+        <Icon name="octagon-x" class="h-4 w-4" />
+      </span>
+      <div class="flex-1">
+        <p class="alert-title">Gagal</p>
+        <p class="alert-description">{message}</p>
+      </div>
+    </div>
+  )
+}
+
+<form
+  method="post"
+  action={action}
+  enctype="multipart/form-data"
+  class="px-6 py-5"
+  data-surat-masuk-form
+>
+  {isEdit && <input type="hidden" name="_method" value="PUT" />}
+
+  <div class="grid gap-4 sm:grid-cols-2">
+    <Field
+      label="Pengirim"
+      name="pengirim"
+      required
+      error={errorOf("pengirim")}
+    >
+      <input
+        class="input"
+        type="text"
+        id="pengirim"
+        name="pengirim"
+        placeholder="Instansi / perorangan pengirim"
+        value={valueOf("pengirim")}
+        aria-invalid={errorOf("pengirim") ? "true" : undefined}
+        aria-describedby={errorOf("pengirim") ? "pengirim-error" : undefined}
+        required
+      />
+    </Field>
+
+    <Field
+      label="Pengolah"
+      name="pengolah"
+      required
+      error={errorOf("pengolah")}
+    >
+      <select
+        class="select"
+        id="pengolah"
+        name="pengolah"
+        aria-invalid={errorOf("pengolah") ? "true" : undefined}
+        aria-describedby={errorOf("pengolah") ? "pengolah-error" : undefined}
+        required
+      >
+        <option value="" hidden selected={valueOf("pengolah") === ""}>
+          Pilih Pengolah
+        </option>
+        {
+          pengolahOptions.map((opt) => (
+            <option value={opt} selected={valueOf("pengolah") === opt}>
+              {opt}
+            </option>
+          ))
+        }
+      </select>
+    </Field>
+
+    <Field
+      label="Nomor Surat"
+      name="no_surat"
+      required
+      error={errorOf("no_surat")}
+    >
+      <input
+        class="input"
+        type="text"
+        id="no_surat"
+        name="no_surat"
+        placeholder="Nomor surat dari pengirim"
+        value={valueOf("no_surat")}
+        aria-invalid={errorOf("no_surat") ? "true" : undefined}
+        aria-describedby={errorOf("no_surat") ? "no_surat-error" : undefined}
+        required
+      />
+    </Field>
+
+    <Field
+      label="No. Agenda"
+      name="no_agenda"
+      hint="Nomor agenda dibuat otomatis (tidak dapat diubah)."
+    >
+      <input
+        class="input"
+        type="text"
+        id="no_agenda"
+        name="no_agenda"
+        value={agendaValue}
+        disabled
+        readonly
+      />
+    </Field>
+
+    <Field
+      label="Tanggal Surat"
+      name="tgl_surat"
+      required
+      error={errorOf("tgl_surat")}
+    >
+      <input
+        class="input"
+        type="date"
+        id="tgl_surat"
+        name="tgl_surat"
+        value={valueOf("tgl_surat")}
+        aria-invalid={errorOf("tgl_surat") ? "true" : undefined}
+        aria-describedby={errorOf("tgl_surat") ? "tgl_surat-error" : undefined}
+        required
+      />
+    </Field>
+
+    <Field
+      label="Tanggal Diterima"
+      name="tgl_diterima"
+      required
+      error={errorOf("tgl_diterima")}
+    >
+      <input
+        class="input"
+        type="date"
+        id="tgl_diterima"
+        name="tgl_diterima"
+        value={valueOf("tgl_diterima")}
+        aria-invalid={errorOf("tgl_diterima") ? "true" : undefined}
+        aria-describedby={errorOf("tgl_diterima")
+          ? "tgl_diterima-error"
+          : undefined}
+        required
+      />
+    </Field>
+
+    <div class="sm:col-span-2">
+      <Field
+        label="Kode Klasifikasi"
+        name="kode"
+        required
+        error={errorOf("kode")}
+      >
+        <Select
+          name="kode"
+          id="kode"
+          placeholder="Pilih salah satu"
+          searchPlaceholder="Cari kode / nama klasifikasi…"
+          options={kodeOptions}
+          value={valueOf("kode")}
+          required
+          invalid={Boolean(errorOf("kode"))}
+          describedBy={errorOf("kode") ? "kode-error" : undefined}
+        />
+      </Field>
+    </div>
+
+    <div class="sm:col-span-2">
+      <Field label="Perihal" name="perihal" required error={errorOf("perihal")}>
+        <input
+          class="input"
+          type="text"
+          id="perihal"
+          name="perihal"
+          placeholder="Ringkasan isi surat"
+          value={valueOf("perihal")}
+          aria-invalid={errorOf("perihal") ? "true" : undefined}
+          aria-describedby={errorOf("perihal") ? "perihal-error" : undefined}
+          required
+        />
+      </Field>
+    </div>
+
+    <Field
+      label="Keterangan"
+      name="keterangan"
+      required
+      error={errorOf("keterangan")}
+    >
+      <input
+        class="input"
+        type="text"
+        id="keterangan"
+        name="keterangan"
+        placeholder="Catatan tambahan"
+        value={valueOf("keterangan")}
+        aria-invalid={errorOf("keterangan") ? "true" : undefined}
+        aria-describedby={errorOf("keterangan")
+          ? "keterangan-error"
+          : undefined}
+        required
+      />
+    </Field>
+
+    <Field
+      label="Upload Dokumen (PDF)"
+      name="file"
+      required={!isEdit}
+      hint="Hanya file PDF."
+      error={errorOf("file")}
+    >
+      <input
+        class="input"
+        type="file"
+        id="file"
+        name="file"
+        accept="application/pdf"
+        aria-invalid={errorOf("file") ? "true" : undefined}
+        aria-describedby={errorOf("file") ? "file-error" : "file-hint"}
+        required={!isEdit}
+      />
+      {
+        isEdit && filePath !== "" && (
+          <p class="mt-1 text-xs text-[var(--color-ink-subtle)]">
+            Berkas saat ini:{" "}
+            <a
+              class="font-medium text-[var(--color-brand-900)] underline-offset-2 hover:underline"
+              href={berkasUrl(filePath)}
+              target="_blank"
+              rel="noopener"
+            >
+              lihat
+            </a>
+          </p>
+        )
+      }
+    </Field>
+  </div>
+
+  <div class="separator"></div>
+
+  <div
+    class="flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end"
+  >
+    <button type="reset" class="btn-ghost">Ulang</button>
+    <a href={backHref} class="btn-outline">
+      <Icon name="arrow-left" class="h-4 w-4" />
+      <span>Batal</span>
+    </a>
+    <button type="submit" class="btn-primary">
+      <Icon name="check" class="h-4 w-4" />
+      <span>{submitLabel}</span>
+    </button>
+  </div>
+</form>

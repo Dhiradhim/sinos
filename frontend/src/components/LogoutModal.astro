@@ -1,0 +1,73 @@
+---
+/**
+ * Preline overlay konfirmasi logout.
+ * Copy Bahasa Indonesia disalin apa adanya dari
+ * sinos/application/views/layouts/logout_modal.php:1
+ */
+import Icon from "./Icon.astro";
+---
+
+<div
+  id="logoutModal"
+  class="hs-overlay pointer-events-none fixed inset-0 z-[80] hidden size-full overflow-y-auto overflow-x-hidden"
+  data-hs-overlay-options='{"backdropClasses":"hs-overlay-backdrop transition duration fixed inset-0 bg-[rgb(11_27_58_/_0.45)]"}'
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="logoutTitle"
+  tabindex="-1"
+>
+  <div
+    class="pointer-events-none m-3 mt-0 flex min-h-[calc(100%-1.5rem)] items-center opacity-0 transition-all duration-300 ease-out sm:mx-auto sm:w-full sm:max-w-sm hs-overlay-open:mt-7 hs-overlay-open:opacity-100"
+  >
+    <div
+      class="pointer-events-auto flex w-full flex-col rounded-[var(--radius-panel)] border border-[var(--color-line)] bg-[var(--color-canvas)] shadow-[var(--shadow-panel)]"
+    >
+      <div
+        class="flex items-center justify-between border-b border-[var(--color-line)] px-5 py-3"
+      >
+        <h3
+          id="logoutTitle"
+          class="flex items-center gap-2 text-sm font-semibold text-[var(--color-ink)]"
+        >
+          <span
+            class="flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)] bg-[color-mix(in_oklab,var(--color-danger)_8%,#ffffff)] text-[var(--color-danger)]"
+          >
+            <Icon name="log-out" class="h-4 w-4" />
+          </span>
+          Konfirmasi Logout
+        </h3>
+        <button
+          type="button"
+          class="btn-icon"
+          data-hs-overlay="#logoutModal"
+          aria-label="Tutup"
+        >
+          <Icon name="x" class="h-4 w-4" />
+        </button>
+      </div>
+
+      <div
+        class="px-5 py-4 text-sm leading-relaxed text-[var(--color-ink-muted)]"
+      >
+        Apakah Anda yakin ingin keluar dari aplikasi SINOS? Anda perlu login
+        kembali untuk mengakses sistem.
+      </div>
+
+      <div
+        class="flex items-center justify-end gap-2 border-t border-[var(--color-line)] px-5 py-3"
+      >
+        <button
+          type="button"
+          class="btn-outline btn-sm"
+          data-hs-overlay="#logoutModal">Batal</button
+        >
+        <form method="POST" action="/api/auth/logout" class="inline-flex">
+          <button type="submit" class="btn-primary btn-sm">
+            <Icon name="log-out" />
+            <span>Logout</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

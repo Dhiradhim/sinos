@@ -1,0 +1,302 @@
+---
+/**
+ * Detail Surat Masuk — `/surat-masuk/detail/{id}`.
+ *
+ * Sumber: sinos/application/views/surat_masuk/detail.php + Surat_masuk::detail().
+ * Data: `GET /surat-masuk/{id}` → seluruh field + `posisi`, `riwayat[]`, `aksi`.
+ *
+ * DEVIASI dari brief (dilaporkan): brief menyebut `src/pages/surat-masuk/detail.astro`,
+ * tetapi URL yang diminta (dan yang dipakai seluruh tautan CI3) adalah
+ * `/surat-masuk/detail/{id}`, sehingga halaman ini berada di segmen dinamis
+ * `detail/[id].astro`. Isi dan kontraknya sama.
+ *
+ * Tata letak: dua kolom `lg:grid-cols-3` — 2/3 daftar field, 1/3 posisi
+ * disposisi + riwayat sebagai timeline (`border-l` + titik penanda).
+ *
+ * Semua field yang dirender view CI3 dipertahankan: no_surat, no_agenda,
+ * tgl_surat, tgl_diterima, perihal, pengirim, pengolah, kode, keterangan.
+ */
+import AppShell from "../../../layouts/AppShell.astro";
+import PageHead from "../../../components/PageHead.astro";
+import Icon from "../../../components/Icon.astro";
+import NotFoundState from "../../../components/NotFoundState.astro";
+import { requireUser } from "../../../lib/auth";
+import { apiFetch } from "../../../lib/api";
+import { getSession } from "../../../lib/session";
+import { berkasUrl, formatDateTime, toneClass } from "../../../lib/format";
+import type { SuratMasukDetail } from "../../../lib/suratMasuk";
+
+const auth = await requireUser(Astro);
+if (auth.redirect) return auth.redirect;
+const user = auth.user;
+const token = getSession(Astro.cookies);
+
+const id = Number(Astro.params.id);
+const idValid = Number.isInteger(id) && id > 0;
+
+const result = idValid
+  ? await apiFetch<SuratMasukDetail>(`/surat-masuk/${id}`, { token })
+  : null;
+
+/**
+ * 404 harus TERBACA, bukan redirect: controller CI3 memakai `show_404()` pada
+ * id yang tidak ada. Status HTTP disetel eksplisit agar perayap dan pengujian
+ * menerima 404, lalu halaman dirender dengan tautan kembali.
+ */
+const notFound = !result?.ok || !result.data;
+if (notFound) {
+  Astro.response.status = 404;
+}
+
+// Template bercabang pada `notFound` lebih dulu, jadi di cabang render data
+// `row` selalu terisi. Cast ini menghindari puluhan guard `row?.` yang tidak
+// pernah tercapai.
+const row = (result?.data ?? null) as SuratMasukDetail;
+// `aksi` hanya dibaca di cabang render data; nilai semua-false dipakai di
+// cabang 404 agar tipe tetap lengkap tanpa guard tambahan.
+const aksi: SuratMasukDetail["aksi"] = result?.data?.aksi ?? {
+  can_view: false,
+  can_send: false,
+  can_edit: false,
+  can_print_disposisi: false,
+  can_arsipkan: false,
+  can_batal_arsip: false,
+  can_delete: false,
+};
+
+const tahun = notFound
+  ? new Date().getFullYear()
+  : Number(String(row.tgl_surat.iso ?? "").slice(0, 4)) ||
+    new Date().getFullYear();
+
+const dashboard = await apiFetch<{ disposisi_belum_dibaca: number }>(
+  "/dashboard",
+  {
+    token,
+    query: { tahun },
+  },
+);
+const disposisiCount = dashboard.data?.disposisi_belum_dibaca ?? 0;
+
+/** Field yang dirender, urut seperti view CI3. */
+const fields: {
+  label: string;
+  value: string;
+  tabular?: boolean;
+  span?: boolean;
+}[] = notFound
+  ? []
+  : [
+      { label: "No. Surat", value: row.no_surat },
+      { label: "No. Agenda", value: row.no_agenda, tabular: true },
+      { label: "Tanggal Surat", value: row.tgl_surat.teks },
+      { label: "Tanggal Diterima", value: row.tgl_diterima.teks },
+      { label: "Perihal", value: row.perihal, span: true },
+      { label: "Pengirim", value: row.pengirim },
+      { label: "Pengolah", value: row.pengolah },
+      { label: "Kode Klasifikasi", value: row.kode },
+      {
+        label: "Keterangan",
+        value: row.keterangan !== "" ? row.keterangan : "—",
+      },
+    ];
+---
+
+<AppShell
+  title={notFound ? "Surat masuk tidak ditemukan" : row.no_surat}
+  user={user}
+  disposisiCount={disposisiCount}
+  tahun={tahun}
+  topbarTitle={false}
+>
+  {
+    notFound ? (
+      <NotFoundState
+        title="Surat masuk tidak ditemukan"
+        description={`Surat masuk dengan ID ${Astro.params.id} tidak ada atau sudah dihapus.`}
+        backHref="/surat-masuk/daftar"
+        backLabel="Kembali ke daftar surat masuk"
+      />
+    ) : (
+      <>
+        <PageHead title={row.no_surat} subtitle="Detail surat masuk">
+    <div slot="actions" class="flex flex-wrap items-center gap-2">
+      <a href={`/surat-masuk/daftar?tahun=${tahun}`} class="btn-outline btn-sm">
+        <Icon name="arrow-left" class="h-4 w-4" />
+        <span>Kembali</span>
+      </a>
+
+      {
+        row.file.state === "ready" && (
+          <a
+            href={berkasUrl(row.file.path)}
+            target="_blank"
+            rel="noopener"
+            class="btn-primary btn-sm"
+          >
+            <Icon name="file-text" class="h-4 w-4" />
+            <span>Lihat Berkas</span>
+          </a>
+        )
+      }
+
+      {
+        aksi.can_arsipkan && (
+          <form
+            method="post"
+            action={`/api/surat-masuk/${row.id}/arsip?kembali=/surat-masuk/detail/${row.id}`}
+          >
+            <button type="submit" class="btn-outline btn-sm">
+              <Icon name="archive" class="h-4 w-4" />
+              <span>Arsip</span>
+            </button>
+          </form>
+        )
+      }
+
+      {
+        aksi.can_batal_arsip && (
+          <form
+            method="post"
+            action={`/api/surat-masuk/${row.id}/batal-arsip?kembali=/surat-masuk/detail/${row.id}`}
+          >
+            <button type="submit" class="btn-outline btn-sm">
+              <Icon name="archive-restore" class="h-4 w-4" />
+              <span>Batal Arsip</span>
+            </button>
+          </form>
+        )
+      }
+
+      {
+        aksi.can_print_disposisi && (
+          <a
+            href={`/surat-masuk/${row.id}/cetak`}
+            target="_blank"
+            rel="noopener"
+            class="btn-outline btn-sm"
+          >
+            <Icon name="printer" class="h-4 w-4" />
+            <span>Cetak Disposisi</span>
+          </a>
+        )
+      }
+    </div>
+  </PageHead>
+
+  <div class="grid grid-cols-1 gap-6 px-6 py-6 lg:grid-cols-3">
+    <!-- Detail surat -->
+    <section class="lg:col-span-2" aria-labelledby="detail-title">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="min-w-0">
+          <h2
+            class="text-sm font-semibold text-[var(--color-ink)]"
+            id="detail-title"
+          >
+            Detail Surat Masuk
+          </h2>
+          <p class="text-xs text-[var(--color-ink-subtle)]">
+            Informasi lengkap surat masuk.
+          </p>
+        </div>
+        {row.diarsipkan && <span class="badge-muted">Arsip</span>}
+      </div>
+
+      <div class="separator"></div>
+
+      <dl class="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+        {
+          fields.map((f) => (
+            <div class={f.span ? "sm:col-span-2" : undefined}>
+              <dt class="text-xs uppercase tracking-wide text-[var(--color-ink-subtle)]">
+                {f.label}
+              </dt>
+              <dd
+                class:list={[
+                  "mt-0.5 text-sm font-medium text-[var(--color-ink)]",
+                  f.tabular && "tabular",
+                ]}
+              >
+                {f.value}
+              </dd>
+            </div>
+          ))
+        }
+      </dl>
+    </section>
+
+    <!-- Posisi disposisi & riwayat -->
+    <aside class="min-w-0" aria-labelledby="posisi-title">
+      <h2
+        class="text-sm font-semibold text-[var(--color-ink)]"
+        id="posisi-title"
+      >
+        Posisi Disposisi
+      </h2>
+
+      <div class="separator"></div>
+
+      {
+        row.posisi ? (
+          <div class="rounded-[var(--radius-control)] bg-[var(--color-surface-muted)] p-3">
+            <p class="text-xs text-[var(--color-ink-subtle)]">Saat ini di</p>
+            <p class="mt-0.5 font-medium text-[var(--color-ink)]">
+              {row.posisi.kepada}
+            </p>
+            <p class="text-xs text-[var(--color-ink-subtle)]">
+              {row.posisi.kategori}
+            </p>
+            <p class="mt-2">
+              <span class={toneClass(row.posisi.tone)}>
+                {row.posisi.status}
+              </span>
+            </p>
+          </div>
+        ) : (
+          <p class="text-sm text-[var(--color-ink-subtle)]">
+            Surat ini belum pernah didisposisi.
+          </p>
+        )
+      }
+
+      {
+        row.riwayat.length > 0 && (
+          <div class="mt-6">
+            <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-subtle)]">
+              Riwayat Disposisi
+            </p>
+            <ol class="relative ml-2 border-l border-[var(--color-line)] pl-5">
+              {row.riwayat.map((rw) => (
+                <li class="relative pb-4 last:pb-0">
+                  <span
+                    class="absolute -left-[1.4375rem] top-1 flex h-2.5 w-2.5 items-center justify-center rounded-full border border-[var(--color-line-strong)] bg-[var(--color-canvas)]"
+                    aria-hidden="true"
+                  />
+                  <p class="text-sm font-medium leading-snug text-[var(--color-ink)]">
+                    {rw.kepada}
+                  </p>
+                  <p class="text-xs text-[var(--color-ink-subtle)]">
+                    {formatDateTime(rw.tanggal.iso)}
+                  </p>
+                  {rw.instruksi && (
+                    <p class="mt-0.5 text-xs text-[var(--color-ink-muted)]">
+                      {rw.instruksi}
+                    </p>
+                  )}
+                  {rw.catatan && (
+                    <p class="mt-0.5 text-xs text-[var(--color-ink-subtle)]">
+                      {rw.catatan}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
+        )
+      }
+    </aside>
+  </div>
+      </>
+    )
+  }
+</AppShell>

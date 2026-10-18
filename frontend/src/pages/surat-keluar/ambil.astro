@@ -1,0 +1,177 @@
+---
+/**
+ * Ambil Nomor Surat.
+ *
+ * Sumber: sinos/application/views/surat_keluar/ambil.php +
+ * `_form_nomor_fields.php` + Surat_keluar::ambil()/ambil_simpan().
+ * Data master: `GET /master/pengambil`, `/master/penandatangan`,
+ * `/master/klasifikasi`. Aksi: `POST /api/surat-keluar/ambil`.
+ *
+ * Arah B: `.page-head` lalu kelompok field dipisah `.separator`; TIDAK ada
+ * kartu pembungkus (ambil.php memakai `.card`, arah B menghapusnya).
+ *
+ * PENJAGA 409 — dua lapis, sama seperti CI3:
+ *   1. Saat halaman dibuka, CI3 memeriksa `count_belum_upload()` lalu
+ *      mengalihkan dengan flash "Mohon upload softcopy nomor surat
+ *      sebelumnya!". Astro tidak punya endpoint hitung khusus, jadi daftar
+ *      milik sendiri (`GET /surat-keluar`, urut id DESC) diperiksa untuk baris
+ *      berstatus `file.state === 'pending'`. Bila ada, `.alert-warning`
+ *      tampil di atas form dengan tautan ke halaman upload nomor tersebut.
+ *   2. Bila pengguna tetap menekan Simpan, API membalas 409
+ *      `BERKAS_BELUM_LENGKAP`; action route menyimpan pesan + kode di cookie
+ *      umpan balik dan halaman menampilkannya sebagai `.alert-warning` di atas
+ *      form (payload 409 tidak menyertakan id nomor yang bermasalah).
+ *
+ * PENOMORAN: tidak ada pratinjau nomor di halaman ini. Nomor ditetapkan
+ * server dan hanya ditampilkan setelah 201.
+ */
+import AppShell from "../../layouts/AppShell.astro";
+import PageHead from "../../components/PageHead.astro";
+import NomorFields from "../../components/NomorFields.astro";
+import Icon from "../../components/Icon.astro";
+import { requireUser } from "../../lib/auth";
+import { apiFetch } from "../../lib/api";
+import { getSession } from "../../lib/session";
+import { takeFormFeedback } from "../../lib/formFeedback";
+import type {
+  Klasifikasi,
+  PenandatanganGrup,
+  Pengambil,
+  SuratKeluarRow,
+} from "../../lib/suratKeluar";
+
+const auth = await requireUser(Astro);
+if (auth.redirect) return auth.redirect;
+const user = auth.user;
+const token = getSession(Astro.cookies);
+
+const tahun = new Date().getFullYear();
+
+const [pengambilRes, penandatanganRes, klasifikasiRes] = await Promise.all([
+  apiFetch<Pengambil[]>("/master/pengambil", { token }),
+  apiFetch<PenandatanganGrup[]>("/master/penandatangan", { token }),
+  apiFetch<Klasifikasi[]>("/master/klasifikasi", { token }),
+]);
+
+const pengambil = pengambilRes.data ?? [];
+const penandatangan = penandatanganRes.data ?? [];
+const klasifikasi = klasifikasiRes.data ?? [];
+
+const dashboard = await apiFetch<{ disposisi_belum_dibaca: number }>(
+  "/dashboard",
+  { token, query: { tahun } },
+);
+const disposisiCount = dashboard.data?.disposisi_belum_dibaca ?? 0;
+
+const feedback = takeFormFeedback(Astro.cookies);
+
+/**
+ * Pratinjau penjaga CI3: nomor milik sendiri yang berkasnya belum diunggah.
+ * `count_belum_upload()` mengabaikan baris berperihal "Belum Diambil", jadi
+ * filter yang sama diterapkan di sini.
+ */
+const sendiriRes = await apiFetch<SuratKeluarRow[]>("/surat-keluar", {
+  token,
+  query: { tahun, per_page: 100 },
+});
+
+const belumUpload = (sendiriRes.data ?? []).filter(
+  (row) => row.file.state === "pending" && row.hal !== "Belum Diambil",
+);
+
+/** Tanggal penomoran hari ini — ditetapkan server, hanya ditampilkan. */
+const now = new Date();
+const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
+  now.getDate(),
+).padStart(2, "0")}`;
+
+const pesanBerkas = "Mohon upload softcopy nomor surat sebelumnya!";
+const kode409 = feedback?.code === "BERKAS_BELUM_LENGKAP";
+const showBerkasWarning = !user.is_admin && (kode409 || belumUpload.length > 0);
+const berkasTarget = belumUpload.length > 0 ? belumUpload[0] : null;
+---
+
+<AppShell
+  title="Ambil Nomor Surat"
+  user={user}
+  disposisiCount={disposisiCount}
+  tahun={tahun}
+  topbarTitle={false}
+>
+  <PageHead
+    title="Ambil Nomor Surat"
+    subtitle="Daftarkan nomor surat keluar baru beserta klasifikasinya."
+  />
+
+  <div class="mx-auto w-full max-w-3xl px-6 py-5">
+    {
+      showBerkasWarning && (
+        <div class="alert alert-warning mb-5" role="alert">
+          <span class="mt-0.5 shrink-0">
+            <Icon name="triangle-alert" class="h-4 w-4" />
+          </span>
+          <div class="flex-1">
+            <p class="alert-title">Berkas belum lengkap</p>
+            <p class="alert-description">
+              {kode409 ? (feedback?.message ?? pesanBerkas) : pesanBerkas}
+            </p>
+            {berkasTarget && (
+              <p class="mt-1 text-xs">
+                <a
+                  href={`/surat-keluar/upload/${berkasTarget.id}`}
+                  class="underline underline-offset-2"
+                >
+                  Upload berkas {berkasTarget.no}
+                </a>
+              </p>
+            )}
+          </div>
+        </div>
+      )
+    }
+
+    {
+      feedback?.message && !showBerkasWarning && (
+        <div class="alert alert-danger mb-5" role="alert">
+          <span class="mt-0.5 shrink-0">
+            <Icon name="octagon-x" class="h-4 w-4" />
+          </span>
+          <div class="flex-1">
+            <p class="alert-title">Gagal</p>
+            <p class="alert-description">{feedback.message}</p>
+          </div>
+        </div>
+      )
+    }
+
+    <form method="post" action="/api/surat-keluar/ambil" class="w-full">
+      <NomorFields
+        mode="ambil"
+        pengambil={pengambil}
+        penandatangan={penandatangan}
+        klasifikasi={klasifikasi}
+        nilai={feedback?.values ?? null}
+        errors={feedback?.errors ?? null}
+        todayInfo={today}
+      />
+
+      <div class="separator"></div>
+
+      <div
+        class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <p class="text-xs text-[var(--color-ink-subtle)]">
+          Nomor melanjutkan nomor terakhir pada tanggal hari ini.
+        </p>
+        <div class="flex flex-wrap items-center gap-2 sm:justify-end">
+          <button type="reset" class="btn-ghost">Ulang</button>
+          <a href={`/surat-keluar/daftar?tahun=${tahun}`} class="btn-outline">
+            Batal
+          </a>
+          {/* Label tombol verbatim dari `surat_keluar/ambil.php:20`. */}
+          <button type="submit" class="btn-primary">Ambil Nomor</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</AppShell>

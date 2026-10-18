@@ -1,0 +1,277 @@
+---
+/**
+ * NomorFields.astro — kelompok field form nomor surat keluar.
+ *
+ * Port dari sinos/application/views/surat_keluar/_form_nomor_fields.php.
+ * Dipakai `ambil.astro`, `sisip.astro`, dan `edit/[id].astro` supaya ketiga
+ * form memakai markup, nama field, dan urutan kolom yang sama.
+ *
+ * Struktur (verbatim dari CI3):
+ *
+ *   fieldset  Penanggung Jawab
+ *     Pengambil Nomor      | Penandatangan Surat
+ *   .separator
+ *   fieldset  Identitas Surat
+ *     Kode Penetapan | [Tanggal] | Kode Surat
+ *     Perihal        | Tujuan
+ *
+ * Mode `ambil`   : Kode Penetapan 1/4 + Kode Surat 3/4 (tanpa tanggal).
+ * Mode `sisip`   : Kode Penetapan 1/4 + Tanggal 1/4 + Kode Surat 2/4.
+ * Mode `edit`    : sama seperti ambil; field tanggal dirender halaman edit
+ *                  di bawah partial, persis seperti edit.php:21.
+ *
+ * Arah B: tidak ada kartu. Fieldset dipisah `.separator`; legenda memakai
+ * `.fieldset-legend` (port input.v4.css:338).
+ *
+ * Nama field WAJIB sama dengan kontrak API
+ * (`api_rules_surat_keluar_ambil()` / `_sisip()` / `_update()`):
+ *   nip, penandatangan_nip, kode_penetapan, ks, hal, tujuan, tanggal.
+ */
+import Field from "./Field.astro";
+import Select from "./Select.astro";
+import Icon from "./Icon.astro";
+import { KODE_PENETAPAN } from "../lib/suratKeluar";
+import type {
+  Klasifikasi,
+  PenandatanganGrup,
+  Pengambil,
+} from "../lib/suratKeluar";
+
+interface Props {
+  mode: "ambil" | "sisip" | "edit";
+  pengambil: Pengambil[];
+  penandatangan: PenandatanganGrup[];
+  klasifikasi: Klasifikasi[];
+  /** Nilai awal (repopulate 422 atau baris detail). */
+  nilai?: Record<string, string> | null;
+  /** Peta `field => pesan` dari envelope 422. */
+  errors?: Record<string, string> | null;
+  /** Khusus sisip: batas atas + nilai awal tanggal (Y-m-d). */
+  tanggalField?: { max: string; value: string } | null;
+  /**
+   * Khusus ambil: tanggal hari ini, ditampilkan sebagai field baca-saja.
+   *
+   * CI3 tidak merender field tanggal pada form ambil (`_form_nomor_fields.php`
+   * hanya mengeluarkan tanggal bila `$tanggal_field` diisi, yaitu pada sisip).
+   * Brief Fase 5c meminta kontrol "Tanggal → <input type="date">" juga di
+   * halaman ambil, jadi field ini dirender `disabled` dengan nilai hari ini:
+   * tanggal penomoran ditetapkan server (`date('Y-m-d')`), bukan dikirim
+   * klien, sehingga nomor tidak pernah bisa diprediksi dari input pengguna.
+   */
+  todayInfo?: string | null;
+}
+
+const {
+  mode,
+  pengambil,
+  penandatangan,
+  klasifikasi,
+  nilai = null,
+  errors = null,
+  tanggalField = null,
+  todayInfo = null,
+} = Astro.props;
+
+const val = (key: string, fallback = ""): string => {
+  const raw = nilai?.[key];
+  return raw === undefined || raw === null ? fallback : String(raw);
+};
+
+const errorOf = (field: string): string | undefined =>
+  errors && typeof errors[field] === "string" ? errors[field] : undefined;
+
+/** "Nama, Gelar [KODE] · Grup" — label CI3 (`$t->label` + grup). */
+const penandatanganOptions = penandatangan.flatMap((grup) =>
+  grup.items.map((item) => ({
+    value: String(item.nip),
+    label: `${item.label} \u00b7 ${grup.grup}`,
+  })),
+);
+
+const pengambilOptions = pengambil.map((p) => ({
+  value: String(p.nip),
+  label: p.nama,
+}));
+
+const klasifikasiOptions = klasifikasi.map((k) => ({
+  value: String(k.kode),
+  label: k.nama ? `${k.kode} - ${k.nama}` : String(k.kode),
+}));
+
+const kodePenetapanOptions = KODE_PENETAPAN.map((item) => ({
+  value: item.kode,
+  label: `${item.label} [${item.kode}]`,
+}));
+
+const withTanggal = mode === "sisip";
+const withTanggalInfo = mode === "ambil" && todayInfo !== null;
+const tanggalCols = withTanggal || withTanggalInfo;
+---
+
+<fieldset>
+  <legend class="fieldset-legend">
+    <Icon name="user" class="h-3.5 w-3.5" />
+    <span>Penanggung Jawab</span>
+  </legend>
+
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <Field label="Pengambil Nomor" name="nip" required error={errorOf("nip")}>
+      <Select
+        name="nip"
+        id="nip"
+        placeholder="Pilih pengambil nomor"
+        searchPlaceholder="Cari nama pegawai…"
+        options={pengambilOptions}
+        value={val("nip")}
+        required
+        invalid={Boolean(errorOf("nip"))}
+        describedBy={errorOf("nip") ? "nip-error" : undefined}
+      />
+    </Field>
+
+    <Field
+      label="Penandatangan Surat"
+      name="penandatangan_nip"
+      required
+      error={errorOf("penandatangan_nip")}
+    >
+      <Select
+        name="penandatangan_nip"
+        id="penandatangan_nip"
+        placeholder="Pilih penandatangan"
+        searchPlaceholder="Cari nama pejabat…"
+        options={penandatanganOptions}
+        value={val("penandatangan_nip")}
+        required
+        invalid={Boolean(errorOf("penandatangan_nip"))}
+        describedBy={errorOf("penandatangan_nip")
+          ? "penandatangan_nip-error"
+          : undefined}
+      />
+    </Field>
+  </div>
+</fieldset>
+
+<div class="separator"></div>
+
+<fieldset>
+  <legend class="fieldset-legend">
+    <Icon name="file-text" class="h-3.5 w-3.5" />
+    <span>Identitas Surat</span>
+  </legend>
+
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
+    <Field
+      label="Kode Penetapan"
+      name="kode_penetapan"
+      error={errorOf("kode_penetapan")}
+    >
+      <select
+        class="select"
+        id="kode_penetapan"
+        name="kode_penetapan"
+        aria-invalid={errorOf("kode_penetapan") ? "true" : undefined}
+        aria-describedby={errorOf("kode_penetapan")
+          ? "kode_penetapan-error"
+          : undefined}
+        required
+      >
+        {
+          kodePenetapanOptions.map((opt) => (
+            <option
+              value={opt.value}
+              selected={val("kode_penetapan", "-") === opt.value}
+            >
+              {opt.label}
+            </option>
+          ))
+        }
+      </select>
+    </Field>
+
+    {
+      withTanggal && tanggalField && (
+        <Field
+          label="Tanggal"
+          name="tanggal"
+          required
+          error={errorOf("tanggal")}
+        >
+          <input
+            class="input"
+            type="date"
+            id="tanggal"
+            name="tanggal"
+            max={tanggalField.max}
+            value={tanggalField.value}
+            aria-invalid={errorOf("tanggal") ? "true" : undefined}
+            aria-describedby={errorOf("tanggal") ? "tanggal-error" : undefined}
+            required
+          />
+        </Field>
+      )
+    }
+
+    {
+      withTanggalInfo && (
+        <Field label="Tanggal" name="tanggal" hint="Ditetapkan server.">
+          <input
+            class="input"
+            type="date"
+            id="tanggal"
+            name="tanggal"
+            value={todayInfo}
+            disabled
+            aria-describedby="tanggal-hint"
+          />
+        </Field>
+      )
+    }
+
+    <div class={tanggalCols ? "sm:col-span-2" : "sm:col-span-3"}>
+      <Field label="Kode Surat" name="ks" required error={errorOf("ks")}>
+        <Select
+          name="ks"
+          id="ks"
+          placeholder="Pilih kode surat"
+          searchPlaceholder="Cari kode / nama klasifikasi…"
+          options={klasifikasiOptions}
+          value={val("ks")}
+          required
+          invalid={Boolean(errorOf("ks"))}
+          describedBy={errorOf("ks") ? "ks-error" : undefined}
+        />
+      </Field>
+    </div>
+  </div>
+
+  <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <Field label="Perihal" name="hal" required error={errorOf("hal")}>
+      <input
+        class="input"
+        type="text"
+        id="hal"
+        name="hal"
+        placeholder="Perihal surat"
+        value={val("hal")}
+        aria-invalid={errorOf("hal") ? "true" : undefined}
+        aria-describedby={errorOf("hal") ? "hal-error" : undefined}
+        required
+      />
+    </Field>
+
+    <Field label="Tujuan" name="tujuan" required error={errorOf("tujuan")}>
+      <input
+        class="input"
+        type="text"
+        id="tujuan"
+        name="tujuan"
+        placeholder="Tujuan surat"
+        value={val("tujuan")}
+        aria-invalid={errorOf("tujuan") ? "true" : undefined}
+        aria-describedby={errorOf("tujuan") ? "tujuan-error" : undefined}
+        required
+      />
+    </Field>
+  </div>
+</fieldset>

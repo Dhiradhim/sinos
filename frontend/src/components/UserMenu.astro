@@ -1,0 +1,88 @@
+---
+/**
+ * Menu pengguna — Preline dropdown.
+ * Struktur kelas Preline: hs-dropdown / hs-dropdown-toggle / hs-dropdown-menu.
+ */
+import Icon from "./Icon.astro";
+import { initialOf, roleLabel, type ApiUser } from "../lib/auth";
+
+interface Props {
+  user: ApiUser;
+}
+
+const { user } = Astro.props;
+const initial = initialOf(user.nama);
+const role = roleLabel(user);
+---
+
+<div
+  class="hs-dropdown relative inline-flex [--placement:bottom-right] [--auto-close:true]"
+>
+  <button
+    id="userMenuToggle"
+    type="button"
+    class="hs-dropdown-toggle flex items-center gap-2 rounded-full py-1 pl-1 pr-2 text-sm transition-colors hover:bg-[var(--color-surface-muted)] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_oklab,var(--color-brand-900)_35%,transparent)]"
+    aria-haspopup="menu"
+    aria-expanded="false"
+    aria-label="Menu pengguna"
+  >
+    <span class="avatar">{initial}</span>
+    <span class="hidden min-w-0 text-left leading-tight sm:block">
+      <span
+        class="block max-w-[10rem] truncate text-sm font-medium text-[var(--color-ink)]"
+      >
+        {user.nama}
+      </span>
+      <span
+        class="block max-w-[10rem] truncate text-[0.6875rem] text-[var(--color-ink-subtle)]"
+      >
+        {role}
+      </span>
+    </span>
+    <span class="hidden text-[var(--color-ink-subtle)] sm:block">
+      <Icon
+        name="chevron-down"
+        class="h-4 w-4 transition-transform duration-200 hs-dropdown-open:rotate-180"
+      />
+    </span>
+  </button>
+
+  <div
+    class="hs-dropdown-menu dropdown-menu absolute right-0 top-full mt-2 hidden w-60 opacity-0 transition-[opacity,margin] duration-150 [--placement:bottom-right]"
+    role="menu"
+    aria-labelledby="userMenuToggle"
+  >
+    <div class="px-2.5 py-2">
+      <p class="truncate text-sm font-semibold text-[var(--color-ink)]">
+        {user.nama}
+      </p>
+      <p class="truncate text-xs text-[var(--color-ink-subtle)]">{user.nip}</p>
+    </div>
+
+    <div class="dropdown-separator"></div>
+
+    <!-- Profil: belum ada halaman; tombol dinonaktifkan (bukan tautan mati). -->
+    <button
+      type="button"
+      class="dropdown-item"
+      role="menuitem"
+      disabled
+      aria-disabled="true"
+    >
+      <Icon name="user" />
+      <span>Profil</span>
+    </button>
+
+    <div class="dropdown-separator"></div>
+
+    <button
+      type="button"
+      class="dropdown-item-destructive"
+      role="menuitem"
+      data-hs-overlay="#logoutModal"
+    >
+      <Icon name="log-out" />
+      <span>Keluar</span>
+    </button>
+  </div>
+</div>

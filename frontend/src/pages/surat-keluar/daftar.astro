@@ -1,0 +1,254 @@
+---
+/**
+ * Daftar Nomor Surat (milik sendiri).
+ *
+ * Sumber: sinos/application/views/surat_keluar/daftar.php +
+ * Surat_keluar::daftar(). Data: `GET /surat-keluar?tahun&page&per_page&q`.
+ *
+ * Arah B (§5.1 "Structural break"): tidak ada kartu pembungkus tabel, filter
+ * bukan kotak, header bukan panel. Tabel menempel langsung ke kanvas.
+ *
+ * CATATAN PARITAS (dilaporkan):
+ *   - Subjudul diambil dari `card-description` CI3: "Nomor surat keluar yang
+ *     Anda ambil pada periode terpilih."
+ *   - `GET /surat-keluar` TIDAK mengirim objek `aksi` (hanya endpoint detail
+ *     yang mengirimnya). Karena itu tombol aksi baris diturunkan dari peran +
+ *     kepemilikan — aturan yang sama dengan `Surat_keluar::boleh_ubah()`
+ *     (admin atau pemilik `row.nip`). Bila kelak payload memuat `aksi`, nilai
+ *     itu yang dipakai.
+ *   - Kolom "No." berasal dari prop `startIndex` DataTable.astro, sehingga
+ *     kedelapan label kolom CI3 tetap tampil persis.
+ */
+import AppShell from "../../layouts/AppShell.astro";
+import PageHead from "../../components/PageHead.astro";
+import FilterBar from "../../components/FilterBar.astro";
+import DataTable, { type Column } from "../../components/DataTable.astro";
+import Pagination from "../../components/Pagination.astro";
+import TahunSelector from "../../components/TahunSelector.astro";
+import Icon from "../../components/Icon.astro";
+import { requireUser } from "../../lib/auth";
+import { apiFetch } from "../../lib/api";
+import { getSession } from "../../lib/session";
+import { berkasUrl } from "../../lib/format";
+import type { PageMeta, SuratKeluarRow } from "../../lib/suratKeluar";
+
+const auth = await requireUser(Astro);
+if (auth.redirect) return auth.redirect;
+const user = auth.user;
+const token = getSession(Astro.cookies);
+
+const params = Astro.url.searchParams;
+
+const master = await apiFetch<{ tahun_aktif: number }>("/master/tahun", {
+  token,
+});
+const tahunAktif = master.data?.tahun_aktif ?? new Date().getFullYear();
+
+const tahunParam = Number(params.get("tahun"));
+const tahun =
+  Number.isInteger(tahunParam) && tahunParam > 2000 ? tahunParam : tahunAktif;
+
+const page = Math.max(1, Number(params.get("page")) || 1);
+const q = (params.get("q") ?? "").trim();
+
+const result = await apiFetch<SuratKeluarRow[]>("/surat-keluar", {
+  token,
+  query: { tahun, page, per_page: 25, q: q || undefined },
+});
+
+const rows = result.data ?? [];
+const meta: PageMeta = {
+  page: Number(result.meta?.page ?? page) || 1,
+  per_page: Number(result.meta?.per_page ?? 25) || 25,
+  total: Number(result.meta?.total ?? rows.length) || 0,
+  last_page: Number(result.meta?.last_page ?? 1) || 1,
+};
+
+const dashboard = await apiFetch<{ disposisi_belum_dibaca: number }>(
+  "/dashboard",
+  { token, query: { tahun } },
+);
+const disposisiCount = dashboard.data?.disposisi_belum_dibaca ?? 0;
+
+const isAdmin = Boolean(user.is_admin);
+
+/** Admin atau pemilik nomor — sama dengan `Surat_keluar::boleh_ubah()`. */
+const canTouch = (row: SuratKeluarRow): { edit: boolean; upload: boolean } => {
+  if (row.aksi) {
+    return { edit: row.aksi.can_edit, upload: row.aksi.can_upload };
+  }
+  const owner = String(row.nip ?? "") === String(user.nip ?? "");
+  return { edit: isAdmin || owner, upload: isAdmin || owner };
+};
+
+const columns: Column[] = [
+  { key: "no", label: "No. Surat", nowrap: true, width: "13rem" },
+  { key: "nama", label: "Nama" },
+  { key: "tanggal.teks", label: "Tanggal", nowrap: true, width: "9rem" },
+  { key: "hal", label: "Perihal", prose: true },
+  { key: "tujuan", label: "Tujuan", prose: true },
+  { key: "berkas", label: "Berkas", nowrap: true, width: "8rem" },
+  {
+    key: "aksi",
+    label: "Aksi",
+    align: "right",
+    width: "1%",
+    className: "col-aksi",
+  },
+];
+
+const renderKeys = ["no", "berkas", "aksi"];
+---
+
+<AppShell
+  title="Daftar Nomor Surat"
+  user={user}
+  disposisiCount={disposisiCount}
+  tahun={tahun}
+  topbarTitle={false}
+>
+  <PageHead
+    title="Daftar Nomor Surat"
+    subtitle="Nomor surat keluar yang Anda ambil pada periode terpilih."
+  >
+    <div slot="actions" class="flex flex-wrap items-center gap-2">
+      <TahunSelector tahun={tahun} />
+      <a href="/surat-keluar/ambil" class="btn-primary btn-sm">
+        <Icon name="plus" class="h-4 w-4" />
+        <span>Ambil Nomor</span>
+      </a>
+    </div>
+  </PageHead>
+
+  <FilterBar action="/surat-keluar/daftar" hidden={{ tahun }}>
+    <div class="min-w-0 flex-1 sm:max-w-xs">
+      <label class="sr-only" for="q">Cari nomor surat</label>
+      <input
+        class="input"
+        type="search"
+        id="q"
+        name="q"
+        value={q}
+        placeholder="Cari…"
+      />
+    </div>
+
+    <Fragment slot="actions">
+      <button type="submit" class="btn-primary btn-sm">Terapkan</button>
+      <a
+        href={`/surat-keluar/daftar?tahun=${tahun}`}
+        class="btn-outline btn-sm"
+      >
+        Reset
+      </a>
+    </Fragment>
+  </FilterBar>
+
+  {
+    result.error && rows.length === 0 && (
+      <div class="px-6 pt-4">
+        <div class="alert alert-danger" role="alert">
+          <span class="mt-0.5 shrink-0">
+            <Icon name="octagon-x" class="h-4 w-4" />
+          </span>
+          <div class="flex-1">
+            <p class="alert-title">Gagal memuat data</p>
+            <p class="alert-description">{result.error.message}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  <DataTable
+    columns={columns}
+    rows={rows}
+    renderKeys={renderKeys}
+    startIndex={(meta.page - 1) * meta.per_page + 1}
+    caption="Daftar nomor surat keluar"
+  >
+    {
+      (row: SuratKeluarRow, _index: number, key: string) => {
+        if (key === "no") {
+          return (
+            <span class="font-medium tabular text-[var(--color-ink)]">
+              {row.no}
+            </span>
+          );
+        }
+
+        if (key === "berkas") {
+          if (row.file.state === "pending") {
+            return <span class="badge-warning">Belum ada</span>;
+          }
+          if (row.file.state === "none") {
+            return <span class="badge-muted">—</span>;
+          }
+          return (
+            <a
+              href={berkasUrl(row.file.path)}
+              target="_blank"
+              rel="noopener"
+              class="badge-success"
+            >
+              Lihat
+            </a>
+          );
+        }
+
+        const boleh = canTouch(row);
+
+        return (
+          <div class="flex items-center justify-end gap-1.5">
+            {boleh.upload && (
+              <a
+                href={`/surat-keluar/upload/${row.id}`}
+                class="btn-icon"
+                title="Upload berkas"
+                aria-label={`Upload berkas ${row.no}`}
+              >
+                <Icon name="upload" class="h-4 w-4" />
+              </a>
+            )}
+            {boleh.edit && (
+              <a
+                href={`/surat-keluar/edit/${row.id}`}
+                class="btn-icon"
+                title="Edit"
+                aria-label={`Edit ${row.no}`}
+              >
+                <Icon name="edit" class="h-4 w-4" />
+              </a>
+            )}
+          </div>
+        );
+      }
+    }
+
+    <Fragment slot="empty">
+      <span class="empty-state-icon">
+        <Icon name="file-text" class="h-5 w-5" />
+      </span>
+      <div>
+        <p class="text-sm font-medium text-[var(--color-ink)]">
+          Belum ada data
+        </p>
+        <p class="mt-1 text-sm text-[var(--color-ink-subtle)]">
+          Tidak ada nomor surat untuk tahun {tahun}.
+        </p>
+      </div>
+    </Fragment>
+  </DataTable>
+
+  {
+    meta.total > 0 && (
+      <Pagination
+        page={meta.page}
+        lastPage={meta.last_page}
+        total={meta.total}
+        perPage={meta.per_page}
+        baseUrl="/surat-keluar/daftar"
+      />
+    )
+  }
+</AppShell>

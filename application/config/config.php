@@ -266,3 +266,41 @@ $config['penandatangan_jabatan'] = array(
 | Jumlah nomor yang boleh diambil dalam satu transaksi (default 1).
 */
 $config['surat_keluar_max_jumlah'] = 20;
+
+/*
+|--------------------------------------------------------------------------
+| API HEADLESS - Secret token (HMAC)
+|--------------------------------------------------------------------------
+| Kunci HMAC-SHA256 untuk menandatangani token API `/api/v1/`.
+| Dipakai oleh application/helpers/api_token_helper.php.
+|
+| PENTING: ganti placeholder di bawah dengan string acak PANJANG
+| (minimal 32 karakter, mis. hasil `php -r "echo bin2hex(random_bytes(32));"`).
+| Jangan pernah commit nilai asli ke repositori.
+|
+| Nilai dapat dioverride tanpa menyentuh file ini:
+|   1. variabel environment `API_SECRET`, atau
+|   2. baris `API_SECRET=...` pada file `sinos/.env`
+|      (lihat .env.example).
+|
+| Bila dibiarkan sebagai placeholder, helper memakai kunci turunan
+| base_url + ENVIRONMENT dan mencatat peringatan di log. Kunci turunan
+| TIDAK rahasia, jadi token dapat dipalsukan - hanya untuk pengembangan.
+*/
+$config['api_secret'] = 'GANTI_API_SECRET_ACAK_PANJANG_SINOS';
+
+// Override dari environment / .env (dibaca sekali di sini).
+$sinos_api_secret = getenv('API_SECRET');
+if ($sinos_api_secret === FALSE || $sinos_api_secret === '') {
+    $sinos_api_env_file = FCPATH . '.env';
+    if (file_exists($sinos_api_env_file)) {
+        $sinos_api_env = parse_ini_file($sinos_api_env_file, false, INI_SCANNER_RAW);
+        if (is_array($sinos_api_env) && ! empty($sinos_api_env['API_SECRET'])) {
+            $sinos_api_secret = $sinos_api_env['API_SECRET'];
+        }
+    }
+}
+if ($sinos_api_secret !== FALSE && $sinos_api_secret !== '') {
+    $config['api_secret'] = $sinos_api_secret;
+}
+unset($sinos_api_secret, $sinos_api_env_file, $sinos_api_env);

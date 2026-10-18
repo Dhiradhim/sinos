@@ -1,0 +1,59 @@
+---
+/**
+ * Field.astro — pembungkus label + kontrol + petunjuk/error.
+ *
+ * Dibangun pada Fase 5a agar fase form (5b–5d) memakai satu pola aksesibilitas.
+ *
+ * Kontrak untuk pemakai: kontrol di dalam slot WAJIB memakai `id` yang sama
+ * dengan prop `name`, sehingga `<label for>` bekerja. Bila `hint`/`error`
+ * diisi, id-nya adalah `<name>-hint` dan `<name>-error`; kontrol dapat
+ * merujuknya lewat `aria-describedby="<name>-hint <name>-error"`.
+ *
+ *   <Field label="Perihal" name="hal" required hint="Maksimal 200 karakter">
+ *     <input id="hal" name="hal" class="input"
+ *            aria-describedby="hal-hint" />
+ *   </Field>
+ */
+interface Props {
+  label: string;
+  name: string;
+  hint?: string;
+  error?: string;
+  required?: boolean;
+}
+
+const { label, name, hint, error, required = false } = Astro.props;
+
+const hintId = hint ? `${name}-hint` : undefined;
+const errorId = error ? `${name}-error` : undefined;
+---
+
+<div class="min-w-0" data-field={name}>
+  <label class="label" for={name}>
+    {label}
+    {
+      required && (
+        <span class="text-[var(--color-danger)]" aria-hidden="true">
+          *
+        </span>
+      )
+    }
+  </label>
+
+  <slot />
+
+  {
+    hint && (
+      <p class="field-hint" id={hintId}>
+        {hint}
+      </p>
+    )
+  }
+  {
+    error && (
+      <p class="field-error" id={errorId} role="alert">
+        {error}
+      </p>
+    )
+  }
+</div>

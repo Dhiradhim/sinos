@@ -1,0 +1,45 @@
+---
+/**
+ * FilterBar.astro — satu baris filter bergaris rambut, BUKAN kotak.
+ *
+ * Arah B menghapus kartu pembungkus filter (§5.1 "Structural break").
+ * Kontrol di dalamnya memakai `.input`/`.select` 36px dan `.btn-sm` untuk aksi.
+ *
+ *   <FilterBar action="/surat-keluar/daftar" hidden={{ tahun: 2026 }}>
+ *     <input class="input" name="q" />
+ *     <Fragment slot="actions"><button class="btn-primary btn-sm">Cari</button></Fragment>
+ *   </FilterBar>
+ */
+interface Props {
+  /** Tujuan GET. Kosong = URL saat ini (form GET tanpa action). */
+  action?: string;
+  /** Parameter yang wajib bertahan saat filter dikirim. */
+  hidden?: Record<string, string | number>;
+}
+
+const { action, hidden = {} } = Astro.props;
+const hiddenEntries = Object.entries(hidden).filter(
+  ([, value]) => value !== undefined && value !== null && String(value) !== "",
+);
+---
+
+<form
+  method="get"
+  action={action || undefined}
+  class="filter-bar"
+  role="search"
+>
+  {
+    hiddenEntries.map(([name, value]) => (
+      <input type="hidden" name={name} value={String(value)} />
+    ))
+  }
+
+  <div class="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+    <slot />
+  </div>
+
+  <div class="flex shrink-0 flex-wrap items-center gap-2">
+    <slot name="actions" />
+  </div>
+</form>

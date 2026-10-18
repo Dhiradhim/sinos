@@ -1,0 +1,30 @@
+---
+/**
+ * PageHead.astro — judul halaman + subjudul, tanpa panel.
+ *
+ * `.page-head` sudah membawa garis bawah rambut dan padding 1rem/1.5rem;
+ * komponen ini tidak menambahkan latar atau border lain.
+ */
+interface Props {
+  title: string;
+  subtitle?: string;
+}
+
+const { title, subtitle = "" } = Astro.props;
+const hasActions = Astro.slots.has("actions");
+---
+
+<header class="page-head">
+  <div class="min-w-0">
+    <h1 class="page-head-title">{title}</h1>
+    {subtitle !== "" && <p class="page-head-subtitle">{subtitle}</p>}
+  </div>
+
+  {
+    hasActions && (
+      <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
+        <slot name="actions" />
+      </div>
+    )
+  }
+</header>

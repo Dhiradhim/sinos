@@ -1,15 +1,90 @@
-# SINOS — Sistem Informasi Nomor Surat (CodeIgniter 3 + Tailwind CSS)
+# SINOS — Sistem Informasi Nomor Surat
 
 Aplikasi persuratan: surat keluar, surat masuk, disposisi, dan laporan.
 
 SINOS adalah **pemilik schema `sinos`** dan **pembaca** data pegawai dari schema
 `pegawai_db`. SINOS tidak lagi menyimpan maupun mengubah password pegawai.
 
-| Aplikasi      | Folder     | URL                         | Schema       |
-| ------------- | ---------- | --------------------------- | ------------ |
-| SSO Gateway   | `sso/`     | `http://localhost/sso/`     | `sso_db`     |
-| Pegawai (CI3) | `pegawai/` | `http://localhost/pegawai/` | `pegawai_db` |
-| SINOS (CI3)   | `sinos/`   | `http://localhost/sinos/`   | `sinos`      |
+> **Arsitektur sejak 2026-10-18:** backend dan frontend berada dalam **satu
+> folder, satu repo, satu pipeline**.
+> `sinos/` (CodeIgniter 3) hanya melayani **JSON API** di `/api/v1/`.
+> Seluruh antarmuka ada di `sinos/frontend/` (Astro SSR + Tailwind 4 + Preline 5).
+> Frontend CI3 sudah dihapus; cadangannya ada di
+> `sinos/backup/ui-ci3-frontend-2026-10-18/`.
+> Source frontend **tidak** disajikan Apache — `sinos/.htaccess` menolak
+> `frontend/src`, `frontend/node_modules`, `frontend/.env`, dan berkas build/config.
+
+| Aplikasi      | Folder            | URL                              | Schema       |
+| ------------- | ----------------- | -------------------------------- | ------------ |
+| SSO Gateway   | `sso/`            | `http://localhost/sso/`          | `sso_db`     |
+| Pegawai (CI3) | `pegawai/`        | `http://localhost/pegawai/`      | `pegawai_db` |
+| SINOS API     | `sinos/`          | `http://localhost/sinos/api/v1/` | `sinos`      |
+| SINOS Web     | `sinos/frontend/` | `http://localhost:4321/`         | — (klien)    |
+
+## Menjalankan
+
+```bash
+# Backend (Apache/Laragon) — tidak perlu build
+#   http://localhost/sinos/api/v1/
+
+# Frontend (satu repo, satu pipeline)
+cd sinos/frontend
+npm install
+npm run dev        # http://localhost:4321
+# produksi:
+npm run build && npm run start
+```
+
+Wajib diisi sebelum dipakai di luar lokal:
+
+- `sinos/.env` (backend):
+
+  ```
+  API_SECRET=<32 byte hex — php -r "echo bin2hex(random_bytes(32));">
+  ```
+
+- `sinos/frontend/.env` (frontend) — disalin dari `sinos/frontend/.env.example`:
+
+  | Variabel              | Dev                             | Produksi                            |
+  | --------------------- | ------------------------------- | ----------------------------------- |
+  | `SINOS_API_BASE`      | `http://localhost/sinos/api/v1` | `https://sinos.domain.go.id/api/v1` |
+  | `SINOS_SSO_GATEWAY`   | `http://localhost/sso`          | `https://sso.domain.go.id`          |
+  | `SINOS_SSO_APP_ID`    | `sinos`                         | `sinos`                             |
+  | `SINOS_PUBLIC_ORIGIN` | _(kosong)_                      | `https://sinos.domain.go.id`        |
+  | `SESSION_SECRET`      | 64 hex                          | 64 hex (beda dari dev)              |
+
+Tanpa `API_SECRET`, helper memakai kunci turunan dari `base_url` + `ENVIRONMENT`
+dan menulis peringatan ke log. Jangan pakai mode itu di produksi.
+
+### Login SSO di dev dan produksi
+
+`redirect_uri` yang dikirim ke gateway **harus persis sama** dengan salah satu
+entri di `sso_db.sso_client.redirect_uris`. Origin ditentukan oleh
+[`src/lib/sso.ts`](frontend/src/lib/sso.ts) dengan urutan:
+
+1. `SINOS_PUBLIC_ORIGIN` bila diisi — **wajib di produksi di belakang reverse
+   proxy**, karena `Host` yang diterima Astro adalah host internal.
+2. `X-Forwarded-Proto` + `X-Forwarded-Host` bila proxy meneruskan keduanya.
+3. `url.origin` — dipakai di dev (`http://localhost:4321`).
+
+Daftarkan **semua** origin yang dipakai:
+
+```sql
+-- dev
+UPDATE sso_client
+   SET redirect_uris = CONCAT(redirect_uris, ',http://localhost:4321/api/auth/callback')
+ WHERE app_id = 'sinos';
+
+-- produksi
+UPDATE sso_client
+   SET redirect_uris = CONCAT(redirect_uris, ',https://sinos.domain.go.id/api/auth/callback')
+ WHERE app_id = 'sinos';
+```
+
+Cookie sesi (`sinos_sess`) diberi flag `Secure` **hanya bila permintaan datang
+lewat https** — ditentukan dari protokol, bukan dari `NODE_ENV`. Dengan begitu
+build produksi yang diuji di `http://localhost` tetap bisa login, dan produksi
+yang sebenarnya (https) tetap aman.
 
 ---
 
@@ -48,21 +123,28 @@ Tabel legacy `user` dan `jabatan` sudah dihapus; sumber jabatan sekarang
 sinos/
 ├── application/
 │   ├── config/          # config, database, routes, sso
-│   ├── controllers/     # Auth, Dashboard, Surat_keluar, Surat_masuk,
-│   │                    # Disposisi, User, Laporan, Sso
-│   ├── core/            # MY_Controller, MY_Model
-│   ├── helpers/         # sinos_helper.php
+│   ├── controllers/     # api/ (Auth, Dashboard, Surat_keluar, Surat_masuk,
+│   │                    # Disposisi, Master, Laporan), Sso
+│   ├── core/            # MY_Controller, MY_Api_Controller, MY_Model
+│   ├── helpers/         # sinos_helper.php, api_token_helper.php, api_present_helper.php
 │   ├── libraries/       # Pdf.php, Sso_client.php
 │   ├── models/          # M_user, M_nosur, M_surmas, M_disposisi, M_klasifikasi
-│   └── views/           # layouts/, auth/, surat_keluar/, surat_masuk/, ...
-├── assets/              # css/app.css hasil build Tailwind, js/preline.js
+│   └── views/           # (legacy, tidak lagi dilayani)
+├── assets/img/KOP.jpg   # satu-satunya aset statis yang masih dilayani
+├── backup/              # cadangan frontend CI3 (tidak di-commit ke pipeline)
 ├── db/migration_extra.sql
-├── file/ file/sm/       # berkas PDF
+├── file/ file/sm/       # berkas PDF (akses langsung ditolak .htaccess)
+├── frontend/            # SATU-SATUNYA frontend: Astro SSR + Tailwind 4 + Preline 5
+│   ├── src/             # pages/, layouts/, components/, lib/, styles/
+│   ├── astro.config.mjs
+│   ├── package.json     # nama paket: sinos-frontend
+│   └── .env             # SINOS_API_BASE, SINOS_SSO_GATEWAY, SESSION_SECRET
+├── plans/               # catatan desain & rencana
 ├── system/              # core CodeIgniter 3.1.13
 ├── vendor/              # composer (mPDF)
 ├── .env.example
-├── router.php           # router untuk `php -S` (development)
-└── tailwind.config.js
+├── .htaccess            # menolak application/, file/, dan source frontend/
+└── router.php           # router untuk `php -S` (development)
 ```
 
 ## 3. Instalasi
@@ -123,76 +205,35 @@ berada di host lain.
 
 Prasyarat:
 
-- **Node.js ≥ 20** — wajib untuk pipeline v4 (Tailwind 4 memakai compiler
-  Oxide; versi Node lebih lama gagal saat build).
+- **Node.js ≥ 20** — wajib untuk Tailwind 4 (compiler Oxide; versi Node lebih
+  lama gagal saat build).
 - **npm** (ikut bersama Node).
 - **Composer** untuk mPDF.
 
 ```bash
-composer install     # mPDF
-npm install
-npm run copy:preline # salin runtime Preline 5 -> assets/js/preline.v5.js
+composer install                      # mPDF (backend)
+cd frontend && npm install            # frontend (Astro + Tailwind 4 + Preline 5)
 ```
 
-#### Dua pipeline build
+#### Satu pipeline frontend
 
-Repositori ini memelihara **dua pipeline berdampingan**: v3 (legacy) dan v4
-(desain baru). Keduanya harus tetap dapat di-build.
+Sejak konsolidasi 2026-10-18 hanya ada **satu** pipeline frontend: Astro SSR
+dengan Tailwind 4 (`@tailwindcss/vite`) dan Preline 5. Pipeline v3/v4 CI3 lama
+(`assets/css/input.css`, `assets/css/app.css`, `assets/js/preline.js`,
+`tailwind.config.js`) sudah dihapus dan tidak boleh dibuat ulang.
 
-| Perintah               | Pipeline     | Input                                | Output                    |
-| ---------------------- | ------------ | ------------------------------------ | ------------------------- |
-| `npm run build`        | v3 legacy    | `assets/css/input.css`               | `assets/css/app.css`      |
-| `npm run build:v4`     | v4 (default) | `assets/css/input.v4.css`            | `assets/css/app.v4.css`   |
-| `npm run watch`        | v3 legacy    | —                                    | watch `app.css`           |
-| `npm run watch:v4`     | v4 (default) | —                                    | watch `app.v4.css`        |
-| `npm run copy:preline` | —            | `node_modules/preline/dist/index.js` | `assets/js/preline.v5.js` |
+| Perintah (dari `sinos/frontend/`) | Fungsi                                         |
+| --------------------------------- | ---------------------------------------------- |
+| `npm run dev`                     | dev server `http://localhost:4321`             |
+| `npm run build`                   | build produksi ke `frontend/dist/`             |
+| `npm run start`                   | jalankan hasil build (`dist/server/entry.mjs`) |
+| `npm run preview`                 | pratinjau hasil build                          |
 
-```bash
-npm run build        # v3 legacy
-npm run build:v4     # v4 (desain baru)
-```
-
-> **`app.css` dan `app.v4.css` adalah artefak build, bukan berkas sumber.**
-> Keduanya wajib dihasilkan di server saat deploy dengan `npm run build` dan
-> `npm run build:v4`. Catatan: `app.css` masuk `.gitignore` (tidak di-commit),
-> sedangkan `app.v4.css` **di-commit** agar redesign bisa dipreview tanpa build.
-> Jangan menyunting kedua berkas itu secara manual — perubahan akan hilang pada
-> build berikutnya.
-
-#### Memilih stylesheet yang aktif
-
-**Default adalah v4** sejak 2026-10-17: `assets/css/app.v4.css` (Tailwind 4)
-plus `assets/js/preline.v5.js` (Preline 5). Build v3 legacy
-(`assets/css/app.css` + `assets/js/preline.js`) tetap tersedia dan tidak
-dihapus — itulah jalur rollback, tanpa perlu rebuild.
-
-Varian UI diselesaikan sekali per request oleh
-[`application/helpers/ui_helper.php`](application/helpers/ui_helper.php) dengan
-urutan prioritas:
-
-1. Query string `?ui=v3` atau `?ui=v4` — menang, lalu dipersist ke cookie.
-2. Environment variable `SINOS_UI` — saklar global untuk seluruh deployment.
-3. Cookie `sinos_ui`.
-4. Default: **`v4`**.
-
-Cara berpindah:
-
-- **Rollback per-browser:** buka `?ui=v3` pada URL mana pun, mis.
-  `http://localhost/sinos/dashboard?ui=v3`. Pilihan disimpan di cookie
-  `sinos_ui` selama **30 hari** (`path=/`, `SameSite=Lax`), sehingga halaman
-  berikutnya tetap memakai stylesheet legacy tanpa query string.
-- **Rollback global (server-side, instan):** set environment variable
-  `SINOS_UI=v3` di web server, lalu restart PHP-FPM/Apache. Ini mengembalikan
-  **semua** pengguna ke v3 tanpa menyentuh cookie siapa pun — jalur rollback
-  tercepat saat insiden.
-- **Kembali ke v4:** buka `?ui=v4` (menimpa cookie per-browser) atau hapus
-  `SINOS_UI` dari environment untuk memakai default.
-- Query string tetap menang atas env, jadi `?ui=v4` masih bisa dipakai untuk
-  membandingkan varian saat `SINOS_UI=v3` sedang aktif.
-
-Helper yang dipakai view: `ui_css_tag()`, `ui_js_tag()`, dan `ui_body_class()`.
-Jangan menulis `<link>`/`<script>` ke `app.css`/`app.v4.css` secara langsung —
-selalu lewat helper agar isolasi varian tetap terjaga.
+Sumber gaya ada di [`frontend/src/styles/global.css`](frontend/src/styles/global.css):
+`@import "tailwindcss"`, `@import "preline/variants.css"`, lalu `@source` untuk
+`node_modules/preline/dist/*.js` dan seluruh `src/**/*.astro|ts`. Build harus
+menghasilkan CSS sekitar **56.8 KB**; penurunan drastis berarti glob `@source`
+gagal dan kelas Preline ikut terbuang.
 
 #### Preline MCP (opsional, untuk pengembangan UI)
 
@@ -211,8 +252,16 @@ Pastikan folder berikut dapat ditulis web server:
 
 ### 3.5 Menjalankan
 
-- **XAMPP**: buka `http://localhost/sinos/`
-- **Dev server**:
+- **Apache/Laragon (backend API)**: `http://localhost/sinos/api/v1/`
+- **Astro (frontend, satu-satunya antarmuka)**:
+
+  ```bash
+  cd sinos/frontend
+  npm run dev                      # http://localhost:4321
+  npm run build && npm run start   # produksi
+  ```
+
+- **Dev server backend tanpa Apache** (opsional):
 
   ```bash
   php -S localhost:8899 -t . router.php
@@ -220,25 +269,42 @@ Pastikan folder berikut dapat ditulis web server:
 
 ## 4. Login
 
-- Autentikasi lewat gateway SSO (`app_id = sinos`).
-- Login lokal tidak lagi memverifikasi password; form hanya menampilkan pesan
-  untuk masuk melalui SSO.
+- Autentikasi lewat gateway SSO (`app_id = sinos`). Frontend Astro memulai alur
+  di `/api/auth/login`, menerima tiket di `/api/auth/callback`, lalu menyimpan
+  token API di cookie httpOnly `sinos_sess`.
+- Login lokal tidak lagi memverifikasi password; backend hanya menerbitkan token
+  lewat `POST /api/v1/auth/exchange`.
 - Logout melakukan **single logout**: token seluruh grup sesi dihapus di gateway,
   sehingga aplikasi lain juga ikut logout.
-- Setiap request halaman memeriksa `introspect`; bila sesi gateway berakhir,
-  sesi lokal SINOS dihancurkan otomatis.
+- Setiap request halaman Astro memanggil `GET /api/v1/auth/me`; bila token
+  kedaluwarsa, pengguna dialihkan ke `/login`.
 
 ## 5. Peta URL utama
 
+Frontend (Astro, port 4321):
+
 | URL                                                         | Fungsi               |
 | ----------------------------------------------------------- | -------------------- |
-| `/login`, `/logout`                                         | Autentikasi          |
+| `/login`, `/logout`                                         | Autentikasi (SSO)    |
 | `/dashboard`                                                | Beranda / ringkasan  |
 | `/surat-keluar/ambil`, `/sisip`, `/daftar`, `/daftar-semua` | Surat Keluar         |
-| `/surat-keluar/edit/{id}`, `/upload/{id}`                   | Edit & upload berkas |
+| `/surat-keluar/{id}`                                        | Edit & upload berkas |
 | `/surat-masuk`, `/surat-masuk/daftar?tahun=2026`            | Surat Masuk          |
-| `/surat-masuk/edit/{id}`, `/disposisi/{id}`, `/hapus/{id}`  | Kelola surat masuk   |
+| `/surat-masuk/{id}`, `/disposisi`, `/disposisi/{id}`        | Kelola surat masuk   |
 | `/laporan`, `/laporan/cetak`                                | Laporan PDF (admin)  |
+
+Backend (CI3, JSON saja):
+
+| URL                                          | Fungsi                    |
+| -------------------------------------------- | ------------------------- |
+| `/sinos/api/v1/auth/exchange`, `/auth/me`    | Token & identitas         |
+| `/sinos/api/v1/dashboard`                    | Ringkasan                 |
+| `/sinos/api/v1/surat-masuk`, `/surat-keluar` | Daftar & mutasi surat     |
+| `/sinos/api/v1/disposisi`, `/laporan/opsi`   | Disposisi & opsi laporan  |
+| `/sinos/api/v1/berkas/{token}`               | Unduh PDF bertanda tangan |
+
+Semua URI lain di bawah `sinos/` dibalas JSON 404; source frontend ditolak
+Apache dengan **403**.
 
 Menu **Pegawai** tidak tersedia di SINOS. Pengelolaan pegawai dilakukan di
 aplikasi `pegawai/` dan dapat dibuka dari launcher SSO.
@@ -304,29 +370,31 @@ untuk menambah kolom `penandatangan_nip`, `penandatangan_nama`, `kode_penetapan`
 
 ## 7. Kustomisasi tema
 
-Antarmuka dibangun di atas **Preline UI** (`preline@2.7.0`, devDependency).
+Antarmuka dibangun di atas **Astro SSR + Tailwind 4 + Preline UI 5**
+(`preline@^5`, devDependency di `frontend/package.json`). Tidak ada
+`tailwind.config.js` — konfigurasi tema sepenuhnya CSS-first.
 
-- **Warna & font** — `tailwind.config.js`, palet `brand` (primer `#0A2463`) dan
-  `accent` (merah `#FB3640`).
-- **Komponen** — `.btn`, `.card`, `.input`, `.table`, `.badge-*` di
-  `assets/css/input.css` pada `@layer components`.
-- **Varian Preline** — `require("preline/plugin")` di `tailwind.config.js`
-  menyediakan `hs-dropdown-open:`, `hs-overlay-open:`, `hs-selected:`, dll.
-- **JS Preline** — `assets/js/preline.js` (salinan
-  `node_modules/preline/dist/index.js`). Bila paket diperbarui, salin ulang:
+- **Warna, font, radius** — blok `@theme` di
+  [`frontend/src/styles/global.css`](frontend/src/styles/global.css). Palet
+  `brand` (primer `#0A2463`) dan `accent` (merah `#FB3640`) didefinisikan sebagai
+  custom property Tailwind 4.
+- **Komponen** — kelas `.btn`, `.card`, `.input`, `.table`, `.badge-*` juga di
+  `global.css`, memakai `@layer components`.
+- **Varian Preline** — `@import "preline/variants.css"` menyediakan
+  `hs-dropdown-open:`, `hs-overlay-open:`, `hs-selected:`, dll.
+- **Pemindaian kelas** — `@source "../../node_modules/preline/dist/*.js"` dan
+  `@source "../**/*.astro"` memberi tahu compiler Tailwind 4 di mana mencari
+  kelas. Glob pertama **wajib** menunjuk `frontend/node_modules/preline/dist/`;
+  bila kedalamannya salah, build tetap sukses tetapi kelas Preline hilang dan
+  ukuran CSS anjlok dari ~56.8 KB.
+- **JS Preline** — dimuat sebagai modul dari `node_modules` oleh layout Astro;
+  tidak ada lagi salinan ke `assets/js/`.
 
-  ```bash
-  npm install preline@2.7.0
-  copy /Y node_modules\preline\dist\index.js assets\js\preline.js
-  ```
-
-Setelah mengubah view atau CSS, jalankan `npm run build`.
-
-Catatan: Preline 3.x memakai `@custom-variant` (Tailwind 4) sehingga tidak
-kompatibel dengan Tailwind 3.4 yang dipakai proyek ini.
+Setelah mengubah komponen atau CSS, jalankan `npm run build` dari
+`sinos/frontend/`.
 
 Detail keputusan desain ada di
-[`plans/ui-redesign-preline-2026-10-17.md`](plans/ui-redesign-preline-2026-10-17.md).
+[`plans/2026-10-17-sinos-astro-preline.md`](plans/2026-10-17-sinos-astro-preline.md).
 
 ## 8. Catatan kompatibilitas
 

@@ -1,0 +1,412 @@
+---
+/**
+ * Daftar Disposisi Surat — `/disposisi`.
+ *
+ * Sumber: sinos/application/views/disposisi/index.php + Disposisi::index().
+ * Data: `GET /disposisi?page=&per_page=&q=&arsip=`.
+ *
+ * Arah B (plan §5.1 "Structural break"): tidak ada kartu pembungkus tabel dan
+ * tidak ada kotak filter. Header tipis → filter satu baris → tabel → paginasi.
+ *
+ * Dua hal yang dipertahankan dari pekerjaan CI3 sebelumnya:
+ *   1. Dropdown aksi baris memakai `[--placement:bottom-right]` **dan**
+ *      `data-hs-dropdown-options='{"strategy":"fixed"}'`. Tanpa `fixed`, panel
+ *      terpotong `overflow-x` pada `.table-wrap`. Bug ini sudah dua kali
+ *      menggigit versi CI3.
+ *   2. Baris terarsip memakai tint `--color-surface-muted` lewat kelas
+ *      `.row-archived` (bukan inline style seperti CI3).
+ *
+ * CATATAN PARITAS (dilaporkan):
+ *   - View CI3 tidak punya filter bar: pencarian dan pemilih arsip adalah
+ *     DataTables sisi klien. Di sini keduanya menjadi parameter server
+ *     (`q`, `arsip`) sesuai kontrak API, dengan teks kontrol "Cari…",
+ *     "Semua / Aktif / Diarsipkan", "Terapkan", "Reset".
+ *   - Subjudul memakai teks kartu CI3 apa adanya (bukan kalimat topbar
+ *     controller, yang berbunyi "Seluruh surat yang didisposisikan (termasuk
+ *     yang sudah diarsipkan)." / "Disposisi yang posisinya sedang ada pada
+ *     Anda."). Teks kartu dipilih karena brief meminta copy view verbatim.
+ *   - Badge status baris memakai `status`/`tone` dari API
+ *     (`api_status_posisi_disposisi()`), yang merupakan port 1:1 rantai badge
+ *     CI3: Sudah diarsipkan → Dikembalikan → Dibaca → Belum dibaca.
+ *     "Belum dibaca" karena itu TIDAK diulang di kolom Posisi Saat Ini; kolom
+ *     itu hanya menampilkan status lain agar tidak ada dua badge identik.
+ *   - Aksi arsip/hapus di CI3 adalah tautan GET ber-`data-confirm`. Di sini
+ *     keduanya form POST ke route Astro dengan overlay konfirmasi Preline
+ *     (tanpa `window.confirm`), teks konfirmasi disalin dari view.
+ */
+import AppShell from "../../layouts/AppShell.astro";
+import PageHead from "../../components/PageHead.astro";
+import FilterBar from "../../components/FilterBar.astro";
+import DataTable, { type Column } from "../../components/DataTable.astro";
+import Pagination from "../../components/Pagination.astro";
+import DisposisiModal from "../../components/DisposisiModal.astro";
+import ConfirmModal from "../../components/ConfirmModal.astro";
+import Icon from "../../components/Icon.astro";
+import { requireUser } from "../../lib/auth";
+import { apiFetch } from "../../lib/api";
+import { getSession } from "../../lib/session";
+import { takeFormFeedback } from "../../lib/formFeedback";
+import { toneClass } from "../../lib/format";
+import {
+  emptyDescription,
+  pageSubtitle,
+  type DisposisiMeta,
+  type DisposisiRow,
+} from "../../lib/disposisi";
+
+const auth = await requireUser(Astro);
+if (auth.redirect) return auth.redirect;
+const user = auth.user;
+const token = getSession(Astro.cookies);
+
+const params = Astro.url.searchParams;
+
+const tahunParam = Number(params.get("tahun"));
+const tahun =
+  Number.isInteger(tahunParam) && tahunParam > 2000
+    ? tahunParam
+    : new Date().getFullYear();
+
+const page = Math.max(1, Number(params.get("page")) || 1);
+const q = (params.get("q") ?? "").trim();
+const arsipParam = params.get("arsip") ?? "";
+/** API hanya menerima 'aktif' | 'diarsipkan'; nilai lain = semua. */
+const arsip =
+  arsipParam === "aktif" || arsipParam === "diarsipkan" ? arsipParam : "";
+
+const result = await apiFetch<DisposisiRow[]>("/disposisi", {
+  token,
+  query: {
+    page,
+    per_page: 25,
+    q: q || undefined,
+    arsip: arsip || undefined,
+  },
+});
+
+const rows = result.data ?? [];
+const meta: DisposisiMeta = {
+  page: Number(result.meta?.page ?? page) || 1,
+  per_page: Number(result.meta?.per_page ?? 25) || 25,
+  total: Number(result.meta?.total ?? rows.length) || 0,
+  last_page: Number(result.meta?.last_page ?? 1) || 1,
+  lingkup: String(
+    result.meta?.lingkup ?? (user.is_operator ? "operator" : "atas_nama"),
+  ),
+  arsip: (result.meta?.arsip as string | null) ?? null,
+};
+
+/** Badge jumlah disposisi belum dibaca untuk rail (satu request bersama). */
+const dashboard = await apiFetch<{ disposisi_belum_dibaca: number }>(
+  "/dashboard",
+  { token, query: { tahun } },
+);
+const disposisiCount = dashboard.data?.disposisi_belum_dibaca ?? 0;
+
+/** Umpan balik arsip/hapus yang bertahan melewati redirect 303. */
+const feedback = takeFormFeedback(Astro.cookies);
+
+/**
+ * Kolom tabel — delapan kolom brief. "No." ditambahkan DataTable lewat
+ * `startIndex`, sehingga `columns` memuat tujuh sisanya.
+ */
+const columns: Column[] = [
+  {
+    key: "agenda",
+    label: "Agenda / No. Surat",
+    nowrap: true,
+    width: "13rem",
+  },
+  { key: "tgl_surat.teks", label: "Tanggal", nowrap: true, width: "9rem" },
+  { key: "pengirim", label: "Pengirim Surat", prose: true },
+  { key: "perihal", label: "Perihal", prose: true },
+  { key: "posisi", label: "Posisi Saat Ini", width: "13rem" },
+  { key: "instruksi", label: "Instruksi", width: "14rem" },
+  {
+    key: "aksi",
+    label: "Aksi",
+    align: "right",
+    width: "1%",
+    className: "col-aksi",
+  },
+];
+
+const renderKeys = ["agenda", "posisi", "instruksi", "aksi"];
+
+/** Tint baris terarsip: kelas, bukan inline style. */
+const rowClass = (row: DisposisiRow) =>
+  row.diarsipkan ? "row-archived" : null;
+
+/** URL kembali untuk route aksi (open-redirect guard di sisi route). */
+const kembali = `/disposisi${arsip ? `?arsip=${arsip}` : ""}`;
+---
+
+<AppShell
+  title="Daftar Disposisi Surat"
+  user={user}
+  disposisiCount={disposisiCount}
+  tahun={tahun}
+  topbarTitle={false}
+>
+  {
+    /*
+    Judul memakai teks kartu view CI3 (`disposisi/index.php:3`), bukan judul
+    topbar controller ("Disposisi Surat"), agar konsisten dengan subjudul yang
+    memang sudah disalin dari view.
+  */
+  }
+  <PageHead
+    title="Daftar Disposisi Surat"
+    subtitle={pageSubtitle(meta.lingkup)}
+  />
+
+  <FilterBar action="/disposisi">
+    <div class="min-w-0 flex-1 sm:max-w-xs">
+      <label class="sr-only" for="q">Cari disposisi</label>
+      <input
+        class="input"
+        type="search"
+        id="q"
+        name="q"
+        value={q}
+        placeholder="Cari…"
+      />
+    </div>
+
+    <div>
+      <label class="sr-only" for="arsip">Status arsip</label>
+      <select class="select w-auto" id="arsip" name="arsip">
+        <option value="" selected={arsip === ""}>Semua</option>
+        <option value="aktif" selected={arsip === "aktif"}>Aktif</option>
+        <option value="diarsipkan" selected={arsip === "diarsipkan"}>
+          Diarsipkan
+        </option>
+      </select>
+    </div>
+
+    <Fragment slot="actions">
+      <button type="submit" class="btn-primary btn-sm">Terapkan</button>
+      <a href="/disposisi" class="btn-outline btn-sm">Reset</a>
+    </Fragment>
+  </FilterBar>
+
+  {
+    feedback?.message && (
+      <div class="px-6 pt-4">
+        <div
+          class:list={[
+            "alert",
+            feedback.code === "SUDAH_DIARSIPKAN" ||
+            feedback.code === "POSISI_BUKAN_OPERATOR" ||
+            feedback.code === "FORBIDDEN"
+              ? "alert-warning"
+              : "alert-success",
+          ]}
+          role="status"
+        >
+          <span class="mt-0.5 shrink-0">
+            <Icon
+              name={
+                feedback.code === "SUDAH_DIARSIPKAN" ||
+                feedback.code === "POSISI_BUKAN_OPERATOR" ||
+                feedback.code === "FORBIDDEN"
+                  ? "triangle-alert"
+                  : "circle-check"
+              }
+              class="h-4 w-4"
+            />
+          </span>
+          <div class="flex-1">
+            <p class="alert-description">{feedback.message}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  {
+    result.error && rows.length === 0 && (
+      <div class="px-6 pt-4">
+        <div class="alert alert-danger" role="alert">
+          <span class="mt-0.5 shrink-0">
+            <Icon name="octagon-x" class="h-4 w-4" />
+          </span>
+          <div class="flex-1">
+            <p class="alert-title">Gagal memuat data</p>
+            <p class="alert-description">{result.error.message}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  <DataTable
+    columns={columns}
+    rows={rows}
+    renderKeys={renderKeys}
+    rowClass={rowClass}
+    startIndex={(meta.page - 1) * meta.per_page + 1}
+    caption="Daftar disposisi surat"
+  >
+    {
+      (row: DisposisiRow, _index: number, key: string) => {
+        if (key === "agenda") {
+          return (
+            <div>
+              <span class="block font-medium leading-snug tabular text-[var(--color-ink)]">
+                {row.no_surat}
+              </span>
+              <span class="mt-0.5 block text-xs tabular text-[var(--color-ink-subtle)]">
+                {row.no_agenda}
+              </span>
+              {row.diarsipkan && (
+                <span class="badge-muted mt-1">Diarsipkan</span>
+              )}
+            </div>
+          );
+        }
+
+        if (key === "posisi") {
+          // Brief: `lokasi` + badge dari `status`/`tone` lewat toneClass.
+          // `status` berasal dari api_status_posisi_disposisi(), port 1:1 rantai
+          // badge CI3 (Sudah diarsipkan / Dikembalikan / Dibaca / Belum dibaca).
+          return (
+            <div>
+              <span class="badge-info">{row.lokasi || row.kepada}</span>
+              <span class="mt-1 block text-xs text-[var(--color-ink-subtle)]">
+                {row.kategori}
+              </span>
+              <span class="mt-1 block">
+                <span class={toneClass(row.tone)}>{row.status}</span>
+              </span>
+            </div>
+          );
+        }
+
+        if (key === "instruksi") {
+          return (
+            <div>
+              <span class="block text-sm text-[var(--color-ink-muted)]">
+                {row.instruksi ?? "—"}
+              </span>
+              {!row.dibaca && (
+                <span class="mt-1 block">
+                  <span class="badge-warning">Belum dibaca</span>
+                </span>
+              )}
+            </div>
+          );
+        }
+
+        return (
+          <div class="flex items-center justify-end gap-1">
+            <a
+              class="btn-icon"
+              href={`/disposisi/detail/${row.id}`}
+              title="Detail"
+              aria-label={`Detail disposisi ${row.no_surat}`}
+            >
+              <Icon name="eye" class="h-4 w-4" />
+            </a>
+
+            {row.aksi.can_forward && (
+              <button
+                type="button"
+                class="btn-icon"
+                title="Teruskan disposisi"
+                aria-label={`Teruskan disposisi ${row.no_surat}`}
+                data-disposisi-open={row.surmas_id}
+              >
+                <Icon name="send" class="h-4 w-4" />
+              </button>
+            )}
+
+            {(row.aksi.can_archive || row.aksi.can_delete) && (
+              <div
+                class="hs-dropdown relative inline-flex [--placement:bottom-right]"
+                data-hs-dropdown-options='{"strategy":"fixed"}'
+              >
+                <button
+                  type="button"
+                  class="hs-dropdown-toggle btn-icon"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  title="Aksi lainnya"
+                >
+                  <Icon name="ellipsis" class="h-4 w-4" />
+                </button>
+                <div
+                  class="hs-dropdown-menu dropdown-menu absolute right-0 top-full mt-1 hidden w-56 opacity-0 transition-[opacity,margin] duration-150"
+                  role="menu"
+                >
+                  {row.aksi.can_archive && (
+                    <form
+                      method="post"
+                      action={`/api/disposisi/surmas/${row.surmas_id}/arsip?kembali=${encodeURIComponent(kembali)}`}
+                      data-confirm="Arsipkan surat ini?"
+                    >
+                      <button
+                        type="submit"
+                        class="dropdown-item"
+                        role="menuitem"
+                      >
+                        <Icon name="archive" class="h-4 w-4" />
+                        <span>Arsipkan surat</span>
+                      </button>
+                    </form>
+                  )}
+
+                  {row.aksi.can_delete && (
+                    <form
+                      method="post"
+                      action={`/api/disposisi/${row.id}?kembali=${encodeURIComponent(kembali)}`}
+                      data-confirm="Hapus disposisi ini?"
+                    >
+                      <button
+                        type="submit"
+                        class="dropdown-item dropdown-item-destructive"
+                        role="menuitem"
+                      >
+                        <Icon name="trash" class="h-4 w-4" />
+                        <span>Hapus disposisi</span>
+                      </button>
+                    </form>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+    }
+
+    <Fragment slot="empty">
+      <span class="empty-state-icon">
+        <Icon name="send" class="h-5 w-5" />
+      </span>
+      <div>
+        <p class="text-sm font-medium text-[var(--color-ink)]">
+          Tidak ada disposisi
+        </p>
+        <p class="mt-1 text-sm text-[var(--color-ink-subtle)]">
+          {emptyDescription(meta.lingkup)}
+        </p>
+      </div>
+    </Fragment>
+  </DataTable>
+
+  {
+    meta.total > 0 && (
+      <Pagination
+        page={meta.page}
+        lastPage={meta.last_page}
+        total={meta.total}
+        perPage={meta.per_page}
+        baseUrl="/disposisi"
+      />
+    )
+  }
+</AppShell>
+
+<DisposisiModal title="Kirim Disposisi" />
+<ConfirmModal title="Konfirmasi" />

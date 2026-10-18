@@ -1,0 +1,64 @@
+﻿MANIFEST - backup UI CI3 frontend SINOS (Fase 7)
+Dibuat: 2026-10-18 (UTC+8)
+Sumber: c:/laragon/www/sinos
+Tujuan: c:/laragon/www/sinos/backup/ui-ci3-frontend-2026-10-18
+
+PATH (relatif terhadap root backup) | BYTES
+------------------------------------------------------------------------------------------------
+application\helpers\ui_helper.php | 3569
+application\views\auth\login.php | 6324
+application\views\dashboard\index.php | 6269
+application\views\disposisi\_form_ajax.php | 5285
+application\views\disposisi\detail.php | 10811
+application\views\disposisi\form.php | 50
+application\views\disposisi\index.php | 8493
+application\views\errors\cli\error_404.php | 128
+application\views\errors\cli\error_db.php | 137
+application\views\errors\cli\error_exception.php | 745
+application\views\errors\cli\error_general.php | 128
+application\views\errors\cli\error_php.php | 690
+application\views\errors\cli\index.html | 131
+application\views\errors\html\error_404.php | 1187
+application\views\errors\html\error_db.php | 1183
+application\views\errors\html\error_exception.php | 887
+application\views\errors\html\error_general.php | 1174
+application\views\errors\html\error_php.php | 835
+application\views\errors\html\index.html | 131
+application\views\errors\index.html | 131
+application\views\index.html | 131
+application\views\laporan\index.php | 3259
+application\views\laporan\pdf.php | 2758
+application\views\layouts\_tahun_selector.php | 1279
+application\views\layouts\flash.php | 1279
+application\views\layouts\footer.php | 708
+application\views\layouts\logout_modal.php | 2915
+application\views\layouts\master.php | 5421
+application\views\layouts\sidebar.php | 5846
+application\views\layouts\topbar.php | 5819
+application\views\surat_keluar\_form_nomor_fields.php | 6658
+application\views\surat_keluar\ambil.php | 1171
+application\views\surat_keluar\daftar.php | 4183
+application\views\surat_keluar\daftar_all.php | 3982
+application\views\surat_keluar\edit.php | 2144
+application\views\surat_keluar\sisip.php | 1474
+application\views\surat_keluar\upload.php | 2367
+application\views\surat_masuk\_form_fields.php | 4251
+application\views\surat_masuk\daftar.php | 14981
+application\views\surat_masuk\detail.php | 6815
+application\views\surat_masuk\disposisi.php | 5259
+application\views\surat_masuk\edit.php | 1114
+application\views\surat_masuk\input.php | 942
+assets\css\app.css | 60848
+assets\css\app.v4.css | 65421
+assets\css\datatables-skin.css | 9711
+assets\css\input.css | 9784
+assets\css\input.v4.css | 21018
+assets\js\app.js | 4790
+assets\js\preline.js | 309476
+assets\js\preline.v5.js | 435109
+package.json | 997
+package-lock.json | 77293
+tailwind.config.js | 1459
+------------------------------------------------------------------------------------------------
+TOTAL FILES: 54
+TOTAL BYTES: 1128950

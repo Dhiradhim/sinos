@@ -5,6 +5,27 @@ defined('BASEPATH') or exit('No direct script access allowed');
  * Sso - controller klien SSO di sisi SINOS.
  *
  * Menangani redirect ke gateway (login) dan callback ticket (callback).
+ *
+ * STATUS Fase 7 (2026-10-18): DIPERTAHANKAN.
+ *
+ * Alasan:
+ *   1. `sso_callback` pada application/config/sso.php masih menunjuk ke
+ *      http://localhost/sinos/sso/callback dan URL itu terdaftar sebagai
+ *      redirect_uri di gateway SSO.
+ *   2. Rute `sso/login` dan `sso/callback` masih ada di
+ *      application/config/routes.php.
+ *
+ * Catatan: frontend Astro TIDAK memakai controller ini. Lihat
+ * sinos-web/src/pages/api/auth/login.ts — Astro membangun URL /authorize
+ * gateway sendiri lalu callback ke sinos-web/api/auth/callback, yang menukar
+ * tiket lewat POST api/v1/auth/exchange. Jadi ada dua jalur SSO yang sah:
+ * jalur CI3 (controller ini) dan jalur Astro (api/v1/auth/exchange).
+ *
+ * PERUBAHAN Fase 7:
+ *   - TIDAK ADA pemanggilan `load->view` (controller ini memang tidak pernah
+ *     merender view; hanya redirect + session).
+ *   - Semua `redirect('login')` dan `redirect('dashboard')` diganti ke
+ *     `web_url` (frontend Astro) karena kedua rute HTML itu sudah dihapus.
  */
 class Sso extends CI_Controller
 {
@@ -12,6 +33,21 @@ class Sso extends CI_Controller
     {
         parent::__construct();
         $this->load->library('sso_client');
+        $this->config->load('sso', TRUE);
+    }
+
+    /**
+     * URL frontend Astro, pengganti rute HTML `login`/`dashboard`.
+     *
+     * @param  string $path Path relatif, mis. 'login' atau 'dashboard'
+     * @return string
+     */
+    protected function web($path = '')
+    {
+        $base = rtrim($this->config->item('web_url', 'sso'), '/');
+        $path = ltrim($path, '/');
+
+        return $base . ($path === '' ? '' : '/' . $path);
     }
 
     // Mulai proses SSO: arahkan ke gateway.
@@ -25,23 +61,23 @@ class Sso extends CI_Controller
         }
 
         if (! $this->sso_client->enabled()) {
-            redirect('login');
+            redirect($this->web('login'));
             return;
         }
 
         // Bila sudah login lokal, langsung ke tujuan.
         if ($this->session->userdata('nip')) {
-            redirect('dashboard');
+            redirect($this->web('dashboard'));
             return;
         }
 
         // Bila cURL tidak aktif, gateway tidak dapat dipanggil sama sekali.
-        // Jangan arahkan ke gateway (akan memicu loop) - jatuh ke login lokal.
+        // Jangan arahkan ke gateway (akan memicu loop) - jatuh ke login Astro.
         if (! $this->sso_client->curl_available()) {
             $this->session->set_flashdata('sso_failed', 1);
             $this->session->set_flashdata('flash_tipe', 'error');
             $this->session->set_flashdata('flash_pesan', 'SSO tidak dapat digunakan: ekstensi cURL PHP belum aktif.');
-            redirect('login?local=1');
+            redirect($this->web('login') . '?error=sso');
             return;
         }
 
@@ -53,7 +89,7 @@ class Sso extends CI_Controller
     public function callback()
     {
         if (! $this->sso_client->enabled()) {
-            redirect('login');
+            redirect($this->web('login'));
             return;
         }
 
@@ -62,8 +98,8 @@ class Sso extends CI_Controller
         if (! $this->sso_client->curl_available()) {
             $this->session->set_flashdata('sso_failed', 1);
             $this->session->set_flashdata('flash_tipe', 'error');
-            $this->session->set_flashdata('flash_pesan', 'SSO tidak dapat digunakan: ekstensi cURL PHP belum aktif. Menampilkan login lokal.');
-            redirect('login');
+            $this->session->set_flashdata('flash_pesan', 'SSO tidak dapat digunakan: ekstensi cURL PHP belum aktif.');
+            redirect($this->web('login') . '?error=sso');
             return;
         }
 
@@ -74,8 +110,8 @@ class Sso extends CI_Controller
         if (empty($ticket) || ! $this->sso_client->verify_state($state)) {
             $this->session->set_flashdata('sso_failed', 1);
             $this->session->set_flashdata('flash_tipe', 'error');
-            $this->session->set_flashdata('flash_pesan', 'Sesi SSO tidak valid. Silakan coba lagi atau gunakan login lokal.');
-            redirect('login');
+            $this->session->set_flashdata('flash_pesan', 'Sesi SSO tidak valid. Silakan coba lagi.');
+            redirect($this->web('login') . '?error=sso');
             return;
         }
 
@@ -85,7 +121,7 @@ class Sso extends CI_Controller
             $this->session->set_flashdata('sso_failed', 1);
             $this->session->set_flashdata('flash_tipe', 'error');
             $this->session->set_flashdata('flash_pesan', 'Gagal memvalidasi tiket SSO.' . ($err ? ' (' . $err . ')' : ''));
-            redirect('login');
+            redirect($this->web('login') . '?error=sso');
             return;
         }
 
@@ -101,9 +137,9 @@ class Sso extends CI_Controller
         ));
         $this->session->sess_regenerate(TRUE);
 
-        // Arahkan ke tujuan semula atau dashboard.
+        // Arahkan ke tujuan semula atau dashboard Astro.
         $redirect = $this->session->userdata('sso_redirect');
         $this->session->unset_userdata('sso_redirect');
-        redirect(! empty($redirect) ? $redirect : 'dashboard');
+        redirect(! empty($redirect) ? $redirect : $this->web('dashboard'));
     }
 }

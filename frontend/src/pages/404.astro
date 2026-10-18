@@ -1,0 +1,50 @@
+---
+import Base from "../layouts/Base.astro";
+import Icon from "../components/Icon.astro";
+
+const path = Astro.url.pathname;
+---
+
+<Base title="Halaman tidak ditemukan">
+	<main
+		class="flex min-h-screen items-center justify-center bg-[var(--color-page)] px-6"
+	>
+		<div class="w-full max-w-md text-center">
+			<span
+				class="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-surface-muted)] text-[var(--color-ink-subtle)]"
+			>
+				<Icon name="file-text" class="h-6 w-6" />
+			</span>
+
+			<p
+				class="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-subtle)]"
+			>
+				404
+			</p>
+			<h1 class="mb-2 text-[1.125rem] font-semibold text-[var(--color-ink)]">
+				Halaman tidak ditemukan
+			</h1>
+			<p class="mb-1 text-sm text-[var(--color-ink-muted)]">
+				Alamat yang Anda buka tidak tersedia di SINOS.
+			</p>
+			<p
+				class="mb-6 break-all font-mono text-xs text-[var(--color-ink-subtle)]"
+			>
+				{path}
+			</p>
+
+			<div
+				class="flex flex-col items-stretch justify-center gap-2 sm:flex-row sm:items-center"
+			>
+				<a href="/dashboard" class="btn btn-primary">
+					<Icon name="bank" class="h-4 w-4" />
+					<span>Ke Beranda</span>
+				</a>
+				<a href="/surat-masuk/daftar" class="btn btn-outline">
+					<Icon name="inbox" class="h-4 w-4" />
+					<span>Daftar Surat Masuk</span>
+				</a>
+			</div>
+		</div>
+	</main>
+</Base>

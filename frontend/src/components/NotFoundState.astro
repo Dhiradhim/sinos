@@ -1,0 +1,49 @@
+---
+/**
+ * NotFoundState.astro — keadaan "tidak ditemukan" yang dapat dibaca.
+ *
+ * Dipakai halaman detail/edit ketika API menjawab 404. Halaman TIDAK
+ * mengalihkan: pengguna harus melihat HTTP 404 beserta alasannya, sama
+ * seperti `show_404()` pada controller CI3. Halaman pemanggil menetapkan
+ * `Astro.response.status = 404` sebelum merender komponen ini.
+ *
+ * Komponen ini menggantikan `PageHead` pada cabang 404, jadi ia WAJIB memuat
+ * tepat satu `<h1>` agar aturan "satu h1 per halaman" tetap berlaku.
+ *
+ * Semua copy Bahasa Indonesia, mengikuti gaya pesan CI3.
+ */
+import Icon from "./Icon.astro";
+
+interface Props {
+  /** Judul singkat, mis. "Surat masuk tidak ditemukan". */
+  title: string;
+  /** Penjelasan satu kalimat; boleh menyebut id yang dicari. */
+  description: string;
+  /** Tautan kembali ke daftar induk. */
+  backHref: string;
+  /** Label tautan kembali, mis. "Kembali ke daftar surat masuk". */
+  backLabel: string;
+}
+
+const { title, description, backHref, backLabel } = Astro.props;
+---
+
+<div class="mx-auto w-full max-w-2xl px-6 py-10">
+  <header class="page-head mb-5">
+    <h1 class="page-head-title">{title}</h1>
+  </header>
+
+  <div class="alert alert-destructive" role="alert">
+    <span class="mt-0.5 shrink-0">
+      <Icon name="octagon-x" class="h-4 w-4" />
+    </span>
+    <div class="flex-1">
+      <p class="alert-description">{description}</p>
+    </div>
+  </div>
+
+  <a href={backHref} class="btn-outline btn-sm mt-5">
+    <Icon name="arrow-left" class="h-4 w-4" />
+    <span>{backLabel}</span>
+  </a>
+</div>

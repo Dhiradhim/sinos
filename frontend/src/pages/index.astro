@@ -1,0 +1,10 @@
+---
+/**
+ * Root redirect.
+ *
+ * SINOS tidak punya halaman beranda terpisah: pengguna yang sudah login
+ * langsung masuk ke ringkasan, yang belum login diarahkan ke /login oleh
+ * requireUser() di halaman dashboard.
+ */
+return Astro.redirect("/dashboard", 302);
+---

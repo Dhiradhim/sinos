@@ -74,6 +74,9 @@ if (! function_exists('tanggal_indonesia')) {
 if (! function_exists('is_admin')) {
     /**
      * Cek apakah user saat ini adalah admin.
+     *
+     * STATUS Fase 7: TIDAK ADA pemanggil tersisa (controller HTML dihapus).
+     * Dipertahankan sebagai util murah tanpa ketergantungan view.
      */
     function is_admin()
     {
@@ -85,6 +88,9 @@ if (! function_exists('is_admin')) {
 if (! function_exists('active_menu')) {
     /**
      * Menghasilkan class Tailwind untuk menu aktif.
+     *
+     * STATUS Fase 7: TIDAK ADA pemanggil tersisa (view HTML dihapus).
+     * Dipertahankan sebagai util murah tanpa ketergantungan view.
      */
     function active_menu($segment, $class = 'bg-slate-800 text-white', $default = 'text-slate-300 hover:bg-slate-800 hover:text-white')
     {
@@ -96,6 +102,9 @@ if (! function_exists('active_menu')) {
 if (! function_exists('old')) {
     /**
      * Ambil nilai input lama dari flashdata (untuk repopulasi form).
+     *
+     * STATUS Fase 7: TIDAK ADA pemanggil tersisa (form HTML dihapus).
+     * Dipertahankan sebagai util murah tanpa ketergantungan view.
      */
     function old($field, $default = '')
     {
@@ -108,6 +117,10 @@ if (! function_exists('old')) {
 if (! function_exists('svg_icon')) {
     /**
      * Mengembalikan markup inline SVG (Lucide-style, stroke-based) berdasarkan nama ikon.
+     *
+     * STATUS Fase 7: TIDAK ADA pemanggil tersisa. `laporan/pdf.php` — satu-satunya
+     * view yang bertahan — TIDAK memakai svg_icon() (diverifikasi dengan grep).
+     * Dipertahankan sesuai instruksi Fase 7 untuk tidak menyentuhnya.
      *
      * @param string $name    Nama ikon (mis. 'dashboard', 'mail', 'trash')
      * @param string $classes Class Tailwind tambahan untuk elemen svg

@@ -1,0 +1,224 @@
+---
+/**
+ * DataTable.astro — tabel generik arah B.
+ *
+ * Aturan yang dijaga:
+ *   - TIDAK dibungkus kartu. Tabel menempel langsung ke kanvas.
+ *   - Tanpa zebra. Hover hanya `--color-surface-muted` (dari `.table`).
+ *   - Sel pertama/terakhir 1.5rem sudah diatur `.table` di global.css.
+ *   - `.table-wrap` hanya menggulir mendatar pada layar sempit.
+ *
+ * Pemakaian:
+ *   <DataTable columns={columns} rows={rows} renderKeys={["berkas", "aksi"]}>
+ *     {(row, index, key) =>
+ *       key === "berkas" ? <span class="badge-warning">…</span> : <a …>…</a>
+ *     }
+ *   </DataTable>
+ *
+ * Kolom di luar `renderKeys` dirender otomatis dari dot-path `key`.
+ *
+ * DEVIASI dari brief Fase 5a
+ * Brief meminta `<slot name="cell-{key}" row={row} />`. Astro 7 tidak
+ * mendukung slot props: atribut `<slot>` bertipe `SlotHTMLAttributes &
+ * AstroSlotAttributes` (hanya atribut HTML). `Astro.slots.render(name, args)`
+ * juga hanya meneruskan argumen bila isi slot adalah SATU ekspresi fungsi
+ * telanjang — mustahil untuk slot bernama, karena slot bernama wajib dibungkus
+ * `<Fragment slot="…">` dan pembungkusan itu memutus ekstraksi fungsi
+ * (argumen tiba sebagai `undefined`). Keduanya sudah diuji di proyek ini
+ * (Astro 7.4).
+ *
+ * Solusi yang dipakai: slot DEFAULT berupa fungsi `(row, index, key)` yang
+ * dipanggil per sel untuk kolom di `renderKeys`. Ini mekanisme yang didukung
+ * resmi (`Astro.slots.render('default', [row, index, key])`), memberi hasil
+ * visual identik, dan tetap menulis template Astro di halaman — bukan string
+ * HTML yang dirakit manual.
+ */
+import Icon from "./Icon.astro";
+
+export interface Column {
+  /** Dot-path ke nilai baris, mis. 'tanggal.teks'. */
+  key: string;
+  label: string;
+  align?: "left" | "right" | "center";
+  /** Lebar kolom, mis. '1%' atau '10rem'. */
+  width?: string;
+  nowrap?: boolean;
+  /** Memetakan ke `.col-prose` (min 10rem, max 20rem). */
+  prose?: boolean;
+  className?: string;
+  /** Menampilkan penanda urut; pengurutan dilakukan di server lewat URL. */
+  sortable?: boolean;
+}
+
+interface Props {
+  columns: Column[];
+  rows: any[];
+  rowKey?: string;
+  emptyTitle?: string;
+  emptyDescription?: string;
+  /** Bila diisi, kolom "No." ditambahkan di depan dengan nomor mulai nilai ini. */
+  startIndex?: number;
+  caption?: string;
+  /**
+   * Key kolom yang isinya dirender oleh slot default `(row, index, key)`.
+   * Kolom lain memakai nilai dot-path sebagai teks.
+   */
+  renderKeys?: string[];
+  /**
+   * Kelas tambahan per baris. Dipakai halaman disposisi untuk tint baris
+   * terarsip (`.row-archived`) tanpa inline style, sesuai aturan arah B.
+   */
+  rowClass?: (row: any, index: number) => string | undefined | null;
+}
+
+const {
+  columns,
+  rows,
+  rowKey = "id",
+  emptyTitle = "Belum ada data",
+  emptyDescription = "",
+  startIndex,
+  caption,
+  renderKeys = [],
+  rowClass,
+} = Astro.props;
+
+/** Ambil nilai dot-path; undefined bila salah satu segmen tidak ada. */
+function valueAt(row: any, path: string): unknown {
+  return path
+    .split(".")
+    .reduce<any>(
+      (acc, part) => (acc === null || acc === undefined ? acc : acc[part]),
+      row,
+    );
+}
+
+const alignClass = (align: Column["align"]) =>
+  align === "right"
+    ? "text-right"
+    : align === "center"
+      ? "text-center"
+      : "text-left";
+
+const list = Array.isArray(rows) ? rows : [];
+const hasRows = list.length > 0;
+const showNumber = typeof startIndex === "number";
+
+const keyOf = (row: any, index: number): string =>
+  String(valueAt(row, rowKey) ?? index);
+
+const customKeys = new Set(renderKeys);
+const hasRenderer = Astro.slots.has("default") && customKeys.size > 0;
+
+/**
+ * Renderer dipanggil di frontmatter karena `Astro.slots.render()` asinkron dan
+ * tidak dapat di-await di dalam template. Hasilnya HTML siap tempel.
+ */
+const cellHtml: Record<string, string[]> = {};
+if (hasRows && hasRenderer) {
+  for (const col of columns) {
+    if (!customKeys.has(col.key)) continue;
+    cellHtml[col.key] = await Promise.all(
+      list.map((row, index) =>
+        Astro.slots.render("default", [row, index, col.key]),
+      ),
+    );
+  }
+}
+
+const emptyHtml = Astro.slots.has("empty")
+  ? await Astro.slots.render("empty")
+  : null;
+---
+
+{
+  hasRows ? (
+    <div class="table-wrap">
+      <table class="table" aria-label={caption}>
+        {caption && <caption class="sr-only">{caption}</caption>}
+        <thead>
+          <tr>
+            {showNumber && (
+              <th scope="col" style="width: 1%" class="text-right">
+                No.
+              </th>
+            )}
+            {columns.map((col: Column) => (
+              <th
+                scope="col"
+                style={col.width ? `width: ${col.width}` : undefined}
+                class:list={[
+                  alignClass(col.align),
+                  col.prose && "col-prose",
+                  col.nowrap && "col-nowrap",
+                  col.className,
+                ]}
+              >
+                <span class="inline-flex items-center gap-1">
+                  {col.label}
+                  {col.sortable && (
+                    <span class="col-sort" aria-hidden="true">
+                      <Icon name="chevron-down" class="h-3 w-3" />
+                    </span>
+                  )}
+                </span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {list.map((row, index) => (
+            <tr
+              data-key={keyOf(row, index)}
+              class:list={[rowClass?.(row, index)]}
+            >
+              {showNumber && (
+                <td class="text-right tabular text-[var(--color-ink-subtle)]">
+                  {(startIndex as number) + index}
+                </td>
+              )}
+              {columns.map((col: Column) => (
+                <td
+                  class:list={[
+                    alignClass(col.align),
+                    col.prose && "col-prose",
+                    col.nowrap && "col-nowrap",
+                    col.className,
+                  ]}
+                >
+                  {cellHtml[col.key] ? (
+                    <Fragment set:html={cellHtml[col.key][index]} />
+                  ) : (
+                    String(valueAt(row, col.key) ?? "—")
+                  )}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  ) : (
+    <div class="empty-state">
+      {emptyHtml !== null ? (
+        <Fragment set:html={emptyHtml} />
+      ) : (
+        <>
+          <span class="empty-state-icon">
+            <Icon name="file-text" class="h-5 w-5" />
+          </span>
+          <div>
+            <p class="text-sm font-medium text-[var(--color-ink)]">
+              {emptyTitle}
+            </p>
+            {emptyDescription && (
+              <p class="mt-1 text-sm text-[var(--color-ink-subtle)]">
+                {emptyDescription}
+              </p>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}

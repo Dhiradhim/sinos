@@ -14,6 +14,10 @@ defined('BASEPATH') or exit('No direct script access allowed');
 | $config['sso_app_secret'] : rahasia bersama (harus sama dengan gateway).
 | $config['sso_callback']   : URL callback di sisi SINOS (harus terdaftar).
 | $config['sso_timeout']    : timeout cURL (detik).
+| $config['web_url']        : base URL frontend Astro (sinos-web), TANPA "/"
+|                             di akhir. Dipakai Fase 7 sebagai tujuan redirect
+|                             pengganti rute HTML yang sudah dihapus
+|                             (dulu `login` dan `dashboard`).
 */
 
 // Muat .env bila ada (dipakai juga oleh database.php).
@@ -34,3 +38,7 @@ $config['sso_app_id']     = $cfg_sso('SSO_APP_ID', 'sinos');
 $config['sso_app_secret'] = $cfg_sso('SSO_APP_SECRET', 'GANTI_SECRET_ACAK_PANJANG_SINOS');
 $config['sso_callback']   = $cfg_sso('SSO_CALLBACK', 'http://localhost/sinos/sso/callback');
 $config['sso_timeout']    = (int) $cfg_sso('SSO_TIMEOUT', 5);
+
+// Fase 7: tujuan redirect pengganti rute HTML `login` dan `dashboard` yang
+// sudah dihapus. Menunjuk ke frontend Astro.
+$config['web_url']        = rtrim($cfg_sso('SINOS_WEB_URL', 'http://localhost:4321'), '/');

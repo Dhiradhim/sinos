@@ -1,0 +1,212 @@
+---
+/**
+ * Pagination.astro — paginasi server-side dari `meta` API.
+ *
+ * Kata-kata diambil apa adanya dari layouts/master.php:90
+ * (`Menampilkan _START_–_END_ dari _TOTAL_ data`).
+ *
+ * Aturan visual arah B:
+ *   - tombol 34x34, border 1px `--color-line`, radius kontrol, tanpa shadow;
+ *   - halaman aktif: latar navy + cincin 2px di luar tombol;
+ *   - jarak antar tombol memakai flex `gap`, tidak pernah margin per tombol.
+ *
+ * Semua query lain di URL dipertahankan saat berpindah halaman.
+ */
+interface Props {
+  page: number;
+  lastPage: number;
+  total: number;
+  perPage: number;
+  /** Path tujuan, mis. '/surat-keluar/daftar'. */
+  baseUrl: string;
+}
+
+const { page, lastPage, total, perPage, baseUrl } = Astro.props;
+
+const current = Math.min(
+  Math.max(1, Math.floor(page) || 1),
+  Math.max(1, lastPage),
+);
+const last = Math.max(1, Math.floor(lastPage) || 1);
+const size = Math.max(1, Math.floor(perPage) || 1);
+const count = Math.max(0, Math.floor(total) || 0);
+
+const start = count === 0 ? 0 : (current - 1) * size + 1;
+const end = count === 0 ? 0 : Math.min(current * size, count);
+
+/** Nomor halaman yang ditampilkan: jendela 5 dengan elipsis di kedua sisi. */
+function windowPages(active: number, totalPages: number): number[] {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  let from = Math.max(2, active - 2);
+  let to = Math.min(totalPages - 1, from + 4);
+  from = Math.max(2, to - 4);
+  const out: number[] = [];
+  for (let p = from; p <= to; p++) out.push(p);
+  return out;
+}
+
+const pages = windowPages(current, last);
+const showFirstGap = last > 5 && pages.length > 0 && pages[0] > 2;
+const showLastGap =
+  last > 5 && pages.length > 0 && pages[pages.length - 1] < last - 1;
+
+/** URL halaman tujuan, mempertahankan seluruh query lain. */
+function hrefFor(target: number): string {
+  const url = new URL(baseUrl, "http://placeholder");
+  for (const [key, value] of Astro.url.searchParams.entries()) {
+    if (key === "page") continue;
+    url.searchParams.append(key, value);
+  }
+  if (target > 1) url.searchParams.set("page", String(target));
+  return `${url.pathname}${url.search}`;
+}
+
+const isFirst = current <= 1;
+const isLast = current >= last;
+
+// `Awal` dan `Akhir` melompat ke ujung; `Sebelumnya`/`Berikutnya` satu langkah.
+// `rel` hanya dipasang pada Sebelumnya agar tidak ada dua rel=prev di halaman.
+const navItems: {
+  label: string;
+  target: number;
+  disabled: boolean;
+  title: string;
+  rel?: string;
+}[] = [
+  { label: "Awal", target: 1, disabled: isFirst, title: "Halaman pertama" },
+  {
+    label: "Sebelumnya",
+    target: current - 1,
+    disabled: isFirst,
+    title: "Halaman sebelumnya",
+    rel: "prev",
+  },
+];
+---
+
+<nav class="pagination" aria-label="Navigasi halaman">
+  <p class="pagination-info">
+    Menampilkan {start}&ndash;{end} dari {count} data
+  </p>
+
+  <div class="pagination-pages">
+    {
+      navItems.map((item) =>
+        item.disabled ? (
+          <span class="pagination-btn" aria-disabled="true" title={item.title}>
+            {item.label}
+          </span>
+        ) : (
+          <a
+            class="pagination-btn"
+            href={hrefFor(item.target)}
+            title={item.title}
+            rel={item.rel}
+          >
+            {item.label}
+          </a>
+        ),
+      )
+    }
+
+    {
+      last > 5 && (
+        <a
+          class="pagination-btn"
+          href={hrefFor(1)}
+          aria-current={current === 1 ? "page" : undefined}
+          aria-label="Halaman 1"
+        >
+          1
+        </a>
+      )
+    }
+    {
+      showFirstGap && (
+        <span class="pagination-gap" aria-hidden="true">
+          &hellip;
+        </span>
+      )
+    }
+
+    {
+      pages.map((p) =>
+        p === current ? (
+          <span
+            class="pagination-btn"
+            aria-current="page"
+            aria-label={`Halaman ${p}`}
+          >
+            {p}
+          </span>
+        ) : (
+          <a
+            class="pagination-btn"
+            href={hrefFor(p)}
+            aria-label={`Halaman ${p}`}
+          >
+            {p}
+          </a>
+        ),
+      )
+    }
+
+    {
+      showLastGap && (
+        <span class="pagination-gap" aria-hidden="true">
+          &hellip;
+        </span>
+      )
+    }
+    {
+      last > 5 && (
+        <a
+          class="pagination-btn"
+          href={hrefFor(last)}
+          aria-current={current === last ? "page" : undefined}
+          aria-label={`Halaman ${last}`}
+        >
+          {last}
+        </a>
+      )
+    }
+
+    {
+      isLast ? (
+        <span
+          class="pagination-btn"
+          aria-disabled="true"
+          title="Halaman berikutnya"
+        >
+          Berikutnya
+        </span>
+      ) : (
+        <a
+          class="pagination-btn"
+          href={hrefFor(current + 1)}
+          title="Halaman berikutnya"
+          rel="next"
+        >
+          Berikutnya
+        </a>
+      )
+    }
+    {
+      isLast ? (
+        <span
+          class="pagination-btn"
+          aria-disabled="true"
+          title="Halaman terakhir"
+        >
+          Akhir
+        </span>
+      ) : (
+        <a class="pagination-btn" href={hrefFor(last)} title="Halaman terakhir">
+          Akhir
+        </a>
+      )
+    }
+  </div>
+</nav>

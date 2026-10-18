@@ -1,0 +1,38 @@
+---
+import "../styles/global.css";
+
+interface Props {
+	title: string;
+	subtitle?: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="id" class="h-full">
+	<head>
+		<meta charset="utf-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="theme-color" content="#0b1b3a" />
+		<meta name="color-scheme" content="light" />
+		<title>{title} - SINOS</title>
+
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+			rel="stylesheet"
+		/>
+	</head>
+
+	<body class="min-h-dvh bg-[var(--color-page)]">
+		<slot />
+
+		<!-- Preline: satu bundel npm, dimuat setelah DOM siap. Tidak ada skrip statis dari CI3. -->
+		<script>
+			import "preline";
+		</script>
+	</body>
+</html>

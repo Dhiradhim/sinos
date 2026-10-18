@@ -12,3 +12,7 @@
 !/file/sm/index.html
 /assets/css/app.css
 composer.phar
+/frontend/node_modules
+/frontend/dist
+/frontend/.astro
+/frontend/.env

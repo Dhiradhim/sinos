@@ -1,18 +1,62 @@
 RewriteEngine On
 RewriteBase /sinos/
 
-# Jangan rewrite file/direktori yang memang ada (asset, index.php, dll)
+# ---------------------------------------------------------------------------
+# Konsolidasi 2026-10-18: frontend Astro kini berada di `sinos/frontend/`.
+# Seluruh proyek berada di bawah document root, jadi tanpa aturan ini
+# http://localhost/sinos/frontend/src/... akan menyajikan source TypeScript,
+# node_modules, dan berkas .env. Blokir SEBELUM catch-all rewrite di bawah
+# agar tidak sempat dialihkan ke index.php.
+# ---------------------------------------------------------------------------
+RewriteRule ^frontend/(src|node_modules|\.astro|dist|\.env|astro\.config\.mjs|tsconfig\.json|package(-lock)?\.json) - [F,L]
+
+# FASE 7 (2026-10-18): frontend HTML CI3 sudah dihentikan.
+# Aplikasi ini hanya melayani JSON API (/api/v1/*) dan rute klien SSO
+# (/sso/login, /sso/callback). Semua URI lain dibalas JSON 404 oleh
+# `api/notfound` (lihat $route['404_override'] di application/config/routes.php).
+
+# Jangan rewrite file/direktori yang memang ada (index.php, KOP.jpg, dll)
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
-# Jangan rewrite index.php itu sendiri agar tidak terjadi loop
+# Jangan rewrite index.php itu sendiri agar tidak terjadi loop.
+# Catatan Fase 7: `assets` DIHAPUS dari daftar pengecualian karena
+# assets/css dan assets/js sudah dihapus. Yang tersisa hanya
+# assets/img/KOP.jpg yang memang file nyata (ditangani RewriteCond -f di
+# atas) dan direferensikan oleh api/v1/surat-masuk/{id}/disposisi.
+# `vendor`/`tmp` tetap dikecualikan agar berkas internal tidak pernah
+# masuk ke router CI3.
 
-RewriteCond $1 !^(index\.php|assets|file|img|css|js|vendor|tmp|robots\.txt)
+RewriteCond $1 !^(index\.php|file|img|css|js|vendor|tmp|robots\.txt)
 RewriteRule ^(.*)$ index.php/$1 [L]
 
-# Protect .env
+# ---------------------------------------------------------------------------
+# Hardening direktori internal (additive, tidak mengubah aturan di atas)
+# ---------------------------------------------------------------------------
+# Blokir akses langsung ke kode aplikasi. `application/.htaccess` sudah
+# menolak semuanya, ini lapisan kedua bila AllowOverride untuk subdirektori
+# dimatikan atau file tersebut hilang.
+RewriteRule ^application(/|$) - [F,L]
 
-<Files ".env">
+# `file/` - menyimpan PDF surat. Akses langsung ditolak; berkas hanya dapat
+# diambil lewat endpoint bertanda tangan:
+#       GET /api/v1/berkas/{token}
+# Token = HMAC-SHA256 atas path + masa berlaku (default 1 jam), lihat
+# application/helpers/api_berkas_helper.php.
+RewriteRule ^file(/|$) - [F,L]
+
+# Protect .env (dan contohnya, agar tidak pernah tersaji lewat web)
+
+<FilesMatch "^\.env">
 Require all denied
-</Files>
+</FilesMatch>
+
+# Protect berkas konfigurasi dependensi.
+# Fase 7: package.json / package-lock.json / tailwind.config.js sudah dihapus
+# dari sinos/, tetapi pola dipertahankan sebagai lapisan pertahanan bila
+# berkas semacam itu muncul lagi.
+
+<FilesMatch "^(composer\.(json|lock)|package(-lock)?\.json|tailwind\.config\.js)$">
+Require all denied
+</FilesMatch>

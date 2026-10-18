@@ -1,0 +1,76 @@
+---
+/**
+ * StatRow.astro — empat angka statistik tanpa kartu (arah B).
+ *
+ * Menggantikan stat card v4: tidak ada border, shadow, atau latar. Yang
+ * tersisa hanya angka besar `tabular-nums`, label kecil, dan satu garis
+ * rambut di bawah seluruh baris. Pemisah antar kolom memakai `divide-x`
+ * (garis rambut) hanya pada `lg`, tempat keempat kolom sejajar.
+ */
+import Icon from "./Icon.astro";
+import { formatNumber, toneInk } from "../lib/format";
+
+export interface Stat {
+  key: string;
+  label: string;
+  value: number | string;
+  href?: string;
+  tone: string;
+  icon?: string;
+}
+
+interface Props {
+  stats: Stat[];
+}
+
+const { stats } = Astro.props;
+
+/** Satu sel statistik. `href` membuat seluruh sel menjadi tautan. */
+const cellClass =
+  "group flex min-w-0 flex-col gap-1 px-6 py-4 transition-colors hover:bg-[var(--color-surface-muted)]";
+const staticCellClass = "flex min-w-0 flex-col gap-1 px-6 py-4";
+---
+
+<section
+  class="grid grid-cols-2 border-b border-[var(--color-line)] lg:grid-cols-4 lg:divide-x lg:divide-[var(--color-line)]"
+  aria-label="Statistik tahun ini"
+>
+  {
+    stats.map((stat) => {
+      const body = (
+        <>
+          <span class="flex items-center gap-1.5 text-[0.75rem] leading-4 text-[var(--color-ink-subtle)]">
+            {stat.icon && (
+              <span
+                class="inline-flex shrink-0"
+                style={`color: ${toneInk(stat.tone)};`}
+              >
+                <Icon name={stat.icon} class="h-4 w-4" />
+              </span>
+            )}
+            <span class="truncate">{stat.label}</span>
+          </span>
+          <span class="text-[1.75rem] font-semibold leading-none tabular text-[var(--color-ink)]">
+            {formatNumber(stat.value)}
+          </span>
+        </>
+      );
+
+      return stat.href ? (
+        <a href={stat.href} class={cellClass}>
+          {body}
+        </a>
+      ) : (
+        <div class={staticCellClass}>{body}</div>
+      );
+    })
+  }
+
+  {
+    stats.length === 0 && (
+      <p class="col-span-full px-6 py-4 text-sm text-[var(--color-ink-subtle)]">
+        Data ringkasan tidak tersedia.
+      </p>
+    )
+  }
+</section>

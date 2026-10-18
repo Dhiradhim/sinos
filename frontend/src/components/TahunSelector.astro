@@ -1,0 +1,62 @@
+---
+/**
+ * Pemilih tahun.
+ *
+ * Daftar tahun: `tahun_tersedia()` di sinos/application/helpers/sinos_helper.php
+ * (2024 s.d. tahun berjalan, urut menurun), sama seperti
+ * layouts/_tahun_selector.php.
+ *
+ * Pengiriman: form GET tanpa `action` mengirim ke PATH saat ini. Query string
+ * lama TIDAK otomatis ikut (browser menggantinya dengan field form), jadi
+ * seluruh parameter lain — `q`, `page`, `per_page`, dst. — disalin sebagai
+ * hidden input. `page` sengaja dibuang agar pergantian tahun kembali ke
+ * halaman 1.
+ */
+interface Props {
+  tahun?: number;
+  param?: string;
+}
+
+const { tahun = new Date().getFullYear(), param = "tahun" } = Astro.props;
+
+const now = new Date().getFullYear();
+const years: number[] = [];
+for (let y = now; y >= 2024; y--) years.push(y);
+
+/** Parameter yang dipertahankan saat tahun berganti. */
+const preserved = [...Astro.url.searchParams.entries()].filter(
+  ([key]) => key !== param && key !== "page",
+);
+---
+
+<form method="GET" class="inline-flex" data-tahun-form>
+  {
+    preserved.map(([key, value]) => (
+      <input type="hidden" name={key} value={value} />
+    ))
+  }
+  <label for="tahunSelect" class="sr-only">Tahun</label>
+  <select id="tahunSelect" name={param} class="select w-auto" data-tahun-select>
+    {
+      years.map((y) => (
+        <option value={y} selected={y === Number(tahun)}>
+          {y}
+        </option>
+      ))
+    }
+  </select>
+  <noscript>
+    <button type="submit" class="btn-outline btn-sm ml-2">Terapkan</button>
+  </noscript>
+</form>
+
+<script>
+  // Kirim form otomatis saat tahun berganti; tidak ada state di klien.
+  document
+    .querySelectorAll<HTMLSelectElement>("[data-tahun-select]")
+    .forEach((select) => {
+      select.addEventListener("change", () => {
+        select.form?.requestSubmit();
+      });
+    });
+</script>

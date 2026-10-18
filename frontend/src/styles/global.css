@@ -1,0 +1,837 @@
+@import "tailwindcss";
+@import "preline/variants.css";
+@source "../../node_modules/preline/dist/*.js";
+@source "../**/*.astro";
+@source "../**/*.ts";
+
+/*
+ * SINOS — arah desain B "Meja Registrasi".
+ *
+ * Rail navigasi navy pekat (perabot gelap) + kanvas kerja putih (lembar
+ * terang). Garis 1px sebagai tepi meja. Tidak ada shadow pada kontrol,
+ * shadow hanya untuk panel mengambang. Aksen dipakai hemat (<= 8% layar).
+ */
+
+@theme {
+	/* Rail navigasi — lebih dalam dari brand agar tombol utama tetap menonjol */
+	--color-rail: #0b1b3a;
+	--color-rail-hover: #14294f;
+	--color-rail-active: #1c3663;
+	--color-rail-text: #c3ccdd;
+	--color-rail-text-strong: #ffffff;
+
+	/* Kanvas kerja */
+	--color-canvas: #ffffff;
+	--color-page: #f6f7f9;
+	--color-surface-muted: #f9fafb;
+
+	/* Garis */
+	--color-line: #e4e7ec;
+	--color-line-strong: #cfd5df;
+
+	/* Teks */
+	--color-ink: #0f172a;
+	--color-ink-muted: #475569;
+	--color-ink-subtle: #64748b;
+
+	/* Aksi & status */
+	--color-brand-900: #0a2463;
+	--color-brand-800: #12316f;
+	--color-brand-50: #eef2fa;
+	--color-accent-500: #fb3640;
+	--color-ok: #047857;
+	--color-warn: #b45309;
+	--color-danger: #b91c1c;
+
+	/* Bentuk */
+	--radius-control: 0.5rem;
+	--radius-panel: 0.75rem;
+	--shadow-panel:
+		0 1px 2px 0 rgb(15 23 42 / 0.05), 0 8px 24px -12px rgb(15 23 42 / 0.18);
+
+	--font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+	html {
+		-webkit-font-smoothing: antialiased;
+	}
+
+	body {
+		background: var(--color-page);
+		color: var(--color-ink);
+		font-family: var(--font-sans);
+	}
+
+	::selection {
+		background: color-mix(in oklab, var(--color-brand-900) 18%, transparent);
+	}
+
+	/* Tailwind v4 mengubah default border-color menjadi currentColor.
+	   Shim ini menjaga semua border tanpa warna tetap memakai garis desain. */
+	*,
+	::before,
+	::after,
+	::backdrop {
+		border-color: var(--color-line);
+	}
+
+	[hidden] {
+		display: none !important;
+	}
+
+	::-webkit-scrollbar {
+		width: 10px;
+		height: 10px;
+	}
+
+	::-webkit-scrollbar-thumb {
+		border-radius: 9999px;
+		background-color: var(--color-line-strong);
+	}
+
+	::-webkit-scrollbar-thumb:hover {
+		background-color: var(--color-ink-subtle);
+	}
+}
+
+@layer components {
+	/* ------------------------------- Focus ring -------------------------------
+	 * §5.1 control grammar: outline 2px, offset 2px, navy 35%.
+	 * Satu cincin untuk semua kontrol; tidak ada shadow.
+	 */
+	:where(.input, .select, .textarea):focus,
+	:where(.btn, .btn-primary, .btn-outline, .btn-ghost, .btn-destructive, .btn-icon):focus-visible,
+	:where(.rail-item):focus-visible,
+	:where(.pagination-btn):focus-visible,
+	:where(.dropdown-item, .dropdown-item-destructive):focus-visible,
+	.focus-ring:focus-visible {
+		outline: 2px solid color-mix(in oklab, var(--color-brand-900) 35%, transparent);
+		outline-offset: 2px;
+	}
+
+	/* --------------------------------- Button ---------------------------------
+	 * Tinggi 34px (sm 30px, lg 40px). Tanpa shadow. Motion "klik" 140ms.
+	 */
+	:where(.btn, .btn-primary, .btn-outline, .btn-ghost, .btn-destructive) {
+		@apply inline-flex select-none items-center justify-center whitespace-nowrap border border-transparent text-sm disabled:pointer-events-none disabled:opacity-50;
+		height: 34px;
+		gap: 0.5rem;
+		padding-inline: 0.875rem;
+		font-weight: 600;
+		border-radius: var(--radius-control);
+		box-shadow: none;
+		transition: background-color 140ms cubic-bezier(0.2, 0, 0.2, 1);
+	}
+
+	:where(.btn, .btn-primary, .btn-outline, .btn-ghost, .btn-destructive) > svg {
+		width: 1rem;
+		height: 1rem;
+		flex-shrink: 0;
+	}
+
+	.btn-primary {
+		background-color: var(--color-brand-900);
+		color: #ffffff;
+	}
+
+	.btn-primary:hover {
+		background-color: var(--color-brand-800);
+	}
+
+	.btn-outline {
+		background-color: var(--color-canvas);
+		border-color: var(--color-line);
+		color: var(--color-ink);
+	}
+
+	.btn-outline:hover {
+		background-color: var(--color-surface-muted);
+		border-color: var(--color-line-strong);
+	}
+
+	.btn-ghost {
+		background-color: transparent;
+		color: var(--color-ink-muted);
+	}
+
+	.btn-ghost:hover {
+		background-color: var(--color-surface-muted);
+		color: var(--color-ink);
+	}
+
+	.btn-destructive {
+		background-color: var(--color-danger);
+		color: #ffffff;
+	}
+
+	.btn-destructive:hover {
+		background-color: color-mix(in oklab, var(--color-danger) 88%, #000000);
+	}
+
+	.btn-sm {
+		height: 30px;
+		gap: 0.375rem;
+		padding-inline: 0.625rem;
+		font-size: 0.75rem;
+	}
+
+	.btn-lg {
+		height: 40px;
+		padding-inline: 1.125rem;
+		font-size: 0.9375rem;
+	}
+
+	.btn-icon {
+		@apply inline-flex shrink-0 items-center justify-center border disabled:pointer-events-none disabled:opacity-50;
+		width: 34px;
+		height: 34px;
+		border-color: transparent;
+		border-radius: var(--radius-control);
+		background-color: transparent;
+		color: var(--color-ink-muted);
+		box-shadow: none;
+		transition: background-color 140ms cubic-bezier(0.2, 0, 0.2, 1);
+	}
+
+	.btn-icon:hover {
+		background-color: var(--color-surface-muted);
+		color: var(--color-ink);
+	}
+
+	.btn-icon > svg {
+		width: 1rem;
+		height: 1rem;
+	}
+
+	/* ---------------------------------- Form ----------------------------------
+	 * Tinggi 36px = border 1px x2 (2) + padding-block .4375rem x2 (14)
+	 *               + line-height 1.25rem (20) = 36.
+	 * box-sizing: border-box dari preflight Tailwind. Jangan tambah
+	 * min-height/padding lain: kombinasi itu yang dulu membuat tinggi 38-40px
+	 * dan huruf terpotong.
+	 */
+	.label {
+		display: block;
+		margin-bottom: 0.375rem;
+		font-size: 0.75rem;
+		line-height: 1rem;
+		font-weight: 600;
+		color: var(--color-ink-muted);
+	}
+
+	:where(.input, .select, .textarea) {
+		@apply block w-full text-sm disabled:cursor-not-allowed;
+		border: 1px solid var(--color-line);
+		border-radius: var(--radius-control);
+		background-color: var(--color-canvas);
+		padding-block: 0.4375rem;
+		padding-inline: 0.75rem;
+		line-height: 1.25rem;
+		color: var(--color-ink);
+		transition: border-color 140ms cubic-bezier(0.2, 0, 0.2, 1);
+	}
+
+	:where(.input, .select, .textarea)::placeholder {
+		color: var(--color-ink-subtle);
+	}
+
+	:where(.input, .select, .textarea):hover {
+		border-color: var(--color-line-strong);
+	}
+
+	:where(.input, .select, .textarea):disabled {
+		background-color: var(--color-surface-muted);
+		color: var(--color-ink-subtle);
+		opacity: 1;
+	}
+
+	:where(.input, .select, .textarea):focus {
+		border-color: var(--color-brand-900);
+	}
+
+	.input,
+	.select {
+		height: 36px;
+	}
+
+	/* Input file tidak boleh tinggi tetap: tombol native punya padding sendiri. */
+	.input[type="file"] {
+		height: auto;
+		min-height: 36px;
+		padding-block: 0.25rem;
+		line-height: 1.5;
+		cursor: pointer;
+	}
+
+	.textarea {
+		height: auto;
+		min-height: 6rem;
+		resize: vertical;
+		line-height: 1.5;
+	}
+
+	:where(.input, .textarea)::file-selector-button {
+		margin-right: 0.75rem;
+		border: 0;
+		border-radius: var(--radius-control);
+		background-color: var(--color-brand-900);
+		padding: 0.375rem 0.75rem;
+		font-size: 0.75rem;
+		line-height: 1rem;
+		font-weight: 600;
+		color: #ffffff;
+		cursor: pointer;
+	}
+
+	.select {
+		@apply appearance-none;
+		padding-right: 2.25rem;
+		background-repeat: no-repeat;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+		background-position: right 0.75rem center;
+		background-size: 1rem;
+	}
+
+	/* ---------------------------------- Badge ---------------------------------
+	 * Pil, 0.6875rem, 600, border 1px, latar bertinta.
+	 * Pemetaan tone netral (brand|sky|amber|danger|ok|muted|neutral|warning|info)
+	 * ke kelas ini HANYA terjadi di src/lib/format.ts.
+	 */
+	:where(
+			.badge,
+			.badge-default,
+			.badge-success,
+			.badge-warning,
+			.badge-danger,
+			.badge-info,
+			.badge-muted,
+			.badge-outline
+		) {
+		@apply inline-flex items-center gap-1 whitespace-nowrap;
+		border-width: 1px;
+		border-style: solid;
+		border-radius: 9999px;
+		padding: 0.125rem 0.5rem;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		line-height: 1.15;
+	}
+
+	.badge-default {
+		background-color: var(--color-brand-50);
+		border-color: color-mix(in oklab, var(--color-brand-900) 16%, transparent);
+		color: var(--color-brand-900);
+	}
+
+	.badge-success {
+		background-color: color-mix(in oklab, var(--color-ok) 9%, #ffffff);
+		border-color: color-mix(in oklab, var(--color-ok) 26%, transparent);
+		color: var(--color-ok);
+	}
+
+	.badge-warning {
+		background-color: color-mix(in oklab, var(--color-warn) 10%, #ffffff);
+		border-color: color-mix(in oklab, var(--color-warn) 26%, transparent);
+		color: var(--color-warn);
+	}
+
+	.badge-danger {
+		background-color: color-mix(in oklab, var(--color-danger) 8%, #ffffff);
+		border-color: color-mix(in oklab, var(--color-danger) 24%, transparent);
+		color: var(--color-danger);
+	}
+
+	.badge-info {
+		background-color: var(--color-sky-50);
+		border-color: color-mix(in oklab, var(--color-sky-700) 24%, transparent);
+		color: var(--color-sky-700);
+	}
+
+	.badge-muted {
+		background-color: var(--color-surface-muted);
+		border-color: var(--color-line);
+		color: var(--color-ink-subtle);
+	}
+
+	.badge-outline {
+		background-color: transparent;
+		border-color: var(--color-line-strong);
+		color: var(--color-ink-muted);
+	}
+
+	/* ---------------------------------- Table ---------------------------------
+	 * Arah B: TIDAK dibungkus kartu. Tabel menempel langsung ke kanvas.
+	 * Sel pertama/terakhir 1.5rem agar sejajar dengan .page-head/.filter-bar.
+	 */
+	.table {
+		@apply w-full;
+		font-size: 0.8125rem;
+		caption-side: bottom;
+		border-collapse: collapse;
+	}
+
+	.table thead th {
+		@apply whitespace-nowrap text-left align-middle;
+		padding: 0.625rem 1rem;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--color-ink-subtle);
+		background-color: var(--color-surface-muted);
+		border-bottom: 1px solid var(--color-line);
+	}
+
+	.table tbody td {
+		padding: 0.75rem 1rem;
+		color: var(--color-ink-muted);
+		vertical-align: middle;
+		border-bottom: 1px solid var(--color-line);
+	}
+
+	.table tbody tr {
+		transition: background-color 140ms cubic-bezier(0.2, 0, 0.2, 1);
+	}
+
+	.table tbody tr:hover {
+		background-color: var(--color-surface-muted);
+	}
+
+	/* Baris terarsip pada daftar disposisi — tint CI3
+	   (`bg-[var(--color-surface-muted)]`) dipindah ke kelas, bukan inline style.
+	   `.table tbody tr:hover` di atas lebih spesifik, jadi hover tetap terlihat. */
+	.row-archived {
+		background-color: var(--color-surface-muted);
+	}
+
+	.table tbody tr:last-child > td {
+		border-bottom-width: 0;
+	}
+
+	.table :is(thead th, tbody td):first-child {
+		padding-inline-start: 1.5rem;
+	}
+
+	.table :is(thead th, tbody td):last-child {
+		padding-inline-end: 1.5rem;
+	}
+
+	.table .col-prose {
+		min-width: 10rem;
+		max-width: 20rem;
+	}
+
+	/* Penanda kolom yang dapat diurutkan (sortir di server lewat URL). */
+	.table .col-sort {
+		display: inline-flex;
+		align-items: center;
+		margin-left: 0.25rem;
+		color: var(--color-line-strong);
+	}
+
+	.table .col-nowrap {
+		@apply whitespace-nowrap;
+	}
+
+	.table th.col-aksi,
+	.table td.col-aksi {
+		@apply whitespace-nowrap text-right;
+		width: 1px;
+	}
+
+	.table td.col-aksi > * {
+		@apply inline-flex;
+	}
+
+	/* Nomor surat: angka rata sempurna antar-baris (memorable moment §5.1). */
+	.table .col-no {
+		@apply whitespace-nowrap;
+		font-weight: 500;
+		font-variant-numeric: tabular-nums;
+		color: var(--color-ink);
+	}
+
+	/* Tabel hanya menggulir mendatar pada layar sempit; di kanvas lebar
+	   tabel memakai seluruh lebar tanpa scrollbar horizontal. */
+	.table-wrap {
+		width: 100%;
+		overflow-x: visible;
+	}
+
+	@media (max-width: 63.9375rem) {
+		.table-wrap {
+			overflow-x: auto;
+		}
+	}
+
+	/* -------------------------------- Page head --------------------------------
+	 * Judul + subjudul, tanpa panel, hanya garis bawah rambut.
+	 */
+	.page-head {
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 0.75rem;
+		padding: 1rem 1.5rem 0.75rem;
+		background: transparent;
+		border-bottom: 1px solid var(--color-line);
+	}
+
+	.page-head-title {
+		font-size: 1.125rem;
+		line-height: 1.5rem;
+		font-weight: 600;
+		letter-spacing: -0.01em;
+		color: var(--color-ink);
+	}
+
+	.page-head-subtitle {
+		font-size: 0.8125rem;
+		line-height: 1.25rem;
+		color: var(--color-ink-subtle);
+	}
+
+	/* -------------------------------- Filter bar -------------------------------
+	 * Satu baris, bukan kotak. Search tinggal di sini (topbar tidak punya search).
+	 */
+	.filter-bar {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.75rem 1.5rem;
+		border-bottom: 1px solid var(--color-line);
+	}
+
+	/* ------------------------------ Fieldset legend ----------------------------
+	 * Port dari sinos/assets/css/input.v4.css:338. Dipakai form nomor surat
+	 * keluar (Penanggung Jawab / Identitas Surat). Fieldset itu sendiri tidak
+	 * dibungkus kartu — arah B memisahkan kelompok dengan `.separator`.
+	 */
+	.fieldset-legend {
+		@apply mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider;
+		color: var(--color-ink-subtle);
+	}
+
+	/* ---------------------------------- Rail -----------------------------------
+	 * Navigasi di permukaan gelap. Item aktif ditandai garis aksen kiri.
+	 */
+	.rail-item {
+		@apply relative flex items-center text-sm;
+		gap: 0.625rem;
+		padding: 0.5rem 0.625rem;
+		border-radius: var(--radius-control);
+		color: var(--color-rail-text);
+		font-weight: 500;
+		transition: background-color 140ms cubic-bezier(0.2, 0, 0.2, 1);
+	}
+
+	.rail-item:hover {
+		background-color: var(--color-rail-hover);
+		color: var(--color-rail-text-strong);
+	}
+
+	.rail-item > svg {
+		width: 1.125rem;
+		height: 1.125rem;
+		flex-shrink: 0;
+		color: color-mix(in oklab, var(--color-rail-text) 85%, transparent);
+	}
+
+	.rail-item-active {
+		background-color: var(--color-rail-active);
+		color: #ffffff;
+		font-weight: 600;
+		box-shadow: inset 3px 0 0 var(--color-accent-500);
+	}
+
+	.rail-item-active:hover {
+		background-color: var(--color-rail-active);
+		color: #ffffff;
+	}
+
+	.rail-item-active > svg {
+		color: #ffffff;
+	}
+
+	.rail-group {
+		padding: 1rem 0.75rem 0.375rem;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: rgb(255 255 255 / 0.45);
+	}
+
+	/* --------------------------------- Dropdown -------------------------------- */
+	.dropdown-menu {
+		@apply z-50 overflow-hidden;
+		min-width: 12rem;
+		padding: 0.375rem;
+		border: 1px solid var(--color-line);
+		border-radius: var(--radius-panel);
+		background-color: var(--color-canvas);
+		box-shadow: var(--shadow-panel);
+	}
+
+	:where(.dropdown-item, .dropdown-item-destructive) {
+		@apply relative flex w-full cursor-pointer select-none items-center gap-2 text-left text-sm;
+		padding: 0.5rem 0.625rem;
+		border-radius: var(--radius-control);
+		color: var(--color-ink-muted);
+		transition: background-color 140ms cubic-bezier(0.2, 0, 0.2, 1);
+	}
+
+	:where(.dropdown-item, .dropdown-item-destructive):hover {
+		background-color: var(--color-surface-muted);
+		color: var(--color-ink);
+	}
+
+	:where(.dropdown-item, .dropdown-item-destructive) > svg {
+		width: 1rem;
+		height: 1rem;
+		flex-shrink: 0;
+		color: var(--color-ink-subtle);
+	}
+
+	:where(.dropdown-item, .dropdown-item-destructive)[disabled] {
+		pointer-events: none;
+		opacity: 0.45;
+	}
+
+	.dropdown-item-destructive {
+		color: var(--color-danger);
+	}
+
+	.dropdown-item-destructive:hover {
+		background-color: color-mix(in oklab, var(--color-danger) 8%, #ffffff);
+		color: var(--color-danger);
+	}
+
+	.dropdown-item-destructive > svg {
+		color: var(--color-danger);
+	}
+
+	.dropdown-label {
+		padding: 0.375rem 0.625rem;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--color-ink-subtle);
+	}
+
+	.dropdown-separator {
+		height: 1px;
+		margin: 0.25rem -0.375rem;
+		background-color: var(--color-line);
+	}
+
+	/* ---------------------------------- Alert ---------------------------------- */
+	:where(.alert, .alert-default, .alert-info, .alert-success, .alert-warning, .alert-danger) {
+		@apply flex w-full items-start gap-3 text-sm;
+		padding: 0.75rem 1rem;
+		border: 1px solid var(--color-line);
+		border-left-width: 3px;
+		border-radius: var(--radius-control);
+	}
+
+	.alert-title {
+		margin-bottom: 0.125rem;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		line-height: 1.125rem;
+	}
+
+	.alert-description {
+		font-size: 0.8125rem;
+		line-height: 1.25rem;
+	}
+
+	.alert-default {
+		background-color: var(--color-canvas);
+		border-left-color: var(--color-line-strong);
+		color: var(--color-ink);
+	}
+
+	.alert-info {
+		background-color: var(--color-brand-50);
+		border-color: color-mix(in oklab, var(--color-brand-900) 16%, transparent);
+		border-left-color: var(--color-brand-900);
+		color: var(--color-brand-900);
+	}
+
+	.alert-success {
+		background-color: color-mix(in oklab, var(--color-ok) 8%, #ffffff);
+		border-color: color-mix(in oklab, var(--color-ok) 22%, transparent);
+		border-left-color: var(--color-ok);
+		color: var(--color-ok);
+	}
+
+	.alert-warning {
+		background-color: color-mix(in oklab, var(--color-warn) 8%, #ffffff);
+		border-color: color-mix(in oklab, var(--color-warn) 22%, transparent);
+		border-left-color: var(--color-warn);
+		color: var(--color-warn);
+	}
+
+	.alert-danger,
+	.alert-destructive {
+		background-color: color-mix(in oklab, var(--color-danger) 7%, #ffffff);
+		border-color: color-mix(in oklab, var(--color-danger) 22%, transparent);
+		border-left-color: var(--color-danger);
+		color: var(--color-danger);
+	}
+
+	/* ------------------------------- Pagination --------------------------------
+	 * Kontrol 34x34, garis 1px, radius kontrol, tanpa shadow. Halaman aktif
+	 * memakai cincin 2px di luar tombol (bukan border tambahan, agar ukuran
+	 * tombol tidak bergeser).
+	 */
+	.pagination {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		padding: 0.75rem 1.5rem;
+		border-top: 1px solid var(--color-line);
+	}
+
+	.pagination-info {
+		font-size: 0.75rem;
+		line-height: 1rem;
+		color: var(--color-ink-subtle);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.pagination-pages {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.375rem;
+	}
+
+	.pagination-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		height: 34px;
+		min-width: 34px;
+		padding-inline: 0.5rem;
+		border: 1px solid var(--color-line);
+		border-radius: var(--radius-control);
+		background-color: var(--color-canvas);
+		color: var(--color-ink-muted);
+		font-size: 0.75rem;
+		font-weight: 600;
+		line-height: 1;
+		box-shadow: none;
+		transition: background-color 140ms cubic-bezier(0.2, 0, 0.2, 1);
+	}
+
+	.pagination-btn:hover {
+		background-color: var(--color-surface-muted);
+		color: var(--color-ink);
+	}
+
+	.pagination-btn[aria-disabled="true"] {
+		cursor: not-allowed;
+		color: var(--color-ink-subtle);
+		background-color: var(--color-canvas);
+		box-shadow: none;
+		opacity: 0.55;
+	}
+
+	.pagination-btn[aria-current="page"] {
+		background-color: var(--color-brand-900);
+		border-color: var(--color-brand-900);
+		color: #ffffff;
+		font-weight: 700;
+		box-shadow:
+			0 0 0 2px var(--color-canvas),
+			0 0 0 3px color-mix(in oklab, var(--color-brand-900) 45%, transparent);
+	}
+
+	.pagination-btn[aria-current="page"]:hover {
+		background-color: var(--color-brand-900);
+		color: #ffffff;
+	}
+
+	.pagination-gap {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		height: 34px;
+		min-width: 1rem;
+		font-size: 0.75rem;
+		color: var(--color-ink-subtle);
+	}
+
+	@media (max-width: 639.98px) {
+		.pagination {
+			justify-content: flex-start;
+		}
+	}
+
+	/* ---------------------------------- Field ----------------------------------
+	 * Pembungkus label + kontrol + petunjuk/error untuk fase form.
+	 */
+	.field-hint {
+		margin-top: 0.375rem;
+		font-size: 0.75rem;
+		line-height: 1rem;
+		color: var(--color-ink-subtle);
+	}
+
+	.field-error {
+		margin-top: 0.375rem;
+		font-size: 0.75rem;
+		line-height: 1rem;
+		color: var(--color-danger);
+	}
+
+	/* ---------------------------------- Misc ----------------------------------- */
+	.avatar {
+		@apply flex shrink-0 select-none items-center justify-center text-xs font-semibold;
+		width: 32px;
+		height: 32px;
+		border-radius: 9999px;
+		background-color: var(--color-brand-900);
+		color: #ffffff;
+	}
+
+	.empty-state {
+		@apply flex flex-col items-center justify-center gap-2 text-center;
+		padding: 3rem 1.5rem;
+		color: var(--color-ink-subtle);
+	}
+
+	.empty-state-icon {
+		@apply flex items-center justify-center;
+		width: 52px;
+		height: 52px;
+		border-radius: 9999px;
+		background-color: var(--color-surface-muted);
+		color: var(--color-ink-subtle);
+	}
+
+	.separator {
+		height: 1px;
+		width: 100%;
+		margin-block: 1.25rem;
+		background-color: var(--color-line);
+	}
+}
+
+@layer utilities {
+	.focus-ring {
+		outline: 2px solid transparent;
+		outline-offset: 2px;
+	}
+
+	.tabular {
+		font-variant-numeric: tabular-nums;
+	}
+}

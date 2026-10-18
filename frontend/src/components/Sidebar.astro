@@ -1,0 +1,290 @@
+---
+/**
+ * Sidebar arah B — rail navigasi gelap, 15rem, fixed.
+ *
+ * Label dan gerbang peran disalin apa adanya dari
+ * sinos/application/views/layouts/sidebar.php:1 (is_admin / is_operator).
+ * Menu aktif dihitung dari Astro.url.pathname, bukan closure $is().
+ */
+import Icon from "./Icon.astro";
+import type { ApiUser } from "../lib/auth";
+
+interface Props {
+	user: ApiUser;
+	disposisiCount?: number;
+	pathname: string;
+	tahun?: number;
+}
+
+const {
+	user,
+	disposisiCount = 0,
+	pathname,
+	tahun = new Date().getFullYear(),
+} = Astro.props;
+
+const isAdmin = Boolean(user.is_admin);
+const isOperator = Boolean(user.is_operator);
+
+type Item = {
+	href: string;
+	label: string;
+	icon: string;
+	badge?: number;
+	external?: boolean;
+	/**
+	 * Awalan path lain yang juga menyalakan item ini. Dipakai agar
+	 * `/surat-masuk/detail/{id}`, `/surat-masuk/edit/{id}`, dan
+	 * `/surat-masuk/{id}/cetak` tetap menyala pada "Daftar Surat Masuk" —
+	 * halaman-halaman itu adalah turunan daftar, bukan menu sendiri.
+	 */
+	match?: string[];
+};
+
+const suratMasuk: Item[] = [
+	...(isOperator
+		? [
+				{
+					href: "/surat-masuk/input",
+					label: "Input Surat Masuk",
+					icon: "inbox",
+				},
+			]
+		: []),
+	{
+		href: "/surat-masuk/daftar",
+		label: "Daftar Surat Masuk",
+		icon: "mail-open",
+		// Detail/edit/cetak tidak punya item sendiri; semuanya bagian daftar.
+		match: ["/surat-masuk/detail", "/surat-masuk/edit", "/surat-masuk/"],
+	},
+	{
+		href: "/disposisi",
+		label: "Disposisi",
+		icon: "send",
+		badge: disposisiCount,
+		// `/disposisi/detail/{id}` adalah turunan daftar: rail item ini yang
+		// menyala. Aturan "cocok terpanjang menang" sudah memilih /disposisi
+		// (10) untuk pathname itu, entri `match` di bawah membuat niatnya
+		// eksplisit dan menjaga perilaku bila kelak ada item /disposisi/* lain.
+		match: ["/disposisi/detail"],
+	},
+];
+
+const suratKeluar: Item[] = [
+	{ href: "/surat-keluar/ambil", label: "Ambil Nomor Surat", icon: "hash" },
+	{
+		href: "/surat-keluar/sisip",
+		label: "Sisip Nomor Surat",
+		icon: "paperclip",
+	},
+	{
+		href: "/surat-keluar/daftar-semua",
+		label: "Daftar Surat Keluar",
+		icon: "folder",
+		// Edit dan upload adalah turunan daftar: barisnya dibuka dari tabel
+		// "Daftar Surat Keluar", jadi rail item itu yang menyala. Aturan
+		// "cocok terpanjang menang" tetap memilih /surat-keluar/daftar untuk
+		// pathname daftar itu sendiri (21 > 19) dan /surat-keluar/daftar-semua
+		// untuk daftar-semua (25 > 21).
+		match: ["/surat-keluar/edit", "/surat-keluar/upload"],
+	},
+	...(!isAdmin
+		? [
+				{
+					href: "/surat-keluar/daftar",
+					label: "Daftar Nomor Surat",
+					icon: "file-text",
+				},
+			]
+		: []),
+];
+
+const laporan: Item[] = [
+	{ href: "/laporan", label: "Cetak Laporan", icon: "printer" },
+];
+
+const panduan: Item[] = [
+	{
+		href: "/assets/klasifikasi.pdf",
+		label: "Pola Klasifikasi Surat",
+		icon: "book",
+		external: true,
+	},
+];
+
+const all: Item[] = [
+	{ href: "/dashboard", label: "Beranda", icon: "dashboard" },
+	...suratMasuk,
+	...suratKeluar,
+	...laporan,
+	...panduan,
+];
+
+/**
+ * Item aktif = href terpanjang yang cocok, supaya /surat-keluar/daftar-semua
+ * tidak ikut menyalakan /surat-keluar/daftar.
+ *
+ * `/` dan `/dashboard` sama-sama milik Beranda: root adalah default controller
+ * dashboard di CI3, dan Astro tidak punya halaman index terpisah.
+ */
+function matchLength(item: Item): number {
+	const clean = item.href.split("?")[0];
+	if (clean === "/dashboard" && pathname === "/") return clean.length;
+	if (pathname === clean) return clean.length;
+	if (pathname.startsWith(`${clean}/`)) return clean.length;
+
+	// Awalan tambahan (mis. /surat-masuk/detail/{id} → Daftar Surat Masuk).
+	// Nilainya dipakai apa adanya sebagai panjang, sehingga aturan "cocok
+	// terpanjang menang" tetap memilih item yang paling spesifik:
+	// /surat-masuk/input (17) mengalahkan /surat-masuk/ (13).
+	for (const prefix of item.match ?? []) {
+		if (pathname === prefix || pathname.startsWith(prefix)) {
+			return prefix.length;
+		}
+	}
+
+	return -1;
+}
+
+let activeHref = "";
+let activeLength = -1;
+for (const item of all) {
+	const len = matchLength(item);
+	if (len > activeLength) {
+		activeLength = len;
+		activeHref = item.href;
+	}
+}
+
+const isActive = (href: string) => href === activeHref && activeLength >= 0;
+const withTahun = (href: string) =>
+	href.includes("?") ? href : `${href}?tahun=${tahun}`;
+---
+
+<aside
+	id="sidebar"
+	class="fixed inset-y-0 left-0 z-40 flex h-dvh w-60 shrink-0 -translate-x-full flex-col transition-transform duration-200 lg:translate-x-0"
+	style="background: var(--color-rail);"
+	data-rail
+	aria-label="Navigasi utama"
+>
+	<div class="flex h-full min-h-0 flex-col">
+		<!-- Brand -->
+		<div
+			class="flex h-14 shrink-0 items-center border-b border-[rgb(255_255_255_/_0.08)] px-4"
+		>
+			<a
+				href="/dashboard"
+				class="focus-ring flex min-w-0 items-center gap-3 rounded-[var(--radius-control)]"
+			>
+				<span
+					class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[rgb(255_255_255_/_0.10)] text-white"
+				>
+					<Icon name="bank" class="h-4 w-4" />
+				</span>
+				<span class="min-w-0 leading-tight">
+					<span
+						class="block truncate text-sm font-semibold tracking-tight text-white"
+						>SINOS</span
+					>
+					<span
+						class="block truncate text-[0.6875rem] font-medium tracking-[0.04em] text-[rgb(255_255_255_/_0.55)]"
+					>
+						Pengadilan Agama Kupang
+					</span>
+				</span>
+			</a>
+		</div>
+
+		<!-- Navigasi -->
+		<nav class="flex-1 overflow-y-auto px-2.5 pb-4 pt-1.5">
+			<a
+				href="/dashboard"
+				class:list={["rail-item", isActive("/dashboard") && "rail-item-active"]}
+				aria-current={isActive("/dashboard") ? "page" : undefined}
+			>
+				<Icon name="dashboard" />
+				<span>Beranda</span>
+			</a>
+
+			<p class="rail-group">Surat Masuk</p>
+			{
+				suratMasuk.map((item) => (
+					<a
+						href={withTahun(item.href)}
+						class:list={[
+							"rail-item",
+							isActive(item.href) && "rail-item-active",
+						]}
+						aria-current={isActive(item.href) ? "page" : undefined}
+					>
+						<Icon name={item.icon} />
+						<span>{item.label}</span>
+						{item.badge && item.badge > 0 ? (
+							<span class="badge badge-warning ml-auto tabular">
+								{item.badge}
+							</span>
+						) : null}
+					</a>
+				))
+			}
+
+			<p class="rail-group">Surat Keluar</p>
+			{
+				suratKeluar.map((item) => (
+					<a
+						href={withTahun(item.href)}
+						class:list={[
+							"rail-item",
+							isActive(item.href) && "rail-item-active",
+						]}
+						aria-current={isActive(item.href) ? "page" : undefined}
+					>
+						<Icon name={item.icon} />
+						<span>{item.label}</span>
+					</a>
+				))
+			}
+
+			{
+				isAdmin && (
+					<>
+						<p class="rail-group">Laporan</p>
+						{laporan.map((item) => (
+							<a
+								href={item.href}
+								class:list={[
+									"rail-item",
+									isActive(item.href) && "rail-item-active",
+								]}
+								aria-current={isActive(item.href) ? "page" : undefined}
+							>
+								<Icon name={item.icon} />
+								<span>{item.label}</span>
+							</a>
+						))}
+					</>
+				)
+			}
+
+			<p class="rail-group">Panduan</p>
+			{
+				panduan.map((item) => (
+					<a href={item.href} target="_blank" rel="noopener" class="rail-item">
+						<Icon name={item.icon} />
+						<span>{item.label}</span>
+						<Icon name="external-link" class="ml-auto h-3.5 w-3.5 opacity-60" />
+					</a>
+				))
+			}
+		</nav>
+
+		<!-- Footer -->
+		<div class="shrink-0 border-t border-[rgb(255_255_255_/_0.08)] px-4 py-2.5">
+			<p class="text-[0.6875rem] text-[rgb(255_255_255_/_0.35)]">
+				SINOS &middot; {tahun}
+			</p>
+		</div>
+	</div>
+</aside>

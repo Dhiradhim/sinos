@@ -1,0 +1,106 @@
+---
+/**
+ * Input Surat Masuk.
+ *
+ * Sumber: sinos/application/views/surat_masuk/input.php + Surat_masuk::index().
+ * Hanya operator surat (gerbang yang sama dengan controller CI3: `show_error`
+ * 403 bila bukan operator).
+ *
+ * Arah B: form duduk di kanvas putih dengan `.page-head`; kelompok field
+ * dipisah `.separator`, bukan kartu.
+ *
+ * Nomor agenda: view CI3 menampilkan `M_surmas::next_no_agenda()`. API tidak
+ * menyediakan endpoint untuk nilai itu, jadi pratinjau di sini dihitung dari
+ * halaman pertama daftar tahun berjalan — server tetap yang menetapkan nilai
+ * final saat POST, dan field `no_agenda` disabled (tidak pernah dikirim).
+ */
+import AppShell from "../../layouts/AppShell.astro";
+import PageHead from "../../components/PageHead.astro";
+import Icon from "../../components/Icon.astro";
+import SuratMasukForm from "../../components/SuratMasukForm.astro";
+import { requireUser } from "../../lib/auth";
+import { apiFetch } from "../../lib/api";
+import { getSession } from "../../lib/session";
+import { takeFormFeedback } from "../../lib/formFeedback";
+import type { SuratMasukRow } from "../../lib/suratMasuk";
+
+const auth = await requireUser(Astro);
+if (auth.redirect) return auth.redirect;
+const user = auth.user;
+
+// Gerbang peran identik dengan Surat_masuk::index().
+if (!user.is_operator) {
+  return Astro.redirect("/dashboard", 303);
+}
+
+const token = getSession(Astro.cookies);
+
+const klasifikasiResult = await apiFetch<{ kode: string; nama: string }[]>(
+  "/master/klasifikasi",
+  { token },
+);
+const klasifikasi = klasifikasiResult.data ?? [];
+
+const tahun = new Date().getFullYear();
+
+/**
+ * Pratinjau nomor agenda: pola `{urut}/SM/PA.Kp/{tahun}`. Nomor urut
+ * tertinggi diambil dari baris terbaru tahun berjalan; nilai final tetap
+ * ditetapkan server saat penyimpanan.
+ */
+const daftarResult = await apiFetch<SuratMasukRow[]>("/surat-masuk", {
+  token,
+  query: { tahun, per_page: 100 },
+});
+let maxUrut = 0;
+for (const row of daftarResult.data ?? []) {
+  const match = /^\s*(\d+)/.exec(row.no_agenda ?? "");
+  if (match) maxUrut = Math.max(maxUrut, Number(match[1]));
+}
+const nextAgenda = `${maxUrut + 1}/SM/PA.Kp/${tahun}`;
+
+const dashboard = await apiFetch<{ disposisi_belum_dibaca: number }>(
+  "/dashboard",
+  {
+    token,
+    query: { tahun },
+  },
+);
+const disposisiCount = dashboard.data?.disposisi_belum_dibaca ?? 0;
+
+// Umpan balik 422 dari action route (cookie sekali pakai).
+const feedback = takeFormFeedback(Astro.cookies);
+---
+
+<AppShell
+  title="Input Surat Masuk"
+  user={user}
+  disposisiCount={disposisiCount}
+  tahun={tahun}
+  topbarTitle={false}
+>
+  <PageHead
+    title="Input Surat Masuk"
+    subtitle="Catat surat masuk beserta klasifikasi dan berkasnya."
+  >
+    <a
+      slot="actions"
+      href={`/surat-masuk/daftar?tahun=${tahun}`}
+      class="btn-outline btn-sm"
+    >
+      <Icon name="arrow-left" class="h-4 w-4" />
+      <span>Kembali</span>
+    </a>
+  </PageHead>
+
+  <div class="mx-auto w-full max-w-3xl">
+    <SuratMasukForm
+      mode="create"
+      row={feedback?.values ?? null}
+      klasifikasi={klasifikasi}
+      errors={feedback?.errors ?? null}
+      message={feedback?.message ?? ""}
+      nextAgenda={nextAgenda}
+    />
+  </div>
+</AppShell>

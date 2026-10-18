@@ -5,58 +5,81 @@ defined('BASEPATH') or exit('No direct script access allowed');
 |--------------------------------------------------------------------------
 | URI ROUTING
 |--------------------------------------------------------------------------
+| FASE 7 (2026-10-18): SELURUH RUTE HTML SUDAH DIHAPUS.
+|
+| Aplikasi ini kini hanya melayani:
+|   1. JSON API untuk frontend Astro  (api/v1/*)
+|   2. Rute klien SSO milik CI3       (sso/login, sso/callback)
+|
+| Catatan penting mengenai SSO:
+|   Frontend Astro TIDAK memakai `Sso` controller di sini. Lihat
+|   sinos-web/src/pages/api/auth/login.ts — Astro membangun sendiri URL
+|   /authorize gateway lalu callback ke sinos-web/api/auth/callback, yang
+|   menukar tiket lewat POST api/v1/auth/exchange.
+|
+|   Rute `sso/login` & `sso/callback` DIPERTAHANKAN karena `sso_callback`
+|   pada application/config/sso.php masih menunjuk ke
+|   http://localhost/sinos/sso/callback dan URL tersebut terdaftar sebagai
+|   redirect_uri di gateway. Menghapusnya akan memutus alur SSO berbasis CI3
+|   (dan membuat pendaftaran redirect_uri di gateway menunjuk ke 404).
+|
+| Rute HTML lama (login, logout, dashboard, surat-masuk/*, disposisi/*,
+| surat-keluar/*, laporan/*) sudah tidak ada. Permintaan ke URL tersebut
+| sekarang ditangkap `404_override` (controller Notfound) yang membalas
+| JSON 404 — bukan halaman error PHP dengan stack trace.
+|
+| PENTING: `404_override` diurai CI3 sebagai pasangan class/method
+| (sscanf '%[^/]/%s') dan dicari di AKAR `controllers/`. Karena itu
+| controller penangan 404 ada di `controllers/Notfound.php`, bukan di
+| `controllers/api/`. Nilai 'api/notfound' akan salah dibaca sebagai
+| class `Api` method `notfound`.
 */
 
-$route['default_controller'] = 'dashboard';
-$route['404_override'] = '';
+$route['default_controller'] = 'notfound';
+$route['404_override'] = 'notfound/index';
 $route['translate_uri_dashes'] = FALSE;
 
-// Auth
-$route['login'] = 'auth/login';
-$route['logout'] = 'auth/logout';
-// Ganti password tidak tersedia di SINOS; akan dipusatkan di SSO Gateway.
-
-// SSO (klien)
-$route['sso/login'] = 'sso/login';
+// ---------------------------------------------------------------------------
+// SSO client (CI3) — dipertahankan, lihat catatan di atas.
+// ---------------------------------------------------------------------------
+$route['sso/login']    = 'sso/login';
 $route['sso/callback'] = 'sso/callback';
 
-// Surat Masuk
-$route['surat-masuk'] = 'surat_masuk/index';
-$route['surat-masuk/daftar'] = 'surat_masuk/daftar';
-$route['surat-masuk/simpan'] = 'surat_masuk/simpan';
-$route['surat-masuk/edit/(:num)'] = 'surat_masuk/edit/$1';
-$route['surat-masuk/update/(:num)'] = 'surat_masuk/update/$1';
-$route['surat-masuk/hapus/(:num)'] = 'surat_masuk/hapus/$1';
-$route['surat-masuk/detail/(:num)'] = 'surat_masuk/detail/$1';
-$route['surat-masuk/disposisi/(:num)'] = 'surat_masuk/disposisi/$1';
-$route['surat-masuk/arsipkan/(:num)'] = 'surat_masuk/arsipkan/$1';
-$route['surat-masuk/batal-arsip/(:num)'] = 'surat_masuk/batal_arsip/$1';
+// ---------------------------------------------------------------------------
+// API v1 (headless frontend / Astro)
+// ---------------------------------------------------------------------------
 
-// Disposisi
-$route['disposisi'] = 'disposisi/index';
-$route['disposisi/form/(:num)'] = 'disposisi/form/$1';
-$route['disposisi/form-ajax/(:num)'] = 'disposisi/form_ajax/$1';
-$route['disposisi/kirim'] = 'disposisi/kirim';
-$route['disposisi/detail/(:num)'] = 'disposisi/detail/$1';
-$route['disposisi/arsipkan/(:num)'] = 'disposisi/arsipkan/$1';
-$route['disposisi/hapus/(:num)'] = 'disposisi/hapus/$1';
+// Auth
+$route['api/v1/auth/exchange'] = 'api/auth/exchange';
+$route['api/v1/auth/me']       = 'api/auth/me';
+$route['api/v1/auth/logout']   = 'api/auth/logout';
 
-// Surat Keluar
-$route['surat-keluar/ambil'] = 'surat_keluar/ambil';
-$route['surat-keluar/ambil-simpan'] = 'surat_keluar/ambil_simpan';
-$route['surat-keluar/sisip'] = 'surat_keluar/sisip';
-$route['surat-keluar/sisip-simpan'] = 'surat_keluar/sisip_simpan';
-$route['surat-keluar/daftar'] = 'surat_keluar/daftar';
-$route['surat-keluar/daftar-semua'] = 'surat_keluar/daftar_semua';
-$route['surat-keluar/edit/(:num)'] = 'surat_keluar/edit/$1';
-$route['surat-keluar/update/(:num)'] = 'surat_keluar/update/$1';
-$route['surat-keluar/upload/(:num)'] = 'surat_keluar/upload/$1';
-$route['surat-keluar/upload-simpan'] = 'surat_keluar/upload_simpan';
+// Fase 1 (baca saja)
+// PENTING: rute statis harus berada SEBELUM rute ber-parameter numerik,
+// karena CI3 memakai aturan pertama yang cocok (surat-keluar/semua akan
+// tertangkap oleh (:num) bila urutannya dibalik).
+$route['api/v1/master/(:any)']       = 'api/master/$1';
+$route['api/v1/dashboard']           = 'api/dashboard/index';
+$route['api/v1/surat-masuk']         = 'api/surat_masuk/index';
+$route['api/v1/surat-masuk/(:num)']  = 'api/surat_masuk/show/$1';
+$route['api/v1/surat-keluar']        = 'api/surat_keluar/index';
+$route['api/v1/surat-keluar/semua']  = 'api/surat_keluar/semua';
+$route['api/v1/surat-keluar/(:num)'] = 'api/surat_keluar/show/$1';
+$route['api/v1/disposisi']           = 'api/disposisi/index';
+$route['api/v1/disposisi/(:num)']    = 'api/disposisi/show/$1';
+$route['api/v1/laporan/opsi']        = 'api/laporan/opsi';
 
-// Catatan: rute `/user` (kelola pegawai) sudah DIHAPUS.
-// Pengelolaan pegawai hanya tersedia di aplikasi `pegawai/` (pemilik
-// schema pegawai_db), sehingga tidak ada jalur masuk dari SINOS.
-
-// Laporan
-$route['laporan'] = 'laporan/index';
-$route['laporan/cetak'] = 'laporan/cetak';
+// Fase 2 (tulis + berkas)
+// Rute statis dan rute dengan segmen tambahan diletakkan SEBELUM rute
+// numerik. CI3 mencocokkan pola secara utuh (^…$), jadi `(:num)` tidak akan
+// menelan `/arsip`, tetapi urutan ini menjaga niat tetap terbaca.
+$route['api/v1/surat-masuk/(:num)/arsip']       = 'api/surat_masuk/arsip/$1';
+$route['api/v1/surat-masuk/(:num)/batal-arsip'] = 'api/surat_masuk/batal_arsip/$1';
+$route['api/v1/surat-masuk/(:num)/disposisi']   = 'api/surat_masuk/disposisi/$1';
+$route['api/v1/surat-keluar/ambil']             = 'api/surat_keluar/ambil';
+$route['api/v1/surat-keluar/sisip']             = 'api/surat_keluar/sisip';
+$route['api/v1/surat-keluar/(:num)/berkas']     = 'api/surat_keluar/berkas/$1';
+$route['api/v1/disposisi/form/(:num)']          = 'api/disposisi/form/$1';
+$route['api/v1/disposisi/(:num)/arsip']         = 'api/disposisi/arsip/$1';
+$route['api/v1/berkas/(:any)']                  = 'api/berkas/show/$1';
+$route['api/v1/laporan/cetak']                  = 'api/laporan/cetak';

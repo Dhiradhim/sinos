@@ -165,6 +165,179 @@ class M_disposisi extends MY_Model
     }
 
     /**
+     * Query dasar tampilan operator untuk API (paginasi server-side).
+     *
+     * Mengulang bentuk `daftar_operator()` apa adanya (join ke disposisi
+     * terakhir per surat, status 'didiposisi', urut d.tanggal DESC) dengan
+     * tambahan filter `q` dan `arsip`.
+     *
+     * @param  string|null $q
+     * @param  string|null $arsip 'diarsipkan' | 'aktif' | NULL
+     * @return void
+     */
+    private function _api_query_operator($q = NULL, $arsip = NULL)
+    {
+        $this->db->select('d.*, s.no_surat, s.no_agenda, s.perihal, s.pengirim, s.tgl_surat, s.tgl_diterima, s.pengolah, s.file, s.status AS status_surat, u.nama AS pengirim_nama');
+        $this->db->from('surmas s');
+        $this->db->join('disposisi d', 'd.id = (
+            SELECT MAX(d2.id) FROM disposisi d2 WHERE d2.surmas_id = s.id
+        )', 'inner', FALSE);
+        $this->db->join('pegawai_db.pegawai u', 'd.dari = u.nip', 'left');
+
+        // `daftar_operator()` membatasi pada status 'didiposisi'. Filter arsip
+        // memberi akses ke surat yang sudah diarsipkan tanpa mengubah default.
+        if ($arsip === 'diarsipkan') {
+            $this->db->where('s.status', 'diarsipkan');
+        } elseif ($arsip === 'aktif') {
+            $this->db->where('s.status', 'didiposisi');
+        } else {
+            $this->db->where('s.status', 'didiposisi');
+        }
+
+        if ($q !== NULL && $q !== '') {
+            $this->db->group_start();
+            $this->db->like('s.no_surat', $q);
+            $this->db->or_like('s.no_agenda', $q);
+            $this->db->or_like('s.perihal', $q);
+            $this->db->or_like('s.pengirim', $q);
+            $this->db->or_like('d.kepada', $q);
+            $this->db->group_end();
+        }
+    }
+
+    /**
+     * Satu halaman daftar disposisi untuk operator surat (API).
+     *
+     * @param  string|null $q
+     * @param  string|null $arsip
+     * @param  int         $limit
+     * @param  int         $offset
+     * @return array of object
+     */
+    public function api_daftar_operator($q = NULL, $arsip = NULL, $limit = 25, $offset = 0)
+    {
+        $this->_api_query_operator($q, $arsip);
+
+        // Pemecah seri `d.id DESC` menjaga urutan stabil saat beberapa
+        // disposisi bertanggal sama (LIMIT/OFFSET tidak boleh menggeser baris).
+        $this->db->order_by('d.tanggal', 'DESC');
+        $this->db->order_by('d.id', 'DESC');
+        $this->db->limit(max(1, (int) $limit), max(0, (int) $offset));
+
+        return $this->db->get()->result();
+    }
+
+    /**
+     * Jumlah baris untuk filter operator yang sama dengan api_daftar_operator().
+     *
+     * @param  string|null $q
+     * @param  string|null $arsip
+     * @return int
+     */
+    public function api_count_operator($q = NULL, $arsip = NULL)
+    {
+        $this->_api_query_operator($q, $arsip);
+
+        return $this->db->count_all_results();
+    }
+
+    /**
+     * Query dasar "disposisi atas nama saya" untuk API (paginasi server-side).
+     *
+     * Mengulang bentuk `daftar_atas_nama()`: hanya baris disposisi TERAKHIR
+     * per surat, ditujukan ke NIP tersebut, belum dikembalikan, dan surat
+     * belum diarsipkan.
+     *
+     * @param  string      $nip
+     * @param  string|null $q
+     * @param  string|null $arsip
+     * @return void
+     */
+    private function _api_query_atas_nama($nip, $q = NULL, $arsip = NULL)
+    {
+        $this->db->select('d.*, s.no_surat, s.no_agenda, s.perihal, s.pengirim, s.tgl_surat, s.tgl_diterima, s.pengolah, s.file, s.status AS status_surat, u.nama AS pengirim_nama');
+        $this->db->from('disposisi d');
+        $this->db->join('surmas s', 'd.surmas_id = s.id', 'inner');
+        $this->db->join('pegawai_db.pegawai u', 'd.dari = u.nip', 'left');
+        $this->db->where('d.nip_tujuan', $nip);
+        $this->db->where('d.dikembalikan', 0);
+
+        if ($arsip === 'diarsipkan') {
+            $this->db->where('s.status', 'diarsipkan');
+        } else {
+            // Default sama dengan daftar_atas_nama(): sembunyikan arsip.
+            $this->db->where('s.status !=', 'diarsipkan');
+        }
+
+        $this->db->where('d.id = (
+            SELECT MAX(d2.id) FROM disposisi d2 WHERE d2.surmas_id = d.surmas_id
+        )', NULL, FALSE);
+
+        if ($q !== NULL && $q !== '') {
+            $this->db->group_start();
+            $this->db->like('s.no_surat', $q);
+            $this->db->or_like('s.no_agenda', $q);
+            $this->db->or_like('s.perihal', $q);
+            $this->db->or_like('s.pengirim', $q);
+            $this->db->or_like('d.kepada', $q);
+            $this->db->group_end();
+        }
+    }
+
+    /**
+     * Satu halaman disposisi yang posisinya ada pada user tertentu (API).
+     *
+     * @param  string      $nip
+     * @param  string|null $q
+     * @param  string|null $arsip
+     * @param  int         $limit
+     * @param  int         $offset
+     * @return array of object
+     */
+    public function api_daftar_atas_nama($nip, $q = NULL, $arsip = NULL, $limit = 25, $offset = 0)
+    {
+        $this->_api_query_atas_nama($nip, $q, $arsip);
+
+        // Pemecah seri `d.id DESC`, sama dengan api_daftar_operator().
+        $this->db->order_by('d.tanggal', 'DESC');
+        $this->db->order_by('d.id', 'DESC');
+        $this->db->limit(max(1, (int) $limit), max(0, (int) $offset));
+
+        return $this->db->get()->result();
+    }
+
+    /**
+     * Jumlah baris untuk filter atas-nama yang sama dengan
+     * api_daftar_atas_nama().
+     *
+     * @param  string      $nip
+     * @param  string|null $q
+     * @param  string|null $arsip
+     * @return int
+     */
+    public function api_count_atas_nama($nip, $q = NULL, $arsip = NULL)
+    {
+        $this->_api_query_atas_nama($nip, $q, $arsip);
+
+        return $this->db->count_all_results();
+    }
+
+    /**
+     * Riwayat disposisi satu surat, urut naik (sama dengan
+     * Surat_masuk::detail()).
+     *
+     * @param  int $surmas_id
+     * @return array of object
+     */
+    public function riwayat_surmas($surmas_id)
+    {
+        return $this->db
+            ->order_by('tanggal', 'ASC')
+            ->get_where('disposisi', array('surmas_id' => (int) $surmas_id))
+            ->result();
+    }
+
+    /**
      * Daftar seluruh surat yang sedang didisposisi (belum diarsipkan) untuk
      * dilihat operator surat. Surat yang sudah diarsipkan disembunyikan dari
      * menu Disposisi (pembatalan arsip dilakukan dari daftar surat masuk).

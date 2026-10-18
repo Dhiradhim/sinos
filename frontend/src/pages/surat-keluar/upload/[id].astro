@@ -1,0 +1,225 @@
+---
+/**
+ * Upload Berkas Surat — `/surat-keluar/upload/{id}`.
+ *
+ * Sumber: sinos/application/views/surat_keluar/upload.php +
+ * Surat_keluar::upload()/upload_simpan(). Data: `GET /surat-keluar/{id}`.
+ * Aksi: `POST /api/surat-keluar/{id}/berkas` (multipart).
+ *
+ * Ringkasan surat (nomor, tanggal, perihal, tujuan) adalah konteks sebelum
+ * mengunggah. Zona unggah bergaris putus-putus membungkus `<input type="file">`
+ * sungguhan — bukan tombol JS — dengan `accept="application/pdf"` dan
+ * `required`, sama seperti upload.php:26.
+ *
+ * Nama field `file` sama dengan yang dibaca `api/Surat_keluar::berkas()`
+ * (`$_FILES['file']`). `id_surat` tetap dikirim sebagai hidden agar perilaku
+ * form identik dengan CI3, walau id sudah ada di path.
+ */
+import AppShell from "../../../layouts/AppShell.astro";
+import PageHead from "../../../components/PageHead.astro";
+import Field from "../../../components/Field.astro";
+import Icon from "../../../components/Icon.astro";
+import NotFoundState from "../../../components/NotFoundState.astro";
+import { requireUser } from "../../../lib/auth";
+import { apiFetch } from "../../../lib/api";
+import { getSession } from "../../../lib/session";
+import { takeFormFeedback } from "../../../lib/formFeedback";
+import { berkasUrl } from "../../../lib/format";
+import type { SuratKeluarDetail } from "../../../lib/suratKeluar";
+
+const auth = await requireUser(Astro);
+if (auth.redirect) return auth.redirect;
+const user = auth.user;
+const token = getSession(Astro.cookies);
+
+const id = Number(Astro.params.id);
+const idValid = Number.isInteger(id) && id > 0;
+
+const result = idValid
+  ? await apiFetch<SuratKeluarDetail>(`/surat-keluar/${id}`, { token })
+  : null;
+
+/**
+ * 404 / 403 dirender, bukan dialihkan. 403 muncul ketika pemanggil bukan admin
+ * dan bukan pemilik nomor (`boleh_ubah()`); pesannya sama dengan API.
+ */
+const notFound = !result?.ok || !result.data;
+const detail = (result?.data ?? null) as SuratKeluarDetail;
+const forbidden = !notFound && !detail.aksi.can_upload;
+
+if (notFound) Astro.response.status = 404;
+else if (forbidden) Astro.response.status = 403;
+
+const tahun =
+  Number(String(detail?.tanggal?.iso ?? "").slice(0, 4)) ||
+  new Date().getFullYear();
+
+const dashboard = await apiFetch<{ disposisi_belum_dibaca: number }>(
+  "/dashboard",
+  { token, query: { tahun } },
+);
+const disposisiCount = dashboard.data?.disposisi_belum_dibaca ?? 0;
+
+const feedback = takeFormFeedback(Astro.cookies);
+
+const berkasLama =
+  !notFound && detail.file.state === "ready" && detail.file.path
+    ? berkasUrl(detail.file.path)
+    : "";
+---
+
+<AppShell
+  title="Upload Berkas"
+  user={user}
+  disposisiCount={disposisiCount}
+  tahun={tahun}
+  topbarTitle={false}
+>
+  {
+    notFound ? (
+      <NotFoundState
+        title="Nomor surat tidak ditemukan"
+        description={`Nomor surat dengan ID ${Astro.params.id} tidak ada atau sudah dihapus.`}
+        backHref="/surat-keluar/daftar"
+        backLabel="Kembali ke daftar nomor surat"
+      />
+    ) : forbidden ? (
+      <div class="mx-auto w-full max-w-xl px-6 py-6">
+        <PageHead title="Upload Berkas Surat" subtitle={detail.no} />
+
+        <div class="alert alert-destructive" role="alert">
+          <span class="mt-0.5 shrink-0">
+            <Icon name="shield" class="h-4 w-4" />
+          </span>
+          <div class="flex-1">
+            <p class="alert-title">Akses ditolak</p>
+            <p class="alert-description">
+              Anda tidak berhak mengunggah berkas untuk nomor surat ini. Hanya
+              admin atau pegawai yang mengambil nomor tersebut yang dapat
+              mengunggahnya.
+            </p>
+          </div>
+        </div>
+        <a href="/surat-keluar/daftar" class="btn-outline btn-sm mt-5">
+          <Icon name="arrow-left" class="h-4 w-4" />
+          <span>Kembali ke daftar nomor surat</span>
+        </a>
+      </div>
+    ) : (
+      <>
+        <PageHead title="Upload Berkas Surat" subtitle={detail.no} />
+
+        <div class="mx-auto w-full max-w-xl px-6 py-5">
+          {feedback?.message && (
+            <div class="alert alert-danger mb-5" role="alert">
+              <span class="mt-0.5 shrink-0">
+                <Icon name="octagon-x" class="h-4 w-4" />
+              </span>
+              <div class="flex-1">
+                <p class="alert-title">Gagal</p>
+                <p class="alert-description">{feedback.message}</p>
+              </div>
+            </div>
+          )}
+
+          <div class="mb-5 rounded-[var(--radius-panel)] border border-[var(--color-line)] bg-[var(--color-surface-muted)] p-4">
+            <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-[var(--color-ink-subtle)]">
+                  No. Surat
+                </dt>
+                <dd class="font-medium tabular text-[var(--color-ink)]">
+                  {detail.no}
+                </dd>
+              </div>
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-[var(--color-ink-subtle)]">
+                  Tanggal
+                </dt>
+                <dd class="font-medium text-[var(--color-ink)]">
+                  {detail.tanggal?.teks || "—"}
+                </dd>
+              </div>
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-[var(--color-ink-subtle)]">
+                  Perihal
+                </dt>
+                <dd class="font-medium text-[var(--color-ink)]">
+                  {detail.hal}
+                </dd>
+              </div>
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-[var(--color-ink-subtle)]">
+                  Tujuan
+                </dt>
+                <dd class="font-medium text-[var(--color-ink)]">
+                  {detail.tujuan}
+                </dd>
+              </div>
+            </dl>
+
+            {berkasLama && (
+              <p class="mt-3 text-xs text-[var(--color-ink-subtle)]">
+                Berkas saat ini:{" "}
+                <a
+                  href={berkasLama}
+                  target="_blank"
+                  rel="noopener"
+                  class="underline underline-offset-2"
+                >
+                  Lihat
+                </a>
+              </p>
+            )}
+          </div>
+
+          <form
+            method="post"
+            action={`/api/surat-keluar/${detail.id}/berkas`}
+            enctype="multipart/form-data"
+            class="w-full"
+          >
+            <input type="hidden" name="id_surat" value={detail.id} />
+
+            <div class="rounded-[var(--radius-panel)] border border-dashed border-[var(--color-line-strong)] bg-[var(--color-surface-muted)] p-4">
+              <Field
+                label="Berkas Surat (PDF)"
+                name="file"
+                required
+                error={feedback?.errors?.file}
+                hint="Hanya file PDF, maksimal 10 MB."
+              >
+                <input
+                  class="input"
+                  type="file"
+                  id="file"
+                  name="file"
+                  accept="application/pdf"
+                  aria-invalid={feedback?.errors?.file ? "true" : undefined}
+                  aria-describedby="file-hint"
+                  required
+                />
+              </Field>
+            </div>
+
+            <div class="separator" />
+
+            <div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
+              <a
+                href={`/surat-keluar/daftar?tahun=${tahun}`}
+                class="btn-outline"
+              >
+                <Icon name="arrow-left" class="h-4 w-4" />
+                <span>Batal</span>
+              </a>
+              <button type="submit" class="btn-primary">
+                <Icon name="upload" class="h-4 w-4" />
+                <span>Upload</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </>
+    )
+  }
+</AppShell>
