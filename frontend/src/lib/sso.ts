@@ -71,6 +71,29 @@ export function gatewayBase(): string {
   return (env('SINOS_SSO_GATEWAY') || 'http://localhost/sso').replace(/\/+$/, '');
 }
 
+/**
+ * Halaman SSO yang dibuka setelah pengguna keluar.
+ *
+ * Default: beranda gateway (launcher aplikasi). Dapat diarahkan ke halaman
+ * lain — misalnya form login gateway — lewat `SINOS_SSO_HOME`.
+ */
+export function ssoHomeUrl(): string {
+  const configured = env('SINOS_SSO_HOME');
+  if (configured !== '') return configured;
+  return `${gatewayBase()}/home`;
+}
+
+/**
+ * URL logout gateway (GET).
+ *
+ * Gateway menghapus sesi login SSO lalu mengalihkan browser ke `redirect`.
+ * Dipakai tombol "Keluar" agar sesi SSO benar-benar berakhir — bukan hanya
+ * cookie Astro — dan pengguna kembali ke halaman SSO.
+ */
+export function ssoLogoutUrl(): string {
+  return `${gatewayBase()}/logout?redirect=${encodeURIComponent(ssoHomeUrl())}`;
+}
+
 /** app_id klien di gateway. */
 export function appId(): string {
   return env('SINOS_SSO_APP_ID') || 'sinos';

@@ -50,11 +50,11 @@ const params = Astro.url.searchParams;
 
 const tahunParam = Number(params.get("tahun"));
 const master = await apiFetch<{ tahun_aktif: number }>("/master/tahun", {
-  token,
+	token,
 });
 const tahunAktif = master.data?.tahun_aktif ?? new Date().getFullYear();
 const tahun =
-  Number.isInteger(tahunParam) && tahunParam > 2000 ? tahunParam : tahunAktif;
+	Number.isInteger(tahunParam) && tahunParam > 2000 ? tahunParam : tahunAktif;
 
 const page = Math.max(1, Number(params.get("page")) || 1);
 const q = (params.get("q") ?? "").trim();
@@ -62,32 +62,32 @@ const arsip = params.get("arsip") ?? "";
 const disposisi = params.get("disposisi") ?? "";
 
 const result = await apiFetch<SuratMasukRow[]>("/surat-masuk", {
-  token,
-  query: {
-    tahun,
-    page,
-    per_page: 25,
-    q: q || undefined,
-    arsip: arsip || undefined,
-    disposisi: disposisi || undefined,
-  },
+	token,
+	query: {
+		tahun,
+		page,
+		per_page: 25,
+		q: q || undefined,
+		arsip: arsip || undefined,
+		disposisi: disposisi || undefined,
+	},
 });
 
 const rows = result.data ?? [];
 const meta: PageMeta = {
-  page: Number(result.meta?.page ?? page) || 1,
-  per_page: Number(result.meta?.per_page ?? 25) || 25,
-  total: Number(result.meta?.total ?? rows.length) || 0,
-  last_page: Number(result.meta?.last_page ?? 1) || 1,
+	page: Number(result.meta?.page ?? page) || 1,
+	per_page: Number(result.meta?.per_page ?? 25) || 25,
+	total: Number(result.meta?.total ?? rows.length) || 0,
+	last_page: Number(result.meta?.last_page ?? 1) || 1,
 };
 
 /** Badge jumlah disposisi belum dibaca untuk rail (satu request bersama). */
 const dashboard = await apiFetch<{ disposisi_belum_dibaca: number }>(
-  "/dashboard",
-  {
-    token,
-    query: { tahun },
-  },
+	"/dashboard",
+	{
+		token,
+		query: { tahun },
+	},
 );
 const disposisiCount = dashboard.data?.disposisi_belum_dibaca ?? 0;
 
@@ -99,29 +99,29 @@ const isOperator = Boolean(user.is_operator);
  * renderer slot default; sisanya dot-path biasa.
  */
 const columns: Column[] = [
-  {
-    key: "agenda",
-    label: "Agenda / No. Surat",
-    nowrap: true,
-    width: "13rem",
-  },
-  {
-    key: "tgl_surat.teks",
-    label: "Tanggal",
-    nowrap: true,
-    width: "9rem",
-  },
-  { key: "pengirim", label: "Pengirim Surat", prose: true },
-  { key: "perihal", label: "Perihal", prose: true },
-  { key: "posisi", label: "Posisi Saat Ini", width: "13rem" },
-  { key: "instruksi", label: "Instruksi", width: "14rem" },
-  {
-    key: "aksi",
-    label: "Aksi",
-    align: "right",
-    width: "1%",
-    className: "col-aksi",
-  },
+	{
+		key: "agenda",
+		label: "Agenda / No. Surat",
+		nowrap: true,
+		width: "13rem",
+	},
+	{
+		key: "tgl_surat.teks",
+		label: "Tanggal",
+		nowrap: true,
+		width: "9rem",
+	},
+	{ key: "pengirim", label: "Pengirim Surat", prose: true },
+	{ key: "perihal", label: "Perihal", prose: true },
+	{ key: "posisi", label: "Posisi Saat Ini", width: "13rem" },
+	{ key: "instruksi", label: "Instruksi", width: "14rem" },
+	{
+		key: "aksi",
+		label: "Aksi",
+		align: "right",
+		width: "1%",
+		className: "col-aksi",
+	},
 ];
 
 const renderKeys = ["agenda", "posisi", "instruksi", "aksi"];
@@ -136,478 +136,478 @@ const renderKeys = ["agenda", "posisi", "instruksi", "aksi"];
  * halaman detail) agar tidak ada aksi destruktif yang dapat dipicu perayap.
  */
 type RowAction = {
-  href?: string;
-  formAction?: string;
-  icon: string;
-  label: string;
-  blank?: boolean;
-  danger?: boolean;
+	href?: string;
+	formAction?: string;
+	icon: string;
+	label: string;
+	blank?: boolean;
+	danger?: boolean;
 };
 
 function aksiLain(row: SuratMasukRow): RowAction[] {
-  const out: RowAction[] = [];
-  const kembali = `/surat-masuk/daftar?tahun=${tahun}`;
+	const out: RowAction[] = [];
+	const kembali = `/surat-masuk/daftar?tahun=${tahun}`;
 
-  if (isAdmin || isOperator) {
-    out.push({
-      href: `/surat-masuk/edit/${row.id}`,
-      icon: "edit",
-      label: "Edit surat",
-    });
-    out.push({
-      href: `/surat-masuk/${row.id}/cetak`,
-      icon: "printer",
-      label: "Cetak lembar disposisi",
-      blank: true,
-    });
-  }
+	if (isAdmin || isOperator) {
+		out.push({
+			href: `/surat-masuk/edit/${row.id}`,
+			icon: "edit",
+			label: "Edit surat",
+		});
+		out.push({
+			href: `/surat-masuk/${row.id}/cetak`,
+			icon: "printer",
+			label: "Cetak lembar disposisi",
+			blank: true,
+		});
+	}
 
-  if (isOperator && row.status === "diarsipkan") {
-    out.push({
-      formAction: `/api/surat-masuk/${row.id}/batal-arsip?kembali=${encodeURIComponent(kembali)}`,
-      icon: "archive-restore",
-      label: "Batalkan arsip",
-    });
-  }
+	if (isOperator && row.status === "diarsipkan") {
+		out.push({
+			formAction: `/api/surat-masuk/${row.id}/batal-arsip?kembali=${encodeURIComponent(kembali)}`,
+			icon: "archive-restore",
+			label: "Batalkan arsip",
+		});
+	}
 
-  if (isAdmin) {
-    out.push({
-      formAction: `/api/surat-masuk/${row.id}/hapus?kembali=${encodeURIComponent(kembali)}`,
-      icon: "trash",
-      label: "Hapus surat",
-      danger: true,
-    });
-  }
+	if (isAdmin) {
+		out.push({
+			formAction: `/api/surat-masuk/${row.id}/hapus?kembali=${encodeURIComponent(kembali)}`,
+			icon: "trash",
+			label: "Hapus surat",
+			danger: true,
+		});
+	}
 
-  return out;
+	return out;
 }
 
 /** Nilai filter aktif, untuk select di filter bar. */
 const arsipValue = arsip === "diarsipkan" || arsip === "aktif" ? arsip : "";
 const disposisiValue =
-  disposisi === "sudah" || disposisi === "belum" ? disposisi : "";
+	disposisi === "sudah" || disposisi === "belum" ? disposisi : "";
 ---
 
 <AppShell
-  title="Daftar Surat Masuk"
-  user={user}
-  disposisiCount={disposisiCount}
-  tahun={tahun}
-  topbarTitle={false}
+	title="Daftar Surat Masuk"
+	user={user}
+	disposisiCount={disposisiCount}
+	tahun={tahun}
+	topbarTitle={false}
 >
-  <PageHead
-    title="Daftar Surat Masuk"
-    subtitle="Agenda surat masuk pada periode terpilih."
-  >
-    <div slot="actions" class="flex flex-wrap items-center gap-2">
-      <TahunSelector tahun={tahun} />
-      {
-        isOperator && (
-          <a href="/surat-masuk/input" class="btn-primary btn-sm">
-            <Icon name="plus" class="h-4 w-4" />
-            <span>Input Surat</span>
-          </a>
-        )
-      }
-    </div>
-  </PageHead>
+	<PageHead
+		title="Daftar Surat Masuk"
+		subtitle="Agenda surat masuk pada periode terpilih."
+	>
+		<div slot="actions" class="flex flex-wrap items-center gap-2">
+			<TahunSelector tahun={tahun} />
+			{
+				isOperator && (
+					<a href="/surat-masuk/input" class="btn-primary btn-sm">
+						<Icon name="plus" class="h-4 w-4" />
+						<span>Input Surat</span>
+					</a>
+				)
+			}
+		</div>
+	</PageHead>
 
-  <FilterBar action="/surat-masuk/daftar" hidden={{ tahun }}>
-    <div class="min-w-0 flex-1 sm:max-w-xs">
-      <label class="sr-only" for="q">Cari surat</label>
-      <input
-        class="input"
-        type="search"
-        id="q"
-        name="q"
-        value={q}
-        placeholder="Cari…"
-      />
-    </div>
+	<FilterBar action="/surat-masuk/daftar" hidden={{ tahun }}>
+		<div class="min-w-0 flex-1 sm:max-w-xs">
+			<label class="sr-only" for="q">Cari surat</label>
+			<input
+				class="input"
+				type="search"
+				id="q"
+				name="q"
+				value={q}
+				placeholder="Cari…"
+			/>
+		</div>
 
-    <div>
-      <label class="sr-only" for="arsip">Status arsip</label>
-      <select class="select w-auto" id="arsip" name="arsip">
-        <option value="" selected={arsipValue === ""}>Semua</option>
-        <option value="aktif" selected={arsipValue === "aktif"}>Aktif</option>
-        <option value="diarsipkan" selected={arsipValue === "diarsipkan"}>
-          Diarsipkan
-        </option>
-      </select>
-    </div>
+		<div>
+			<label class="sr-only" for="arsip">Status arsip</label>
+			<select class="select w-auto" id="arsip" name="arsip">
+				<option value="" selected={arsipValue === ""}>Semua</option>
+				<option value="aktif" selected={arsipValue === "aktif"}>Aktif</option>
+				<option value="diarsipkan" selected={arsipValue === "diarsipkan"}>
+					Diarsipkan
+				</option>
+			</select>
+		</div>
 
-    <div>
-      <label class="sr-only" for="disposisi">Status disposisi</label>
-      <select class="select w-auto" id="disposisi" name="disposisi">
-        <option value="" selected={disposisiValue === ""}>Semua</option>
-        <option value="sudah" selected={disposisiValue === "sudah"}>
-          Sudah
-        </option>
-        <option value="belum" selected={disposisiValue === "belum"}>
-          Belum
-        </option>
-      </select>
-    </div>
+		<div>
+			<label class="sr-only" for="disposisi">Status disposisi</label>
+			<select class="select w-auto" id="disposisi" name="disposisi">
+				<option value="" selected={disposisiValue === ""}>Semua</option>
+				<option value="sudah" selected={disposisiValue === "sudah"}>
+					Sudah
+				</option>
+				<option value="belum" selected={disposisiValue === "belum"}>
+					Belum
+				</option>
+			</select>
+		</div>
 
-    <Fragment slot="actions">
-      <button type="submit" class="btn-primary btn-sm">Terapkan</button>
-      <a href={`/surat-masuk/daftar?tahun=${tahun}`} class="btn-outline btn-sm">
-        Reset
-      </a>
-    </Fragment>
-  </FilterBar>
+		<Fragment slot="actions">
+			<button type="submit" class="btn-primary btn-sm">Terapkan</button>
+			<a href={`/surat-masuk/daftar?tahun=${tahun}`} class="btn-outline btn-sm">
+				Reset
+			</a>
+		</Fragment>
+	</FilterBar>
 
-  {
-    result.error && rows.length === 0 && (
-      <div class="px-6 pt-4">
-        <div class="alert alert-danger" role="alert">
-          <span class="mt-0.5 shrink-0">
-            <Icon name="octagon-x" class="h-4 w-4" />
-          </span>
-          <div class="flex-1">
-            <p class="alert-title">Gagal memuat data</p>
-            <p class="alert-description">{result.error.message}</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
+	{
+		result.error && rows.length === 0 && (
+			<div class="px-6 pt-4">
+				<div class="alert alert-danger" role="alert">
+					<span class="mt-0.5 shrink-0">
+						<Icon name="octagon-x" class="h-4 w-4" />
+					</span>
+					<div class="flex-1">
+						<p class="alert-title">Gagal memuat data</p>
+						<p class="alert-description">{result.error.message}</p>
+					</div>
+				</div>
+			</div>
+		)
+	}
 
-  <DataTable
-    columns={columns}
-    rows={rows}
-    renderKeys={renderKeys}
-    startIndex={(meta.page - 1) * meta.per_page + 1}
-    caption="Daftar surat masuk"
-  >
-    {
-      (row: SuratMasukRow, _index: number, key: string) => {
-        if (key === "agenda") {
-          return (
-            <div>
-              <span class="block font-medium leading-snug text-[var(--color-ink)] tabular">
-                {row.no_surat}
-              </span>
-              <span class="mt-0.5 block text-xs tabular text-[var(--color-ink-subtle)]">
-                {row.no_agenda}
-              </span>
-            </div>
-          );
-        }
+	<DataTable
+		columns={columns}
+		rows={rows}
+		renderKeys={renderKeys}
+		startIndex={(meta.page - 1) * meta.per_page + 1}
+		caption="Daftar surat masuk"
+	>
+		{
+			(row: SuratMasukRow, _index: number, key: string) => {
+				if (key === "agenda") {
+					return (
+						<div>
+							<span class="block font-medium leading-snug text-[var(--color-ink)] tabular">
+								{row.no_surat}
+							</span>
+							<span class="mt-0.5 block text-xs tabular text-[var(--color-ink-subtle)]">
+								{row.no_agenda}
+							</span>
+						</div>
+					);
+				}
 
-        if (key === "posisi") {
-          return (
-            <div class="flex flex-wrap items-center gap-1.5">
-              <span class={toneClass(row.disposisi.tone)}>
-                {row.disposisi.status}
-              </span>
-              {row.diarsipkan && <span class="badge-muted">Diarsipkan</span>}
-              {/* Tautan berkas, sama dengan `badge-success` "Berkas" pada
+				if (key === "posisi") {
+					return (
+						<div class="flex flex-wrap items-center gap-1.5">
+							<span class={toneClass(row.disposisi.tone)}>
+								{row.disposisi.status}
+							</span>
+							{row.diarsipkan && <span class="badge-muted">Diarsipkan</span>}
+							{/* Tautan berkas, sama dengan `badge-success` "Berkas" pada
                   kolom "Status & Berkas" view CI3. */}
-              {row.file.state === "ready" && (
-                <a
-                  href={berkasUrl(row.file.path)}
-                  target="_blank"
-                  rel="noopener"
-                  class="badge-success"
-                >
-                  <Icon name="eye" class="h-3 w-3" />
-                  Berkas
-                </a>
-              )}
-              {row.disposisi.lokasi && (
-                <span class="flex w-full items-center gap-1 text-xs text-[var(--color-ink-subtle)]">
-                  <Icon name="user" class="h-3 w-3 shrink-0" />
-                  <span class="truncate">{row.disposisi.lokasi}</span>
-                </span>
-              )}
-            </div>
-          );
-        }
+							{row.file.state === "ready" && (
+								<a
+									href={berkasUrl(row.file.path)}
+									target="_blank"
+									rel="noopener"
+									class="badge-success"
+								>
+									<Icon name="eye" class="h-3 w-3" />
+									Berkas
+								</a>
+							)}
+							{row.disposisi.lokasi && (
+								<span class="flex w-full items-center gap-1 text-xs text-[var(--color-ink-subtle)]">
+									<Icon name="user" class="h-3 w-3 shrink-0" />
+									<span class="truncate">{row.disposisi.lokasi}</span>
+								</span>
+							)}
+						</div>
+					);
+				}
 
-        if (key === "instruksi") {
-          return (
-            <div class="flex flex-wrap items-center gap-1.5">
-              <span class="text-[var(--color-ink-muted)]">
-                {row.disposisi.instruksi ?? "—"}
-              </span>
-              {row.disposisi.instruksi && !row.disposisi.dibaca && (
-                <span class="badge-warning">Belum dibaca</span>
-              )}
-            </div>
-          );
-        }
+				if (key === "instruksi") {
+					return (
+						<div class="flex flex-wrap items-center gap-1.5">
+							<span class="text-[var(--color-ink-muted)]">
+								{row.disposisi.instruksi ?? "—"}
+							</span>
+							{row.disposisi.instruksi && !row.disposisi.dibaca && (
+								<span class="badge-warning">Belum dibaca</span>
+							)}
+						</div>
+					);
+				}
 
-        const lain = aksiLain(row);
+				const lain = aksiLain(row);
 
-        return (
-          <div class="flex items-center justify-end gap-1">
-            <a
-              class="btn-icon"
-              href={`/surat-masuk/detail/${row.id}`}
-              title="Lihat detail"
-              aria-label={`Lihat detail ${row.no_surat}`}
-            >
-              <Icon name="eye" class="h-4 w-4" />
-            </a>
+				return (
+					<div class="flex items-center justify-end gap-1">
+						<a
+							class="btn-icon"
+							href={`/surat-masuk/detail/${row.id}`}
+							title="Lihat detail"
+							aria-label={`Lihat detail ${row.no_surat}`}
+						>
+							<Icon name="eye" class="h-4 w-4" />
+						</a>
 
-            {row.can_send && (
-              <button
-                type="button"
-                class="btn-icon"
-                title="Kirim / teruskan disposisi"
-                aria-label={`Kirim disposisi ${row.no_surat}`}
-                data-disposisi-open={row.id}
-              >
-                <Icon name="send" class="h-4 w-4" />
-              </button>
-            )}
+						{row.can_send && (
+							<button
+								type="button"
+								class="btn-icon"
+								title="Kirim / teruskan disposisi"
+								aria-label={`Kirim disposisi ${row.no_surat}`}
+								data-disposisi-open={row.id}
+							>
+								<Icon name="send" class="h-4 w-4" />
+							</button>
+						)}
 
-            {lain.length > 0 && (
-              <div
-                class="hs-dropdown relative inline-flex [--placement:bottom-right]"
-                data-hs-dropdown-options='{"strategy":"fixed"}'
-              >
-                <button
-                  type="button"
-                  class="hs-dropdown-toggle btn-icon"
-                  aria-haspopup="menu"
-                  aria-expanded="false"
-                  title="Aksi lainnya"
-                >
-                  <Icon name="ellipsis" class="h-4 w-4" />
-                </button>
-                <div
-                  class="hs-dropdown-menu dropdown-menu absolute right-0 top-full mt-1 hidden w-56 opacity-0 transition-[opacity,margin] duration-150"
-                  role="menu"
-                >
-                  {lain.map((a) =>
-                    a.formAction ? (
-                      <form
-                        method="post"
-                        action={a.formAction}
-                        data-confirm={`${a.label}?`}
-                        role="none"
-                      >
-                        <button
-                          type="submit"
-                          class:list={[
-                            "dropdown-item w-full text-left",
-                            a.danger && "dropdown-item-destructive",
-                          ]}
-                          role="menuitem"
-                        >
-                          <Icon name={a.icon} class="h-4 w-4" />
-                          <span>{a.label}</span>
-                        </button>
-                      </form>
-                    ) : (
-                      <a
-                        href={a.href}
-                        class:list={[
-                          "dropdown-item",
-                          a.danger && "dropdown-item-destructive",
-                        ]}
-                        target={a.blank ? "_blank" : undefined}
-                        rel={a.blank ? "noopener" : undefined}
-                        role="menuitem"
-                      >
-                        <Icon name={a.icon} class="h-4 w-4" />
-                        <span>{a.label}</span>
-                      </a>
-                    ),
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      }
-    }
+						{lain.length > 0 && (
+							<div
+								class="hs-dropdown relative inline-flex [--placement:bottom-right]"
+								data-hs-dropdown-options='{"strategy":"fixed"}'
+							>
+								<button
+									type="button"
+									class="hs-dropdown-toggle btn-icon"
+									aria-haspopup="menu"
+									aria-expanded="false"
+									title="Aksi lainnya"
+								>
+									<Icon name="ellipsis" class="h-4 w-4" />
+								</button>
+								<div
+									class="hs-dropdown-menu dropdown-menu absolute right-0 top-full mt-1 hidden w-56 opacity-0 transition-[opacity,margin] duration-150 hs-dropdown-open:opacity-100"
+									role="menu"
+								>
+									{lain.map((a) =>
+										a.formAction ? (
+											<form
+												method="post"
+												action={a.formAction}
+												data-confirm={`${a.label}?`}
+												role="none"
+											>
+												<button
+													type="submit"
+													class:list={[
+														"dropdown-item w-full text-left",
+														a.danger && "dropdown-item-destructive",
+													]}
+													role="menuitem"
+												>
+													<Icon name={a.icon} class="h-4 w-4" />
+													<span>{a.label}</span>
+												</button>
+											</form>
+										) : (
+											<a
+												href={a.href}
+												class:list={[
+													"dropdown-item",
+													a.danger && "dropdown-item-destructive",
+												]}
+												target={a.blank ? "_blank" : undefined}
+												rel={a.blank ? "noopener" : undefined}
+												role="menuitem"
+											>
+												<Icon name={a.icon} class="h-4 w-4" />
+												<span>{a.label}</span>
+											</a>
+										),
+									)}
+								</div>
+							</div>
+						)}
+					</div>
+				);
+			}
+		}
 
-    <Fragment slot="empty">
-      <span class="empty-state-icon">
-        <Icon name="file-text" class="h-5 w-5" />
-      </span>
-      <div>
-        <p class="text-sm font-medium text-[var(--color-ink)]">
-          Belum ada data
-        </p>
-        <p class="mt-1 text-sm text-[var(--color-ink-subtle)]">
-          Tidak ada surat masuk untuk tahun {tahun}.
-        </p>
-      </div>
-    </Fragment>
-  </DataTable>
+		<Fragment slot="empty">
+			<span class="empty-state-icon">
+				<Icon name="file-text" class="h-5 w-5" />
+			</span>
+			<div>
+				<p class="text-sm font-medium text-[var(--color-ink)]">
+					Belum ada data
+				</p>
+				<p class="mt-1 text-sm text-[var(--color-ink-subtle)]">
+					Tidak ada surat masuk untuk tahun {tahun}.
+				</p>
+			</div>
+		</Fragment>
+	</DataTable>
 
-  {
-    meta.total > 0 && (
-      <Pagination
-        page={meta.page}
-        lastPage={meta.last_page}
-        total={meta.total}
-        perPage={meta.per_page}
-        baseUrl="/surat-masuk/daftar"
-      />
-    )
-  }
+	{
+		meta.total > 0 && (
+			<Pagination
+				page={meta.page}
+				lastPage={meta.last_page}
+				total={meta.total}
+				perPage={meta.per_page}
+				baseUrl="/surat-masuk/daftar"
+			/>
+		)
+	}
 </AppShell>
 
 <!-- Preline overlay: dialog disposisi -->
 <div
-  id="modalDisposisi"
-  class="hs-overlay pointer-events-none fixed inset-0 z-[80] hidden size-full overflow-y-auto overflow-x-hidden"
-  role="dialog"
-  aria-modal="true"
-  tabindex="-1"
-  aria-labelledby="disposisiTitle"
+	id="modalDisposisi"
+	class="hs-overlay pointer-events-none fixed inset-0 z-[80] hidden size-full overflow-y-auto overflow-x-hidden"
+	role="dialog"
+	aria-modal="true"
+	tabindex="-1"
+	aria-labelledby="disposisiTitle"
 >
-  <div
-    class="pointer-events-none m-3 mt-0 flex min-h-[calc(100%-1.5rem)] items-start opacity-0 transition-all duration-300 ease-out sm:mx-auto sm:w-full sm:max-w-2xl hs-overlay-open:mt-7 hs-overlay-open:opacity-100"
-  >
-    <div
-      class="pointer-events-auto flex w-full flex-col rounded-[var(--radius-panel)] border border-[var(--color-line)] bg-[var(--color-canvas)] shadow-[var(--shadow-panel)]"
-    >
-      <div
-        class="flex items-center justify-between border-b border-[var(--color-line)] px-5 py-3"
-      >
-        <h3
-          id="disposisiTitle"
-          class="flex items-center gap-2 text-sm font-semibold text-[var(--color-ink)]"
-        >
-          <span
-            class="flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)] bg-[var(--color-brand-50)] text-[var(--color-brand-900)]"
-          >
-            <Icon name="send" class="h-4 w-4" />
-          </span>
-          Kirim Disposisi
-        </h3>
-        <button
-          type="button"
-          class="btn-icon"
-          data-disposisi-close
-          aria-label="Tutup"
-        >
-          <Icon name="x" class="h-4 w-4" />
-        </button>
-      </div>
-      <div id="modalDisposisiBody" class="px-5 py-4">
-        <p class="py-8 text-center text-sm text-[var(--color-ink-subtle)]">
-          Memuat…
-        </p>
-      </div>
-    </div>
-  </div>
+	<div
+		class="pointer-events-none m-3 mt-0 flex min-h-[calc(100%-1.5rem)] items-start opacity-0 transition-all duration-300 ease-out sm:mx-auto sm:w-full sm:max-w-2xl hs-overlay-open:mt-7 hs-overlay-open:opacity-100"
+	>
+		<div
+			class="pointer-events-auto flex w-full flex-col rounded-[var(--radius-panel)] border border-[var(--color-line)] bg-[var(--color-canvas)] shadow-[var(--shadow-panel)]"
+		>
+			<div
+				class="flex items-center justify-between border-b border-[var(--color-line)] px-5 py-3"
+			>
+				<h3
+					id="disposisiTitle"
+					class="flex items-center gap-2 text-sm font-semibold text-[var(--color-ink)]"
+				>
+					<span
+						class="flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)] bg-[var(--color-brand-50)] text-[var(--color-brand-900)]"
+					>
+						<Icon name="send" class="h-4 w-4" />
+					</span>
+					Kirim Disposisi
+				</h3>
+				<button
+					type="button"
+					class="btn-icon"
+					data-disposisi-close
+					aria-label="Tutup"
+				>
+					<Icon name="x" class="h-4 w-4" />
+				</button>
+			</div>
+			<div id="modalDisposisiBody" class="px-5 py-4">
+				<p class="py-8 text-center text-sm text-[var(--color-ink-subtle)]">
+					Memuat…
+				</p>
+			</div>
+		</div>
+	</div>
 </div>
 
 {/* Overlay konfirmasi untuk aksi destruktif (batalkan arsip / hapus). */}
 <ConfirmModal title="Konfirmasi" />
 
 <script>
-  /**
-   * Modal disposisi.
-   *
-   * Form diambil dari proxy BFF (Bearer token tidak pernah sampai ke
-   * browser), dirender sebagai HTML di sisi klien, lalu Preline
-   * diinisialisasi ulang untuk select hasil suntikan.
-   */
-  const MODAL = document.getElementById("modalDisposisi");
-  const BODY = document.getElementById("modalDisposisiBody");
+	/**
+	 * Modal disposisi.
+	 *
+	 * Form diambil dari proxy BFF (Bearer token tidak pernah sampai ke
+	 * browser), dirender sebagai HTML di sisi klien, lalu Preline
+	 * diinisialisasi ulang untuk select hasil suntikan.
+	 */
+	const MODAL = document.getElementById("modalDisposisi");
+	const BODY = document.getElementById("modalDisposisiBody");
 
-  type Penerima = { id: number; label: string };
-  type Instruksi = { value: string; label: string };
-  type FormPayload = {
-    surat: {
-      id: number;
-      no_surat: string;
-      no_agenda: string;
-      tgl_surat: { teks: string };
-      pengirim: string;
-      perihal: string;
-    };
-    penerima: Penerima[];
-    instruksi: Instruksi[];
-  };
+	type Penerima = { id: number; label: string };
+	type Instruksi = { value: string; label: string };
+	type FormPayload = {
+		surat: {
+			id: number;
+			no_surat: string;
+			no_agenda: string;
+			tgl_surat: { teks: string };
+			pengirim: string;
+			perihal: string;
+		};
+		penerima: Penerima[];
+		instruksi: Instruksi[];
+	};
 
-  /** JSON untuk `data-hs-select`, disalin dari hs_select_attr(). */
-  function hsSelectAttr(placeholder: string, search: string): string {
-    const cfg: Record<string, unknown> = {
-      placeholder,
-      toggleClasses:
-        "hs-select-toggle relative py-2 ps-3 pe-9 flex gap-x-2 text-nowrap w-full cursor-pointer bg-white border border-gray-300 rounded-lg text-start text-sm text-gray-900 focus:outline-none focus:border-brand-900 focus:ring-1 focus:ring-brand-900 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-red-500 disabled:pointer-events-none disabled:opacity-50",
-      dropdownClasses:
-        "mt-2 max-h-72 pb-1 px-1 space-y-0.5 z-50 w-full bg-white border border-gray-200 rounded-lg overflow-hidden overflow-y-auto shadow-lg",
-      optionClasses:
-        "py-2 px-3 w-full text-sm text-gray-800 cursor-pointer rounded-md hover:bg-gray-100 focus:outline-none focus:bg-gray-100",
-      optionTemplate:
-        '<div class="flex items-center justify-between"><span data-title></span><span class="hidden hs-selected:block"><svg class="shrink-0 size-4 text-brand-900" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></div>',
-      extraMarkup:
-        '<button type="button" class="absolute top-1/2 end-3 -translate-y-1/2" aria-label="Buka pilihan"><svg class="shrink-0 size-3.5 text-gray-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></button>',
-      hasSearch: true,
-      searchPlaceholder: search,
-      searchWrapperClasses:
-        "bg-white p-2 sticky top-0 z-10 border-b border-gray-100",
-      searchClasses:
-        "block w-full text-sm border border-gray-300 rounded-lg py-2 px-3 focus:border-brand-900 focus:outline-none focus:ring-1 focus:ring-brand-900",
-      searchNoResultText: "Tidak ditemukan",
-      searchNoResultClasses: "px-3 py-2 text-sm text-gray-500",
-      optionAllowEmptyOption: true,
-    };
-    return JSON.stringify(cfg).replace(/\\\//g, "/");
-  }
+	/** JSON untuk `data-hs-select`, disalin dari hs_select_attr(). */
+	function hsSelectAttr(placeholder: string, search: string): string {
+		const cfg: Record<string, unknown> = {
+			placeholder,
+			toggleClasses:
+				"hs-select-toggle relative py-2 ps-3 pe-9 flex gap-x-2 text-nowrap w-full cursor-pointer bg-white border border-gray-300 rounded-lg text-start text-sm text-gray-900 focus:outline-none focus:border-brand-900 focus:ring-1 focus:ring-brand-900 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-red-500 disabled:pointer-events-none disabled:opacity-50",
+			dropdownClasses:
+				"mt-2 max-h-72 pb-1 px-1 space-y-0.5 z-50 w-full bg-white border border-gray-200 rounded-lg overflow-hidden overflow-y-auto shadow-lg",
+			optionClasses:
+				"py-2 px-3 w-full text-sm text-gray-800 cursor-pointer rounded-md hover:bg-gray-100 focus:outline-none focus:bg-gray-100",
+			optionTemplate:
+				'<div class="flex items-center justify-between"><span data-title></span><span class="hidden hs-selected:block"><svg class="shrink-0 size-4 text-brand-900" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></div>',
+			extraMarkup:
+				'<button type="button" class="absolute top-1/2 end-3 -translate-y-1/2" aria-label="Buka pilihan"><svg class="shrink-0 size-3.5 text-gray-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></button>',
+			hasSearch: true,
+			searchPlaceholder: search,
+			searchWrapperClasses:
+				"bg-white p-2 sticky top-0 z-10 border-b border-gray-100",
+			searchClasses:
+				"block w-full text-sm border border-gray-300 rounded-lg py-2 px-3 focus:border-brand-900 focus:outline-none focus:ring-1 focus:ring-brand-900",
+			searchNoResultText: "Tidak ditemukan",
+			searchNoResultClasses: "px-3 py-2 text-sm text-gray-500",
+			optionAllowEmptyOption: true,
+		};
+		return JSON.stringify(cfg).replace(/\\\//g, "/");
+	}
 
-  /**
-   * Escape HTML untuk markup yang dirakit sebagai string (modal disposisi).
-   * Entitas dibangun dari kode karakter agar tidak bergantung pada bagaimana
-   * berkas ini disimpan.
-   */
-  const AMP = String.fromCharCode(38);
-  const LT = String.fromCharCode(60);
-  const GT = String.fromCharCode(62);
-  const QUOT = String.fromCharCode(34);
+	/**
+	 * Escape HTML untuk markup yang dirakit sebagai string (modal disposisi).
+	 * Entitas dibangun dari kode karakter agar tidak bergantung pada bagaimana
+	 * berkas ini disimpan.
+	 */
+	const AMP = String.fromCharCode(38);
+	const LT = String.fromCharCode(60);
+	const GT = String.fromCharCode(62);
+	const QUOT = String.fromCharCode(34);
 
-  function esc(value: unknown): string {
-    return String(value ?? "")
-      .split(AMP)
-      .join(AMP + "amp;")
-      .split(LT)
-      .join(AMP + "lt;")
-      .split(GT)
-      .join(AMP + "gt;")
-      .split(QUOT)
-      .join(AMP + "quot;");
-  }
+	function esc(value: unknown): string {
+		return String(value ?? "")
+			.split(AMP)
+			.join(AMP + "amp;")
+			.split(LT)
+			.join(AMP + "lt;")
+			.split(GT)
+			.join(AMP + "gt;")
+			.split(QUOT)
+			.join(AMP + "quot;");
+	}
 
-  function openModal() {
-    const HS = (window as any).HSOverlay;
-    if (HS && typeof HS.open === "function") {
-      HS.open(MODAL);
-    } else {
-      MODAL?.classList.remove("hidden");
-      MODAL?.classList.add("open");
-    }
-  }
+	function openModal() {
+		const HS = (window as any).HSOverlay;
+		if (HS && typeof HS.open === "function") {
+			HS.open(MODAL);
+		} else {
+			MODAL?.classList.remove("hidden");
+			MODAL?.classList.add("open");
+		}
+	}
 
-  function closeModal() {
-    const HS = (window as any).HSOverlay;
-    if (HS && typeof HS.close === "function") {
-      HS.close(MODAL);
-    } else {
-      MODAL?.classList.add("hidden");
-      MODAL?.classList.remove("open");
-    }
-    if (BODY) BODY.innerHTML = "";
-  }
+	function closeModal() {
+		const HS = (window as any).HSOverlay;
+		if (HS && typeof HS.close === "function") {
+			HS.close(MODAL);
+		} else {
+			MODAL?.classList.add("hidden");
+			MODAL?.classList.remove("open");
+		}
+		if (BODY) BODY.innerHTML = "";
+	}
 
-  function renderForm(data: FormPayload): string {
-    const opsiPenerima = data.penerima
-      .map((u) => `<option value="${u.id}">${esc(u.label)}</option>`)
-      .join("");
-    const opsiInstruksi = data.instruksi
-      .map((i) => `<option value="${esc(i.value)}">${esc(i.label)}</option>`)
-      .join("");
+	function renderForm(data: FormPayload): string {
+		const opsiPenerima = data.penerima
+			.map((u) => `<option value="${u.id}">${esc(u.label)}</option>`)
+			.join("");
+		const opsiInstruksi = data.instruksi
+			.map((i) => `<option value="${esc(i.value)}">${esc(i.label)}</option>`)
+			.join("");
 
-    return `
+		return `
       <form id="formDisposisi" class="space-y-4" novalidate>
         <input type="hidden" name="surmas_id" value="${data.surat.id}">
 
@@ -671,113 +671,113 @@ const disposisiValue =
         </div>
       </form>
     `;
-  }
+	}
 
-  function showError(message: string) {
-    const box = document.getElementById("disposisiError");
-    if (!box) return;
-    box.textContent = message;
-    box.classList.remove("hidden");
-  }
+	function showError(message: string) {
+		const box = document.getElementById("disposisiError");
+		if (!box) return;
+		box.textContent = message;
+		box.classList.remove("hidden");
+	}
 
-  async function bukaDisposisi(id: number) {
-    if (!BODY) return;
-    BODY.innerHTML =
-      '<p class="py-8 text-center text-sm text-[var(--color-ink-subtle)]">Memuat…</p>';
-    openModal();
+	async function bukaDisposisi(id: number) {
+		if (!BODY) return;
+		BODY.innerHTML =
+			'<p class="py-8 text-center text-sm text-[var(--color-ink-subtle)]">Memuat…</p>';
+		openModal();
 
-    try {
-      const response = await fetch(`/api/surat-masuk/${id}/disposisi`, {
-        headers: { Accept: "application/json" },
-      });
+		try {
+			const response = await fetch(`/api/surat-masuk/${id}/disposisi`, {
+				headers: { Accept: "application/json" },
+			});
 
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null);
-        BODY.innerHTML = `<p class="py-8 text-center text-sm text-[var(--color-danger)]">${
-          payload?.error?.message ?? "Gagal memuat form disposisi."
-        }</p>`;
-        return;
-      }
+			if (!response.ok) {
+				const payload = await response.json().catch(() => null);
+				BODY.innerHTML = `<p class="py-8 text-center text-sm text-[var(--color-danger)]">${
+					payload?.error?.message ?? "Gagal memuat form disposisi."
+				}</p>`;
+				return;
+			}
 
-      const payload = await response.json();
-      BODY.innerHTML = renderForm(payload.data as FormPayload);
+			const payload = await response.json();
+			BODY.innerHTML = renderForm(payload.data as FormPayload);
 
-      // Preline perlu diinisialisasi ulang untuk markup hasil innerHTML.
-      const HS = (window as any).HSStaticMethods;
-      if (HS && typeof HS.autoInit === "function") HS.autoInit();
+			// Preline perlu diinisialisasi ulang untuk markup hasil innerHTML.
+			const HS = (window as any).HSStaticMethods;
+			if (HS && typeof HS.autoInit === "function") HS.autoInit();
 
-      BODY.querySelectorAll("[data-disposisi-close]").forEach((el) => {
-        el.addEventListener("click", closeModal);
-      });
+			BODY.querySelectorAll("[data-disposisi-close]").forEach((el) => {
+				el.addEventListener("click", closeModal);
+			});
 
-      const form = BODY.querySelector<HTMLFormElement>("#formDisposisi");
-      form?.addEventListener("submit", async (event) => {
-        event.preventDefault();
+			const form = BODY.querySelector<HTMLFormElement>("#formDisposisi");
+			form?.addEventListener("submit", async (event) => {
+				event.preventDefault();
 
-        const select = form.querySelector<HTMLSelectElement>(
-          'select[name="target"]',
-        );
-        if (!select || !select.value) {
-          showError("Pilih penerima disposisi.");
-          return;
-        }
+				const select = form.querySelector<HTMLSelectElement>(
+					'select[name="target"]',
+				);
+				if (!select || !select.value) {
+					showError("Pilih penerima disposisi.");
+					return;
+				}
 
-        const submitBtn = form.querySelector<HTMLButtonElement>(
-          'button[type="submit"]',
-        );
-        if (submitBtn) submitBtn.disabled = true;
+				const submitBtn = form.querySelector<HTMLButtonElement>(
+					'button[type="submit"]',
+				);
+				if (submitBtn) submitBtn.disabled = true;
 
-        try {
-          const response = await fetch(`/api/surat-masuk/${id}/disposisi`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-            body: JSON.stringify({
-              surmas_id: Number(
-                form.querySelector<HTMLInputElement>('input[name="surmas_id"]')
-                  ?.value ?? id,
-              ),
-              target: select.value,
-              instruksi:
-                form.querySelector<HTMLSelectElement>(
-                  'select[name="instruksi"]',
-                )?.value ?? "",
-              catatan:
-                form.querySelector<HTMLTextAreaElement>(
-                  'textarea[name="catatan"]',
-                )?.value ?? "",
-            }),
-          });
+				try {
+					const response = await fetch(`/api/surat-masuk/${id}/disposisi`, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							Accept: "application/json",
+						},
+						body: JSON.stringify({
+							surmas_id: Number(
+								form.querySelector<HTMLInputElement>('input[name="surmas_id"]')
+									?.value ?? id,
+							),
+							target: select.value,
+							instruksi:
+								form.querySelector<HTMLSelectElement>(
+									'select[name="instruksi"]',
+								)?.value ?? "",
+							catatan:
+								form.querySelector<HTMLTextAreaElement>(
+									'textarea[name="catatan"]',
+								)?.value ?? "",
+						}),
+					});
 
-          const payload = await response.json().catch(() => null);
+					const payload = await response.json().catch(() => null);
 
-          if (!response.ok) {
-            showError(payload?.error?.message ?? "Disposisi gagal dikirim.");
-            if (submitBtn) submitBtn.disabled = false;
-            return;
-          }
+					if (!response.ok) {
+						showError(payload?.error?.message ?? "Disposisi gagal dikirim.");
+						if (submitBtn) submitBtn.disabled = false;
+						return;
+					}
 
-          closeModal();
-          window.location.reload();
-        } catch {
-          showError("Disposisi gagal dikirim. Periksa koneksi.");
-          if (submitBtn) submitBtn.disabled = false;
-        }
-      });
-    } catch {
-      BODY.innerHTML =
-        '<p class="py-8 text-center text-sm text-[var(--color-danger)]">Gagal memuat form disposisi.</p>';
-    }
-  }
+					closeModal();
+					window.location.reload();
+				} catch {
+					showError("Disposisi gagal dikirim. Periksa koneksi.");
+					if (submitBtn) submitBtn.disabled = false;
+				}
+			});
+		} catch {
+			BODY.innerHTML =
+				'<p class="py-8 text-center text-sm text-[var(--color-danger)]">Gagal memuat form disposisi.</p>';
+		}
+	}
 
-  document
-    .querySelectorAll<HTMLElement>("[data-disposisi-open]")
-    .forEach((el) => {
-      el.addEventListener("click", () => {
-        const id = Number(el.dataset.disposisiOpen);
-        if (id > 0) void bukaDisposisi(id);
-      });
-    });
+	document
+		.querySelectorAll<HTMLElement>("[data-disposisi-open]")
+		.forEach((el) => {
+			el.addEventListener("click", () => {
+				const id = Number(el.dataset.disposisiOpen);
+				if (id > 0) void bukaDisposisi(id);
+			});
+		});
 </script>

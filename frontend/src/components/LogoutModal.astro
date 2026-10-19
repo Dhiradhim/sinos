@@ -34,7 +34,7 @@ import Icon from "./Icon.astro";
           >
             <Icon name="log-out" class="h-4 w-4" />
           </span>
-          Konfirmasi Logout
+          Konfirmasi Keluar
         </h3>
         <button
           type="button"
@@ -49,8 +49,8 @@ import Icon from "./Icon.astro";
       <div
         class="px-5 py-4 text-sm leading-relaxed text-[var(--color-ink-muted)]"
       >
-        Apakah Anda yakin ingin keluar dari aplikasi SINOS? Anda perlu login
-        kembali untuk mengakses sistem.
+        Apakah Anda yakin ingin keluar dari aplikasi SINOS? Sesi SSO Anda akan
+        diakhiri dan Anda akan kembali ke halaman SSO.
       </div>
 
       <div
@@ -64,7 +64,7 @@ import Icon from "./Icon.astro";
         <form method="POST" action="/api/auth/logout" class="inline-flex">
           <button type="submit" class="btn-primary btn-sm">
             <Icon name="log-out" />
-            <span>Logout</span>
+            <span>Keluar</span>
           </button>
         </form>
       </div>

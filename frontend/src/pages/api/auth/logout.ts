@@ -1,11 +1,16 @@
 import type { APIRoute } from 'astro';
 import { apiFetch } from '../../../lib/api';
 import { clearSession, getSession } from '../../../lib/session';
+import { ssoLogoutUrl } from '../../../lib/sso';
 
 /**
- * Logout: single-logout ke gateway lewat CI3, lalu hapus cookie sesi Astro.
- * Kegagalan backend tidak boleh menahan pengguna di aplikasi — cookie tetap
- * dihapus dan pengguna dikembalikan ke halaman login.
+ * Logout: single-logout ke gateway lewat CI3, hapus cookie sesi Astro, lalu
+ * kembalikan browser ke halaman SSO.
+ *
+ * Tujuan akhirnya adalah endpoint GET /logout milik gateway, bukan /login.
+ * Dengan begitu sesi login SSO ikut berakhir (single logout) dan pengguna
+ * benar-benar kembali ke halaman SSO, bukan berhenti di halaman transisi
+ * SINOS. Kegagalan backend tidak menahan pengguna — cookie tetap dihapus.
  */
 async function logout(cookies: Parameters<APIRoute>[0]['cookies']): Promise<Response> {
   const token = getSession(cookies);
@@ -18,7 +23,7 @@ async function logout(cookies: Parameters<APIRoute>[0]['cookies']): Promise<Resp
 
   return new Response(null, {
     status: 302,
-    headers: { Location: '/login', 'Cache-Control': 'no-store' },
+    headers: { Location: ssoLogoutUrl(), 'Cache-Control': 'no-store' },
   });
 }
 
