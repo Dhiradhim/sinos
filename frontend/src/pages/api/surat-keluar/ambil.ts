@@ -53,6 +53,8 @@ export const POST: APIRoute = async ({ cookies, request, redirect }) => {
   }
 
   setFormFeedback(cookies, {
+    target: "/surat-keluar/ambil",
+    type: result.error?.code === "BERKAS_BELUM_LENGKAP" ? "warning" : "error",
     errors: errorFields(result.error),
     values,
     message:

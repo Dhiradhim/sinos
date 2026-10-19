@@ -73,9 +73,35 @@ async function apiSecret(): Promise<string> {
   return sha256Hex(`sinos-api|${baseUrl}|${environment}`);
 }
 
-/** Normalisasi path relatif; menolak path absolut, backslash, dan '..'. */
+/**
+ * Normalisasi path relatif; menolak path absolut, backslash, dan '..'.
+ *
+ * PENTING — path dari `params.path` MASIH ter-encode.
+ *
+ * `berkasUrl()` membentuk URL dengan `encodeURIComponent(path)` sehingga
+ * seluruh path menjadi SATU segmen:
+ *   'file/sm/x.pdf' → 'file%2Fsm%2Fx.pdf'
+ *
+ * Astro meneruskan segmen dinamis (`[...path]`) APA ADANYA, tanpa men-decode.
+ * Nilai yang tiba di sini karena itu masih `file%2Fsm%2Fx.pdf`. Bila nilai
+ * itu ditandatangani tanpa di-decode, backend menerima `p = file%2Fsm%2Fx.pdf`
+ * yang tidak diawali `file/` dan menolaknya dengan `BERKAS_DILARANG` —
+ * persis gejala "Akses berkas di luar direktori yang diizinkan." pada tautan
+ * berkas yang sah.
+ *
+ * Karena itu decode dilakukan TEPAT SEKALI di sini, lalu divalidasi. Decode
+ * ganda tidak terjadi: hasil decode tidak pernah di-decode lagi.
+ */
 function normalizePath(raw: string): string | null {
-  const path = raw.replace(/^\/+/, '').trim();
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(raw);
+  } catch {
+    // Urutan escape rusak (mis. '%zz'): tolak, jangan diteruskan.
+    return null;
+  }
+
+  const path = decoded.replace(/^\/+/, '').trim();
   if (path === '' || path.includes('\\') || path.includes('\0')) return null;
   if (/^[A-Za-z]:/.test(path) || path.includes('://')) return null;
   if (path.split('/').some((segment) => segment === '..' || segment === '.')) return null;

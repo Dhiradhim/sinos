@@ -18,11 +18,13 @@
  */
 import AppShell from "../../../layouts/AppShell.astro";
 import PageHead from "../../../components/PageHead.astro";
+import FeedbackAlert from "../../../components/FeedbackAlert.astro";
 import Icon from "../../../components/Icon.astro";
 import NotFoundState from "../../../components/NotFoundState.astro";
 import { requireUser } from "../../../lib/auth";
 import { apiFetch } from "../../../lib/api";
 import { getSession } from "../../../lib/session";
+import { takeFormFeedback } from "../../../lib/formFeedback";
 import { berkasUrl, formatDateTime, toneClass } from "../../../lib/format";
 import type { SuratMasukDetail } from "../../../lib/suratMasuk";
 
@@ -30,6 +32,12 @@ const auth = await requireUser(Astro);
 if (auth.redirect) return auth.redirect;
 const user = auth.user;
 const token = getSession(Astro.cookies);
+
+/**
+ * Umpan balik arsip / batal arsip yang mengalihkan kembali ke detail ini.
+ * Dicocokkan dengan pathname agar tidak tampil di halaman lain.
+ */
+const feedback = takeFormFeedback(Astro.cookies, Astro.url.pathname);
 
 const id = Number(Astro.params.id);
 const idValid = Number.isInteger(id) && id > 0;
@@ -119,6 +127,15 @@ const fields: {
       />
     ) : (
       <>
+        {
+          feedback?.message && (
+            <FeedbackAlert
+              type={feedback.type ?? "info"}
+              message={feedback.message}
+            />
+          )
+        }
+
         <PageHead title={row.no_surat} subtitle="Detail surat masuk">
     <div slot="actions" class="flex flex-wrap items-center gap-2">
       <a href={`/surat-masuk/daftar?tahun=${tahun}`} class="btn-outline btn-sm">

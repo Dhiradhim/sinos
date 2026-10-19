@@ -42,6 +42,8 @@ export const POST: APIRoute = async ({ cookies, request, params, redirect }) => 
       String(new Date().getFullYear());
 
     setFormFeedback(cookies, {
+      target: "/surat-keluar/daftar",
+      type: "success",
       message: "Berkas berhasil diunggah.",
     });
 
@@ -49,6 +51,8 @@ export const POST: APIRoute = async ({ cookies, request, params, redirect }) => 
   }
 
   setFormFeedback(cookies, {
+    target: `/surat-keluar/upload/${id}`,
+    type: "error",
     errors: errorFields(result.error),
     message: result.error?.message ?? "Berkas gagal diunggah. Silakan coba lagi.",
     code: result.error?.code ?? null,

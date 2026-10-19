@@ -42,7 +42,11 @@ export const POST: APIRoute = async ({ cookies, params, request, redirect }) => 
 
   if (result.status === 401) return redirect('/login', 303);
 
+  // `target` wajib: cookie ber-path "/" akan terbaca halaman lain bila
+  // halaman tujuan (daftar/detail) tidak sempat mengonsumsinya.
   setFormFeedback(cookies, {
+    target: kembali,
+    type: result.ok ? 'success' : 'error',
     message: result.ok
       ? 'Surat masuk berhasil dihapus.'
       : (result.error?.message ?? 'Surat masuk gagal dihapus.'),

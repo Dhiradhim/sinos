@@ -38,7 +38,15 @@ export const POST: APIRoute = async ({ cookies, params, request, redirect }) => 
 
   if (!result.ok) {
     setFormFeedback(cookies, {
+      target: kembali,
+      type: 'error',
       message: result.error?.message ?? 'Status arsip gagal dibatalkan.',
+    });
+  } else {
+    setFormFeedback(cookies, {
+      target: kembali,
+      type: 'success',
+      message: 'Status arsip berhasil dibatalkan.',
     });
   }
 

@@ -30,14 +30,14 @@ const user = auth.user;
 
 // Gerbang peran identik dengan Surat_masuk::index().
 if (!user.is_operator) {
-  return Astro.redirect("/dashboard", 303);
+	return Astro.redirect("/dashboard", 303);
 }
 
 const token = getSession(Astro.cookies);
 
 const klasifikasiResult = await apiFetch<{ kode: string; nama: string }[]>(
-  "/master/klasifikasi",
-  { token },
+	"/master/klasifikasi",
+	{ token },
 );
 const klasifikasi = klasifikasiResult.data ?? [];
 
@@ -49,58 +49,59 @@ const tahun = new Date().getFullYear();
  * ditetapkan server saat penyimpanan.
  */
 const daftarResult = await apiFetch<SuratMasukRow[]>("/surat-masuk", {
-  token,
-  query: { tahun, per_page: 100 },
+	token,
+	query: { tahun, per_page: 100 },
 });
 let maxUrut = 0;
 for (const row of daftarResult.data ?? []) {
-  const match = /^\s*(\d+)/.exec(row.no_agenda ?? "");
-  if (match) maxUrut = Math.max(maxUrut, Number(match[1]));
+	const match = /^\s*(\d+)/.exec(row.no_agenda ?? "");
+	if (match) maxUrut = Math.max(maxUrut, Number(match[1]));
 }
 const nextAgenda = `${maxUrut + 1}/SM/PA.Kp/${tahun}`;
 
 const dashboard = await apiFetch<{ disposisi_belum_dibaca: number }>(
-  "/dashboard",
-  {
-    token,
-    query: { tahun },
-  },
+	"/dashboard",
+	{
+		token,
+		query: { tahun },
+	},
 );
 const disposisiCount = dashboard.data?.disposisi_belum_dibaca ?? 0;
 
 // Umpan balik 422 dari action route (cookie sekali pakai).
-const feedback = takeFormFeedback(Astro.cookies);
+const feedback = takeFormFeedback(Astro.cookies, Astro.url.pathname);
 ---
 
 <AppShell
-  title="Input Surat Masuk"
-  user={user}
-  disposisiCount={disposisiCount}
-  tahun={tahun}
-  topbarTitle={false}
+	title="Input Surat Masuk"
+	user={user}
+	disposisiCount={disposisiCount}
+	tahun={tahun}
+	topbarTitle={false}
 >
-  <PageHead
-    title="Input Surat Masuk"
-    subtitle="Catat surat masuk beserta klasifikasi dan berkasnya."
-  >
-    <a
-      slot="actions"
-      href={`/surat-masuk/daftar?tahun=${tahun}`}
-      class="btn-outline btn-sm"
-    >
-      <Icon name="arrow-left" class="h-4 w-4" />
-      <span>Kembali</span>
-    </a>
-  </PageHead>
+	<PageHead
+		title="Input Surat Masuk"
+		subtitle="Catat surat masuk beserta klasifikasi dan berkasnya."
+	>
+		<a
+			slot="actions"
+			href={`/surat-masuk/daftar?tahun=${tahun}`}
+			class="btn-outline btn-sm"
+		>
+			<Icon name="arrow-left" class="h-4 w-4" />
+			<span>Kembali</span>
+		</a>
+	</PageHead>
 
-  <div class="mx-auto w-full max-w-3xl">
-    <SuratMasukForm
-      mode="create"
-      row={feedback?.values ?? null}
-      klasifikasi={klasifikasi}
-      errors={feedback?.errors ?? null}
-      message={feedback?.message ?? ""}
-      nextAgenda={nextAgenda}
-    />
-  </div>
+	<div class="mx-auto w-full max-w-3xl">
+		<SuratMasukForm
+			mode="create"
+			row={feedback?.values ?? null}
+			klasifikasi={klasifikasi}
+			errors={feedback?.errors ?? null}
+			message={feedback?.message ?? ""}
+			messageType={feedback?.type ?? "error"}
+			nextAgenda={nextAgenda}
+		/>
+	</div>
 </AppShell>

@@ -57,6 +57,8 @@ export const POST: APIRoute = async ({ cookies, request, redirect }) => {
         : "Nomor surat berhasil disisipkan.");
 
     setFormFeedback(cookies, {
+      target: "/surat-keluar/sisip",
+      type: "success",
       message: pesan,
       result: summarizeSisipMeta(result.meta, nomor),
     });
@@ -65,6 +67,8 @@ export const POST: APIRoute = async ({ cookies, request, redirect }) => {
   }
 
   setFormFeedback(cookies, {
+    target: "/surat-keluar/sisip",
+    type: "error",
     errors: errorFields(result.error),
     values,
     message:

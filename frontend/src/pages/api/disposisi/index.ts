@@ -81,7 +81,11 @@ export const POST: APIRoute = async ({ cookies, request, redirect }) => {
   if (!Number.isInteger(surmasId) || surmasId <= 0) {
     const message = 'Surat masuk tidak ditemukan.';
     if (isJson) return json({ error: { code: 'NOT_FOUND', message } }, 404);
-    setFormFeedback(cookies, { message });
+    setFormFeedback(cookies, {
+      target: '/disposisi',
+      type: 'error',
+      message,
+    });
     return redirect('/disposisi', 303);
   }
 
@@ -119,6 +123,8 @@ export const POST: APIRoute = async ({ cookies, request, redirect }) => {
 
   if (!result.ok) {
     setFormFeedback(cookies, {
+      target: kembali,
+      type: 'error',
       errors: result.error?.fields ?? null,
       values,
       message: result.error?.message ?? 'Disposisi gagal dikirim.',
@@ -128,6 +134,8 @@ export const POST: APIRoute = async ({ cookies, request, redirect }) => {
   }
 
   setFormFeedback(cookies, {
+    target: kembali,
+    type: 'success',
     message:
       (result.data as { pesan?: string } | null)?.pesan ??
       'Disposisi berhasil dikirim.',

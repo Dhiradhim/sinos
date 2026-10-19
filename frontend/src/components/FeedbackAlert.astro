@@ -1,0 +1,47 @@
+---
+/**
+ * Notifikasi hasil aksi yang bertahan melewati redirect 303.
+ *
+ * Berbeda dengan Flash.astro (notifikasi sekali tampil yang di-dismiss
+ * otomatis), komponen ini dirender server-side dari cookie umpan balik dan
+ * tidak punya timer. Nada mengikuti `type` sehingga pesan sukses tidak
+ * pernah tampil sebagai "Gagal".
+ */
+import Icon from "./Icon.astro";
+import type { FormFeedbackType } from "../lib/formFeedback";
+
+interface Props {
+	type?: FormFeedbackType;
+	message: string;
+	/** Jarak atas pembungkus; beberapa halaman menempelkan ke header. */
+	class?: string;
+}
+
+const { type = "info", message, class: klass = "px-6 pt-4" } = Astro.props;
+
+const STYLES = {
+	success: { alert: "alert-success", icon: "circle-check", title: "Berhasil" },
+	error: { alert: "alert-danger", icon: "octagon-x", title: "Gagal" },
+	warning: {
+		alert: "alert-warning",
+		icon: "triangle-alert",
+		title: "Perhatian",
+	},
+	info: { alert: "alert-info", icon: "info", title: "Informasi" },
+} as const;
+
+const cfg = STYLES[type] ?? STYLES.info;
+const isError = type === "error";
+---
+
+<div class={klass}>
+	<div class:list={["alert", cfg.alert]} role={isError ? "alert" : "status"}>
+		<span class="mt-0.5 shrink-0">
+			<Icon name={cfg.icon} class="h-4 w-4" />
+		</span>
+		<div class="flex-1">
+			<p class="alert-title">{cfg.title}</p>
+			<p class="alert-description">{message}</p>
+		</div>
+	</div>
+</div>

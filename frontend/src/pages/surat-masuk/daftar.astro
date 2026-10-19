@@ -23,9 +23,13 @@
  *     aturan "copy verbatim" diutamakan.
  *   - Placeholder pencarian: view CI3 tidak punya filter bar; teks pencarian
  *     berasal dari DataTables (`searchPlaceholder: 'Cari…'`, master.php:88).
- *   - Label kolom mengikuti brief (8 kolom). View CI3 menampilkan 7 kolom
- *     dengan "Pengirim" dan "Status & Berkas"; brief memecahnya menjadi
- *     "Pengirim Surat", "Posisi Saat Ini", dan "Instruksi".
+ *   - Label kolom mengikuti brief. View CI3 menampilkan 7 kolom dengan
+ *     "Pengirim" dan "Status & Berkas"; brief memecahnya menjadi "Pengirim
+ *     Surat", "Posisi Saat Ini", dan "Instruksi".
+ *   - Tanggal dipecah menjadi dua kolom terpisah — "Tanggal Surat" dan
+ *     "Tanggal Diterima" — karena keduanya dipakai untuk menyaring dan
+ *     menelusuri agenda. Keduanya sudah tersedia di payload daftar
+ *     (`tgl_surat` dan `tgl_diterima`, lihat api/Surat_masuk.php:107-108).
  */
 import AppShell from "../../layouts/AppShell.astro";
 import PageHead from "../../components/PageHead.astro";
@@ -34,10 +38,12 @@ import DataTable, { type Column } from "../../components/DataTable.astro";
 import Pagination from "../../components/Pagination.astro";
 import TahunSelector from "../../components/TahunSelector.astro";
 import ConfirmModal from "../../components/ConfirmModal.astro";
+import FeedbackAlert from "../../components/FeedbackAlert.astro";
 import Icon from "../../components/Icon.astro";
 import { requireUser } from "../../lib/auth";
 import { apiFetch } from "../../lib/api";
 import { getSession } from "../../lib/session";
+import { takeFormFeedback } from "../../lib/formFeedback";
 import { berkasUrl, toneClass } from "../../lib/format";
 import type { PageMeta, SuratMasukRow } from "../../lib/suratMasuk";
 
@@ -45,6 +51,13 @@ const auth = await requireUser(Astro);
 if (auth.redirect) return auth.redirect;
 const user = auth.user;
 const token = getSession(Astro.cookies);
+
+/**
+ * Umpan balik dari aksi baris (hapus / arsip / batal arsip) yang mengalihkan
+ * kembali ke halaman ini. Target dicocokkan dengan pathname sehingga pesan
+ * tidak pernah muncul di halaman lain.
+ */
+const feedback = takeFormFeedback(Astro.cookies, Astro.url.pathname);
 
 const params = Astro.url.searchParams;
 
@@ -107,7 +120,13 @@ const columns: Column[] = [
 	},
 	{
 		key: "tgl_surat.teks",
-		label: "Tanggal",
+		label: "Tanggal Surat",
+		nowrap: true,
+		width: "9rem",
+	},
+	{
+		key: "tgl_diterima.teks",
+		label: "Tanggal Diterima",
 		nowrap: true,
 		width: "9rem",
 	},
@@ -211,6 +230,15 @@ const disposisiValue =
 			}
 		</div>
 	</PageHead>
+
+	{
+		feedback?.message && (
+			<FeedbackAlert
+				type={feedback.type ?? "info"}
+				message={feedback.message}
+			/>
+		)
+	}
 
 	<FilterBar action="/surat-masuk/daftar" hidden={{ tahun }}>
 		<div class="min-w-0 flex-1 sm:max-w-xs">

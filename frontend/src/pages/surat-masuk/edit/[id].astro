@@ -33,8 +33,8 @@ const id = Number(Astro.params.id);
 const idValid = Number.isInteger(id) && id > 0;
 
 const result = idValid
-  ? await apiFetch<SuratMasukDetail>(`/surat-masuk/${id}`, { token })
-  : null;
+	? await apiFetch<SuratMasukDetail>(`/surat-masuk/${id}`, { token })
+	: null;
 
 /**
  * 404 dirender, bukan dialihkan (`Surat_masuk::edit()` memakai `show_404()`).
@@ -43,33 +43,33 @@ const result = idValid
  */
 const notFound = !result?.ok || !result.data;
 if (notFound) {
-  Astro.response.status = 404;
+	Astro.response.status = 404;
 }
 
 const detail = (result?.data ?? null) as SuratMasukDetail;
 
 if (!notFound && !detail.aksi.can_edit) {
-  return Astro.redirect(`/surat-masuk/detail/${id}`, 303);
+	return Astro.redirect(`/surat-masuk/detail/${id}`, 303);
 }
 
 const klasifikasiResult = notFound
-  ? null
-  : await apiFetch<{ kode: string; nama: string }[]>("/master/klasifikasi", {
-      token,
-    });
+	? null
+	: await apiFetch<{ kode: string; nama: string }[]>("/master/klasifikasi", {
+			token,
+		});
 const klasifikasi = klasifikasiResult?.data ?? [];
 
 const tahun = notFound
-  ? new Date().getFullYear()
-  : Number(String(detail.tgl_surat.iso ?? "").slice(0, 4)) ||
-    new Date().getFullYear();
+	? new Date().getFullYear()
+	: Number(String(detail.tgl_surat.iso ?? "").slice(0, 4)) ||
+		new Date().getFullYear();
 
 const dashboard = await apiFetch<{ disposisi_belum_dibaca: number }>(
-  "/dashboard",
-  {
-    token,
-    query: { tahun },
-  },
+	"/dashboard",
+	{
+		token,
+		query: { tahun },
+	},
 );
 const disposisiCount = dashboard.data?.disposisi_belum_dibaca ?? 0;
 
@@ -78,70 +78,71 @@ const disposisiCount = dashboard.data?.disposisi_belum_dibaca ?? 0;
  * (feedback.values) menimpanya. `file` sengaja tidak diikutkan — input file
  * tidak dapat dipulihkan dan berkas lama tetap dipertahankan.
  */
-const feedback = takeFormFeedback(Astro.cookies);
+const feedback = takeFormFeedback(Astro.cookies, Astro.url.pathname);
 
 const row: Record<string, unknown> = notFound
-  ? {}
-  : {
-      id: detail.id,
-      pengirim: detail.pengirim,
-      pengolah: detail.pengolah,
-      no_surat: detail.no_surat,
-      no_agenda: detail.no_agenda,
-      tgl_surat: detail.tgl_surat,
-      tgl_diterima: detail.tgl_diterima,
-      kode: detail.kode,
-      perihal: detail.perihal,
-      keterangan: detail.keterangan,
-      file: detail.file,
-    };
+	? {}
+	: {
+			id: detail.id,
+			pengirim: detail.pengirim,
+			pengolah: detail.pengolah,
+			no_surat: detail.no_surat,
+			no_agenda: detail.no_agenda,
+			tgl_surat: detail.tgl_surat,
+			tgl_diterima: detail.tgl_diterima,
+			kode: detail.kode,
+			perihal: detail.perihal,
+			keterangan: detail.keterangan,
+			file: detail.file,
+		};
 
 if (feedback?.values) {
-  for (const [key, value] of Object.entries(feedback.values)) {
-    if (key === "file") continue;
-    row[key] = value;
-  }
+	for (const [key, value] of Object.entries(feedback.values)) {
+		if (key === "file") continue;
+		row[key] = value;
+	}
 }
 ---
 
 <AppShell
-  title="Edit Surat Masuk"
-  user={user}
-  disposisiCount={disposisiCount}
-  tahun={tahun}
-  topbarTitle={false}
+	title="Edit Surat Masuk"
+	user={user}
+	disposisiCount={disposisiCount}
+	tahun={tahun}
+	topbarTitle={false}
 >
-  {
-    notFound ? (
-      <NotFoundState
-        title="Surat masuk tidak ditemukan"
-        description={`Surat masuk dengan ID ${Astro.params.id} tidak ada atau sudah dihapus.`}
-        backHref="/surat-masuk/daftar"
-        backLabel="Kembali ke daftar surat masuk"
-      />
-    ) : (
-      <>
-        <PageHead title="Edit Surat Masuk" subtitle={detail.no_surat}>
-          <a
-            slot="actions"
-            href={`/surat-masuk/detail/${detail.id}`}
-            class="btn-outline btn-sm"
-          >
-            <Icon name="arrow-left" class="h-4 w-4" />
-            <span>Kembali</span>
-          </a>
-        </PageHead>
+	{
+		notFound ? (
+			<NotFoundState
+				title="Surat masuk tidak ditemukan"
+				description={`Surat masuk dengan ID ${Astro.params.id} tidak ada atau sudah dihapus.`}
+				backHref="/surat-masuk/daftar"
+				backLabel="Kembali ke daftar surat masuk"
+			/>
+		) : (
+			<>
+				<PageHead title="Edit Surat Masuk" subtitle={detail.no_surat}>
+					<a
+						slot="actions"
+						href={`/surat-masuk/detail/${detail.id}`}
+						class="btn-outline btn-sm"
+					>
+						<Icon name="arrow-left" class="h-4 w-4" />
+						<span>Kembali</span>
+					</a>
+				</PageHead>
 
-        <div class="mx-auto w-full max-w-3xl">
-          <SuratMasukForm
-            mode="edit"
-            row={row}
-            klasifikasi={klasifikasi}
-            errors={feedback?.errors ?? null}
-            message={feedback?.message ?? ""}
-          />
-        </div>
-      </>
-    )
-  }
+				<div class="mx-auto w-full max-w-3xl">
+					<SuratMasukForm
+						mode="edit"
+						row={row}
+						klasifikasi={klasifikasi}
+						errors={feedback?.errors ?? null}
+						message={feedback?.message ?? ""}
+						messageType={feedback?.type ?? "error"}
+					/>
+				</div>
+			</>
+		)
+	}
 </AppShell>

@@ -42,7 +42,15 @@ export const POST: APIRoute = async ({ cookies, params, request, redirect }) => 
 
   if (!result.ok) {
     setFormFeedback(cookies, {
+      target: kembali,
+      type: 'error',
       message: result.error?.message ?? 'Surat gagal diarsipkan.',
+    });
+  } else {
+    setFormFeedback(cookies, {
+      target: kembali,
+      type: 'success',
+      message: 'Surat berhasil diarsipkan.',
     });
   }
 

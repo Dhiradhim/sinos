@@ -45,6 +45,8 @@ export const POST: APIRoute = async ({ cookies, request, redirect }) => {
   }
 
   setFormFeedback(cookies, {
+    target: '/surat-masuk/input',
+    type: 'error',
     errors: errorFields(result.error),
     values,
     message:

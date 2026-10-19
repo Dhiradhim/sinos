@@ -41,6 +41,7 @@ import DataTable, { type Column } from "../../components/DataTable.astro";
 import Pagination from "../../components/Pagination.astro";
 import DisposisiModal from "../../components/DisposisiModal.astro";
 import ConfirmModal from "../../components/ConfirmModal.astro";
+import FeedbackAlert from "../../components/FeedbackAlert.astro";
 import Icon from "../../components/Icon.astro";
 import { requireUser } from "../../lib/auth";
 import { apiFetch } from "../../lib/api";
@@ -104,7 +105,7 @@ const dashboard = await apiFetch<{ disposisi_belum_dibaca: number }>(
 const disposisiCount = dashboard.data?.disposisi_belum_dibaca ?? 0;
 
 /** Umpan balik arsip/hapus yang bertahan melewati redirect 303. */
-const feedback = takeFormFeedback(Astro.cookies);
+const feedback = takeFormFeedback(Astro.cookies, Astro.url.pathname);
 
 /**
  * Kolom tabel — delapan kolom brief. "No." ditambahkan DataTable lewat
@@ -192,35 +193,17 @@ const kembali = `/disposisi${arsip ? `?arsip=${arsip}` : ""}`;
 
 	{
 		feedback?.message && (
-			<div class="px-6 pt-4">
-				<div
-					class:list={[
-						"alert",
-						feedback.code === "SUDAH_DIARSIPKAN" ||
-						feedback.code === "POSISI_BUKAN_OPERATOR" ||
-						feedback.code === "FORBIDDEN"
-							? "alert-warning"
-							: "alert-success",
-					]}
-					role="status"
-				>
-					<span class="mt-0.5 shrink-0">
-						<Icon
-							name={
-								feedback.code === "SUDAH_DIARSIPKAN" ||
-								feedback.code === "POSISI_BUKAN_OPERATOR" ||
-								feedback.code === "FORBIDDEN"
-									? "triangle-alert"
-									: "circle-check"
-							}
-							class="h-4 w-4"
-						/>
-					</span>
-					<div class="flex-1">
-						<p class="alert-description">{feedback.message}</p>
-					</div>
-				</div>
-			</div>
+			<FeedbackAlert
+				type={
+					feedback.type ??
+					(feedback.code === "SUDAH_DIARSIPKAN" ||
+					feedback.code === "POSISI_BUKAN_OPERATOR" ||
+					feedback.code === "FORBIDDEN"
+						? "warning"
+						: "success")
+				}
+				message={feedback.message}
+			/>
 		)
 	}
 
