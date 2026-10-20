@@ -3,9 +3,21 @@
  * Notifikasi hasil aksi yang bertahan melewati redirect 303.
  *
  * Berbeda dengan Flash.astro (notifikasi sekali tampil yang di-dismiss
- * otomatis), komponen ini dirender server-side dari cookie umpan balik dan
- * tidak punya timer. Nada mengikuti `type` sehingga pesan sukses tidak
- * pernah tampil sebagai "Gagal".
+ * otomatis), komponen ini dirender server-side dari cookie umpan balik.
+ * Nada mengikuti `type` sehingga pesan sukses tidak pernah tampil sebagai
+ * "Gagal".
+ *
+ * AUTO-DISMISS (permintaan pengguna):
+ *   Notifikasi SUKSES hilang otomatis setelah 3 detik — pesan "berhasil
+ *   hapus/arsip/simpan" tidak perlu menetap dan menutupi konten. Notifikasi
+ *   error/warning TIDAK di-dismiss otomatis: pengguna perlu waktu membaca apa
+ *   yang gagal, dan pesan itu sering satu-satunya penjelasan yang tersedia.
+ *
+ *   Timer dihentikan saat kursor/fokus berada di dalam notifikasi, sehingga
+ *   pesan tidak hilang saat sedang dibaca. Setelah kursor pergi, hitungan
+ *   diulang dari awal.
+ *
+ *   Tersedia juga tombol tutup manual untuk semua jenis pesan.
  */
 import Icon from "./Icon.astro";
 import type { FormFeedbackType } from "../lib/formFeedback";
@@ -32,10 +44,22 @@ const STYLES = {
 
 const cfg = STYLES[type] ?? STYLES.info;
 const isError = type === "error";
+
+/**
+ * Hanya pesan sukses yang di-dismiss otomatis. Nilai ini menjadi
+ * `data-feedback-autodismiss` sehingga skrip di bawah tidak perlu menebak
+ * jenis pesan dari kelas CSS.
+ */
+const autodismiss = type === "success";
 ---
 
-<div class={klass}>
-	<div class:list={["alert", cfg.alert]} role={isError ? "alert" : "status"}>
+<div class={klass} data-feedback-wrapper>
+	<div
+		class:list={["alert", cfg.alert]}
+		role={isError ? "alert" : "status"}
+		data-feedback
+		data-feedback-autodismiss={autodismiss ? "3000" : undefined}
+	>
 		<span class="mt-0.5 shrink-0">
 			<Icon name={cfg.icon} class="h-4 w-4" />
 		</span>
@@ -43,5 +67,58 @@ const isError = type === "error";
 			<p class="alert-title">{cfg.title}</p>
 			<p class="alert-description">{message}</p>
 		</div>
+		<button
+			type="button"
+			data-feedback-close
+			class="-mr-1 -mt-1 shrink-0 rounded-[var(--radius-control)] p-1 opacity-60 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_oklab,var(--color-brand-900)_35%,transparent)]"
+			aria-label="Tutup notifikasi"
+		>
+			<Icon name="x" class="h-3.5 w-3.5" />
+		</button>
 	</div>
 </div>
+
+<script>
+	/**
+	 * Auto-dismiss notifikasi sukses.
+	 *
+	 * Ditulis sebagai skrip modul Astro (bukan inline) agar hanya dieksekusi
+	 * sekali per halaman. Setiap notifikasi membawa durasinya sendiri di
+	 * `data-feedback-autodismiss` (milidetik); tanpa atribut itu notifikasi
+	 * tidak pernah di-dismiss otomatis.
+	 */
+	const HILANG_MS = 180;
+
+	function tutup(el: HTMLElement) {
+		// Pembungkus ikut dihapus agar tidak menyisakan jarak kosong.
+		const wrapper = el.closest<HTMLElement>("[data-feedback-wrapper]") ?? el;
+		el.style.transition = `opacity ${HILANG_MS}ms ease`;
+		el.style.opacity = "0";
+		window.setTimeout(() => wrapper.remove(), HILANG_MS + 20);
+	}
+
+	document.querySelectorAll<HTMLElement>("[data-feedback]").forEach((el) => {
+		el.querySelector<HTMLElement>("[data-feedback-close]")?.addEventListener(
+			"click",
+			() => tutup(el),
+		);
+
+		const durasi = Number(el.dataset.feedbackAutodismiss ?? 0);
+		if (!Number.isFinite(durasi) || durasi <= 0) return;
+
+		let timer = window.setTimeout(() => tutup(el), durasi);
+
+		// Tahan selama dibaca: hentikan saat kursor/fokus masuk, mulai ulang
+		// setelah keluar.
+		const tahan = () => window.clearTimeout(timer);
+		const lanjut = () => {
+			window.clearTimeout(timer);
+			timer = window.setTimeout(() => tutup(el), durasi);
+		};
+
+		el.addEventListener("mouseenter", tahan);
+		el.addEventListener("mouseleave", lanjut);
+		el.addEventListener("focusin", tahan);
+		el.addEventListener("focusout", lanjut);
+	});
+</script>

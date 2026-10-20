@@ -1,0 +1,276 @@
+---
+/**
+ * NomorBerhasilModal.astro — popup rincian nomor surat setelah berhasil
+ * mengambil / menyisipkan nomor.
+ *
+ * KENAPA ADA: alur ambil/sisip memakai POST + redirect 303 (lihat
+ * `api/surat-keluar/ambil.ts` dan `sisip.ts`). Setelah redirect, halaman daftar
+ * hanya menampilkan notifikasi singkat, sedangkan pengguna biasanya langsung
+ * menyalin nomor surat ke aplikasi lain. Popup ini menampilkan empat nilai
+ * yang paling sering dibutuhkan — nomor, tanggal, perihal, tujuan — dan
+ * menyediakan tombol salin per baris maupun "Salin semua".
+ *
+ * SUMBER DATA: `feedback.result` (cookie umpan balik sekali pakai). Route
+ * action mengisi `result` dengan kunci: `nomor`, `tanggal`, `hal`, `tujuan`.
+ * Bila salah satu kosong, baris tersebut tidak dirender.
+ *
+ * Preline overlay dipakai (bukan `window.alert`) agar konsisten dengan modal
+ * lain di aplikasi dan agar teksnya dapat diseleksi.
+ */
+import Icon from "./Icon.astro";
+
+interface Props {
+	nomor: string;
+	tanggal: string;
+	perihal: string;
+	tujuan: string;
+}
+
+const { nomor, tanggal, perihal, tujuan } = Astro.props;
+
+/**
+ * Baris yang ditampilkan. Nilai kosong dilewati agar tidak ada baris
+ * "Perihal: —" yang tidak berguna.
+ */
+const baris: { label: string; value: string; key: string }[] = [
+	{ label: "Nomor Surat", value: nomor, key: "nomor" },
+	{ label: "Tanggal Surat", value: tanggal, key: "tanggal" },
+	{ label: "Perihal", value: perihal, key: "hal" },
+	{ label: "Tujuan", value: tujuan, key: "tujuan" },
+].filter((item) => item.value.trim() !== "");
+
+/** Teks gabungan untuk "Salin semua" — format siap tempel. */
+const teksGabungan = baris
+	.map((item) => `${item.label}: ${item.value}`)
+	.join("\n");
+---
+
+{
+	baris.length > 0 && (
+		<div
+			id="modalNomorBerhasil"
+			class="hs-overlay pointer-events-none fixed inset-0 z-[85] hidden size-full overflow-y-auto overflow-x-hidden"
+			data-hs-overlay-options='{"backdropClasses":"hs-overlay-backdrop transition duration fixed inset-0 bg-[rgb(11_27_58_/_0.45)]"}'
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="nomorBerhasilTitle"
+			tabindex="-1"
+			data-nomor-berhasil
+			data-teks-gabungan={teksGabungan}
+		>
+			<div class="pointer-events-none m-3 mt-0 flex min-h-[calc(100%-1.5rem)] items-center opacity-0 transition-all duration-300 ease-out sm:mx-auto sm:w-full sm:max-w-lg hs-overlay-open:mt-7 hs-overlay-open:opacity-100">
+				<div class="pointer-events-auto flex w-full flex-col rounded-[var(--radius-panel)] border border-[var(--color-line)] bg-[var(--color-canvas)] shadow-[var(--shadow-panel)]">
+					<div class="flex items-center justify-between border-b border-[var(--color-line)] px-5 py-3">
+						<h3
+							id="nomorBerhasilTitle"
+							class="flex items-center gap-2 text-sm font-semibold text-[var(--color-ink)]"
+						>
+							<span class="flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)] bg-[color-mix(in_oklab,var(--color-ok)_10%,#ffffff)] text-[var(--color-ok)]">
+								<Icon name="circle-check" class="h-4 w-4" />
+							</span>
+							Nomor Surat Berhasil Dibuat
+						</h3>
+						<button
+							type="button"
+							class="btn-icon"
+							data-nomor-berhasil-close
+							aria-label="Tutup"
+						>
+							<Icon name="x" class="h-4 w-4" />
+						</button>
+					</div>
+
+					{/*
+						Isian disusun seperti form "Kirim Disposisi": label kecil di
+						atas, kontrol di bawahnya. Bedanya, nilainya hanya-baca dan
+						disertai tombol salin di ujung kanan.
+					*/}
+					<div class="space-y-4 px-5 py-4">
+						<p class="text-xs text-[var(--color-ink-subtle)]">
+							Salin rincian di bawah ini untuk ditempelkan ke dokumen atau
+							aplikasi lain.
+						</p>
+
+						<div class="space-y-4">
+							{baris.map((item) => (
+								<div>
+									<label class="label" for={`salin-${item.key}`}>
+										{item.label}
+									</label>
+									<div class="flex items-stretch gap-2">
+										<input
+											class:list={[
+												"input flex-1",
+												item.key === "nomor" && "tabular",
+											]}
+											id={`salin-${item.key}`}
+											type="text"
+											value={item.value}
+											readonly
+											data-copy-value={item.value}
+										/>
+										<button
+											type="button"
+											class="btn-outline btn-sm shrink-0"
+											title={`Salin ${item.label.toLowerCase()}`}
+											aria-label={`Salin ${item.label}`}
+											data-copy
+											data-copy-target={item.key}
+										>
+											<Icon name="clipboard" class="h-4 w-4" />
+											<span>Salin</span>
+										</button>
+									</div>
+								</div>
+							))}
+						</div>
+
+						{/* Umpan balik kecil setelah menyalin. */}
+						<p
+							class="hidden text-xs text-[var(--color-ok)]"
+							role="status"
+							aria-live="polite"
+							data-copy-status
+						>
+							Disalin ke papan klip.
+						</p>
+					</div>
+
+					<div class="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--color-line)] px-5 py-3">
+						<button
+							type="button"
+							class="btn-outline btn-sm"
+							data-nomor-berhasil-close
+						>
+							Tutup
+						</button>
+						<button type="button" class="btn-primary btn-sm" data-copy-all>
+							<Icon name="clipboard" class="h-4 w-4" />
+							<span>Salin semua</span>
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	)
+}
+
+<script>
+	/**
+	 * Buka popup otomatis, lalu tangani aksi salin.
+	 *
+	 * `navigator.clipboard` hanya tersedia pada secure context (https atau
+	 * localhost). Bila tidak tersedia — mis. aplikasi dibuka lewat IP LAN pada
+	 * http — dipakai fallback `document.execCommand("copy")` dengan textarea
+	 * sementara agar tombol salin tetap berfungsi.
+	 */
+	const modal = document.querySelector<HTMLElement>("[data-nomor-berhasil]");
+
+	if (modal) {
+		/**
+		 * Buka overlay.
+		 *
+		 * `HSOverlay.open()` hanya bekerja bila Preline SUDAH mengoleksi elemen
+		 * ini (`window.$hsOverlayCollection`), dan Preline baru menginisialisasi
+		 * pada event `load`. Skrip modul Astro bisa berjalan sebelum itu,
+		 * sehingga panggilan langsung bisa no-op — popup tidak muncul sama
+		 * sekali (gejala yang dilaporkan: hanya notifikasi hijau yang terlihat).
+		 *
+		 * Karena itu: pastikan koleksi ada lebih dulu (panggil `autoInit` bila
+		 * perlu), lalu buka. Bila tetap tidak bisa, kelas overlay dipasang
+		 * manual sebagai fallback sehingga popup selalu tampil.
+		 */
+		const bukaModal = () => {
+			const HS = (window as any).HSOverlay;
+
+			if (HS && typeof HS.autoInit === "function") {
+				const koleksi = (window as any).$hsOverlayCollection;
+				if (!Array.isArray(koleksi) || koleksi.length === 0) HS.autoInit();
+			}
+
+			if (HS && typeof HS.open === "function") {
+				HS.open(modal);
+				// HS.open() menambahkan kelas setelah transisi; pastikan terlihat
+				// meski koleksi belum siap.
+				if (modal.classList.contains("hidden")) {
+					modal.classList.remove("hidden");
+					modal.classList.add("open");
+				}
+			} else {
+				modal.classList.remove("hidden");
+				modal.classList.add("open");
+			}
+		};
+
+		bukaModal();
+		// Preline menginisialisasi pada `load`; ulangi sekali setelah itu.
+		if (document.readyState !== "complete") {
+			window.addEventListener("load", bukaModal, { once: true });
+		}
+
+		const status = modal.querySelector<HTMLElement>("[data-copy-status]");
+
+		const tampilkanStatus = () => {
+			if (!status) return;
+			status.classList.remove("hidden");
+			window.setTimeout(() => status.classList.add("hidden"), 2000);
+		};
+
+		const salin = async (text: string) => {
+			if (text.trim() === "") return;
+
+			try {
+				if (navigator.clipboard && window.isSecureContext) {
+					await navigator.clipboard.writeText(text);
+				} else {
+					const area = document.createElement("textarea");
+					area.value = text;
+					area.setAttribute("readonly", "");
+					area.style.position = "fixed";
+					area.style.opacity = "0";
+					document.body.appendChild(area);
+					area.select();
+					document.execCommand("copy");
+					document.body.removeChild(area);
+				}
+				tampilkanStatus();
+			} catch {
+				// Gagal menyalin: biarkan pengguna menyeleksi teks secara manual.
+				status?.classList.add("hidden");
+			}
+		};
+
+		modal.querySelectorAll<HTMLElement>("[data-copy]").forEach((btn) => {
+			btn.addEventListener("click", () => {
+				// Nilai diambil dari input pada baris tempat tombol berada
+				// (bukan baris pertama), agar setiap tombol menyalin field benar.
+				const value =
+					btn
+						.closest("div")
+						?.parentElement?.querySelector<HTMLInputElement>(
+							"[data-copy-value]",
+						)?.value ?? "";
+				void salin(value);
+			});
+		});
+
+		modal
+			.querySelector<HTMLElement>("[data-copy-all]")
+			?.addEventListener("click", () => {
+				void salin(modal.dataset.teksGabungan ?? "");
+			});
+
+		modal
+			.querySelectorAll<HTMLElement>("[data-nomor-berhasil-close]")
+			.forEach((el) => {
+				el.addEventListener("click", () => {
+					const HS = (window as any).HSOverlay;
+					if (HS && typeof HS.close === "function") HS.close(modal);
+					// Jangan bergantung hanya pada Preline: kelas dibersihkan
+					// sendiri agar popup pasti tertutup.
+					modal.classList.add("hidden");
+					modal.classList.remove("open");
+				});
+			});
+	}
+</script>

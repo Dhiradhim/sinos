@@ -240,13 +240,17 @@ const metaRows: { label: string; value: string }[] = notFound
           <Icon name="printer" class="h-4 w-4" />
           <span>Cetak</span>
         </button>
-        <a
-          href={`/surat-masuk/daftar?tahun=${tahun}`}
-          class="btn-outline btn-sm"
-        >
-          <Icon name="arrow-left" class="h-4 w-4" />
-          <span>Kembali</span>
-        </a>
+        {/*
+          * "Tutup" (bukan "Kembali"): lembar ini dibuka di TAB BARU dari daftar
+          * surat masuk, sehingga tindakan yang diharapkan adalah menutup tab —
+          * bukan menavigasi tab ini ke daftar (yang meninggalkan tab daftar
+          * asli tetap terbuka). Warna danger membedakannya dari aksi utama
+          * "Cetak".
+          */}
+        <button type="button" class="btn-destructive btn-sm" data-close-tab>
+          <Icon name="x" class="h-4 w-4" />
+          <span>Tutup</span>
+        </button>
       </div>
     </div>
 
@@ -416,5 +420,26 @@ const metaRows: { label: string; value: string }[] = notFound
 <script>
   document.querySelectorAll<HTMLElement>("[data-print]").forEach((el) => {
     el.addEventListener("click", () => window.print());
+  });
+
+  /**
+   * Tombol "Tutup" — menutup TAB, bukan menavigasi.
+   *
+   * `window.close()` hanya diizinkan browser untuk tab yang dibuka oleh skrip
+   * (`window.open` / target=_blank dari tautan). Bila ditolak — misalnya
+   * pengguna membuka URL ini langsung — panggilan tidak melempar error, tetapi
+   * tab tetap terbuka. Karena itu setelah percobaan, halaman memeriksa apakah
+   * dirinya masih hidup; bila masih, pengguna dikembalikan ke daftar supaya
+   * tombol tidak terasa mati.
+   */
+  document.querySelectorAll<HTMLElement>("[data-close-tab]").forEach((el) => {
+    el.addEventListener("click", () => {
+      window.close();
+
+      // Masih di sini berarti penutupan ditolak browser.
+      window.setTimeout(() => {
+        if (!window.closed) window.location.href = "/surat-masuk/daftar";
+      }, 120);
+    });
   });
 </script>

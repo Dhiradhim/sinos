@@ -44,10 +44,10 @@ class M_nosur extends MY_Model
     /**
      * Query dasar daftar nomor surat untuk API baca (paginasi server-side).
      *
-     * Sengaja MENGULANG bentuk query `daftar_user()` / `daftar_tahun()` apa
-     * adanya (join inner ke pegawai_db.pegawai, urut id DESC) agar hasil JSON
-     * identik dengan yang dirender view. Bedanya hanya: LIMIT/OFFSET dan
-     * pencarian `q` yang dijalankan di server, bukan di DataTables.
+     * MENGULANG bentuk query `daftar_user()` / `daftar_tahun()` apa adanya
+     * (join inner ke pegawai_db.pegawai). Bedanya: LIMIT/OFFSET, pencarian
+     * `q` di server, dan pengurutan tanggal/no_urut/huruf yang diterapkan
+     * oleh `api_daftar()`.
      *
      * Method ini BARU; `daftar_user()` dan `daftar_tahun()` tidak diubah.
      *
@@ -91,8 +91,27 @@ class M_nosur extends MY_Model
     {
         $this->_api_query($tahun, $nip, $q);
 
-        // Urutan sama dengan daftar_user()/daftar_tahun(): id DESC (deterministik).
-        $this->db->order_by('nosur.id', 'DESC');
+        /**
+         * Urutan daftar: TANGGAL → NO_URUT → HURUF.
+         *
+         * Aturan huruf: entri tanpa huruf lebih dulu, lalu A, B, C, dst.
+         * `huruf` disimpan sebagai VARCHAR dan nilai kosong bisa berupa NULL
+         * maupun '' (dua-duanya berarti "tanpa huruf"), sehingga pengurutan
+         * alfabet biasa akan menempatkan '' sebelum 'A' — tetapi NULL selalu
+         * dianggap paling kecil oleh MySQL. Ekspresi `COALESCE(huruf, '')`
+         * menyamakan keduanya agar '' (tanpa huruf) benar-benar di depan.
+         *
+         * Tanggal DESC: nomor terbaru di atas, sesuai kebiasaan daftar surat.
+         * no_urut DESC mengikuti tanggal agar deret terbaru tampil lebih dulu;
+         * huruf ASC agar 1500 → 1500A → 1500B dalam satu tanggal.
+         *
+         * `id` ditambahkan sebagai pemecah seri terakhir supaya paginasi
+         * deterministik (tanpa ini, dua baris identik dapat berpindah halaman).
+         */
+        $this->db->order_by('nosur.tanggal', 'DESC');
+        $this->db->order_by('nosur.no_urut', 'DESC');
+        $this->db->order_by("COALESCE(nosur.huruf, '')", 'ASC', FALSE);
+        $this->db->order_by('nosur.id', 'ASC');
         $this->db->limit(max(1, (int) $limit), max(0, (int) $offset));
 
         return $this->db->get()->result();
@@ -196,17 +215,30 @@ class M_nosur extends MY_Model
     }
 
     /**
-     * Cek apakah kombinasi tanggal + no_urut + huruf sudah ada.
+     * Cek apakah kombinasi no_urut + huruf sudah dipakai.
      *
-     * @param  string      $tanggal
+     * Nomor urut surat keluar bersifat GLOBAL per tahun, bukan per tanggal.
+     * Pembandingnya karena itu TIDAK menyertakan `tanggal`: nomor 1500 yang
+     * sudah dipakai pada 20 Oktober tetap menghalangi 1500 pada 30 September
+     * (tanggal mundur), sehingga bentrok tidak pernah terjadi.
+     *
+     * Sebelumnya fungsi ini memfilter `tanggal`, akibatnya sisip nomor pada
+     * tanggal mundur selalu lolos di nomor urut yang sudah terpakai di tanggal
+     * lain — menghasilkan nomor ganda (mis. 1500 pada dua tanggal berbeda)
+     * alih-alih memakai huruf berikutnya (1500A).
+     *
      * @param  int         $no_urut
      * @param  string|null $huruf
+     * @param  int|null    $tahun   Batasi ke satu tahun (NULL = semua tahun)
      * @return bool
      */
-    public function nomor_terpakai($tanggal, $no_urut, $huruf = NULL)
+    public function nomor_terpakai($no_urut, $huruf = NULL, $tahun = NULL)
     {
-        $this->db->where('tanggal', $tanggal);
         $this->db->where('no_urut', (int) $no_urut);
+
+        if ($tahun !== NULL) {
+            $this->db->where('YEAR(tanggal)', (int) $tahun);
+        }
 
         if ($huruf === NULL || $huruf === '') {
             $this->db->group_start();

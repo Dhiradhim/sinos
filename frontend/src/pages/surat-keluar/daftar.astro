@@ -26,6 +26,7 @@ import DataTable, { type Column } from "../../components/DataTable.astro";
 import Pagination from "../../components/Pagination.astro";
 import TahunSelector from "../../components/TahunSelector.astro";
 import FeedbackAlert from "../../components/FeedbackAlert.astro";
+import NomorBerhasilModal from "../../components/NomorBerhasilModal.astro";
 import Icon from "../../components/Icon.astro";
 import { requireUser } from "../../lib/auth";
 import { apiFetch } from "../../lib/api";
@@ -41,6 +42,23 @@ const token = getSession(Astro.cookies);
 
 /** Umpan balik unggah berkas yang mengalihkan kembali ke daftar ini. */
 const feedback = takeFormFeedback(Astro.cookies, Astro.url.pathname);
+
+/**
+ * Rincian nomor untuk popup "Nomor Surat Berhasil Dibuat".
+ *
+ * Diisi oleh action route `/api/surat-keluar/ambil` pada `result` cookie
+ * umpan balik. `nomor` wajib ada; bila kosong (mis. umpan balik dari unggah
+ * berkas), popup tidak dirender.
+ */
+const nomorBerhasil =
+	feedback?.result && String(feedback.result.nomor ?? "").trim() !== ""
+		? {
+				nomor: String(feedback.result.nomor ?? ""),
+				tanggal: String(feedback.result.tanggal ?? ""),
+				hal: String(feedback.result.hal ?? ""),
+				tujuan: String(feedback.result.tujuan ?? ""),
+			}
+		: null;
 
 const params = Astro.url.searchParams;
 
@@ -130,6 +148,23 @@ const renderKeys = ["no", "berkas", "aksi"];
 			<FeedbackAlert
 				type={feedback.type ?? "info"}
 				message={feedback.message}
+			/>
+		)
+	}
+
+	{
+		/*
+		Popup rincian nomor setelah "Ambil Nomor" berhasil. Datanya datang dari
+		`feedback.result` yang diisi action route sebelum redirect 303.
+	*/
+	}
+	{
+		nomorBerhasil && (
+			<NomorBerhasilModal
+				nomor={nomorBerhasil.nomor}
+				tanggal={nomorBerhasil.tanggal}
+				perihal={nomorBerhasil.hal}
+				tujuan={nomorBerhasil.tujuan}
 			/>
 		)
 	}

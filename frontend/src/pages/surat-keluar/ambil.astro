@@ -34,7 +34,7 @@ import { requireUser } from "../../lib/auth";
 import { apiFetch } from "../../lib/api";
 import { getSession } from "../../lib/session";
 import { takeFormFeedback } from "../../lib/formFeedback";
-import { currentYear, todayISO } from "../../lib/format";
+import { currentYear } from "../../lib/format";
 import type {
 	Klasifikasi,
 	PenandatanganGrup,
@@ -81,11 +81,12 @@ const belumUpload = (sendiriRes.data ?? []).filter(
 	(row) => row.file.state === "pending" && row.hal !== "Belum Diambil",
 );
 
-/**
- * Tanggal penomoran hari ini menurut zona waktu aplikasi (UTC+8 / WITA) —
- * ditetapkan server, hanya ditampilkan.
+/*
+ * Tanggal penomoran ditetapkan server (`date('Y-m-d')` di
+ * api/Surat_keluar::ambil()) dan TIDAK ditampilkan di form — permintaan
+ * pengguna: halaman ambil tidak perlu field tanggal. `todayISO()` tidak lagi
+ * dipakai di sini.
  */
-const today = todayISO();
 
 const pesanBerkas = "Mohon upload softcopy nomor surat sebelumnya!";
 const kode409 = feedback?.code === "BERKAS_BELUM_LENGKAP";
@@ -152,7 +153,6 @@ const berkasTarget = belumUpload.length > 0 ? belumUpload[0] : null;
 				klasifikasi={klasifikasi}
 				nilai={feedback?.values ?? null}
 				errors={feedback?.errors ?? null}
-				todayInfo={today}
 			/>
 
 			<div class="separator"></div>

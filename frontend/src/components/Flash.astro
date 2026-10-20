@@ -6,64 +6,64 @@
 import Icon from "./Icon.astro";
 
 interface Props {
-  type?: "success" | "error" | "warning" | "info";
-  message: string;
+	type?: "success" | "error" | "warning" | "info";
+	message: string;
 }
 
 const { type = "info", message } = Astro.props;
 
 const STYLES = {
-  success: { klass: "alert-success", icon: "circle-check", title: "Berhasil" },
-  error: { klass: "alert-danger", icon: "octagon-x", title: "Gagal" },
-  warning: {
-    klass: "alert-warning",
-    icon: "triangle-alert",
-    title: "Perhatian",
-  },
-  info: { klass: "alert-info", icon: "info", title: "Informasi" },
+	success: { klass: "alert-success", icon: "circle-check", title: "Berhasil" },
+	error: { klass: "alert-danger", icon: "octagon-x", title: "Gagal" },
+	warning: {
+		klass: "alert-warning",
+		icon: "triangle-alert",
+		title: "Perhatian",
+	},
+	info: { klass: "alert-info", icon: "info", title: "Informasi" },
 } as const;
 
 const cfg = STYLES[type] ?? STYLES.info;
 ---
 
 <div
-  class:list={[cfg.klass, "mb-4"]}
-  data-flash
-  role="status"
-  aria-live="polite"
+	class:list={[cfg.klass, "mb-4"]}
+	data-flash
+	role="status"
+	aria-live="polite"
 >
-  <span class="mt-0.5 shrink-0"><Icon name={cfg.icon} class="h-4 w-4" /></span>
-  <div class="flex-1">
-    <p class="alert-title">{cfg.title}</p>
-    <p class="alert-description">{message}</p>
-  </div>
-  <button
-    type="button"
-    data-flash-close
-    class="-mr-1 -mt-1 shrink-0 rounded-[var(--radius-control)] p-1 opacity-60 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_oklab,var(--color-brand-900)_35%,transparent)]"
-    aria-label="Tutup notifikasi"
-  >
-    <Icon name="x" class="h-3.5 w-3.5" />
-  </button>
+	<span class="mt-0.5 shrink-0"><Icon name={cfg.icon} class="h-4 w-4" /></span>
+	<div class="flex-1">
+		<p class="alert-title">{cfg.title}</p>
+		<p class="alert-description">{message}</p>
+	</div>
+	<button
+		type="button"
+		data-flash-close
+		class="-mr-1 -mt-1 shrink-0 rounded-[var(--radius-control)] p-1 opacity-60 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_oklab,var(--color-brand-900)_35%,transparent)]"
+		aria-label="Tutup notifikasi"
+	>
+		<Icon name="x" class="h-3.5 w-3.5" />
+	</button>
 </div>
 
 <script>
-  // Auto-dismiss 4 detik. Ditulis inline agar tidak perlu modul bersama.
-  const DISMISS_MS = 4000;
+	// Auto-dismiss 3 detik — disamakan dengan FeedbackAlert (permintaan pengguna).
+	const DISMISS_MS = 3000;
 
-  const hide = (el: HTMLElement) => {
-    el.style.transition = "opacity 160ms ease";
-    el.style.opacity = "0";
-    window.setTimeout(() => el.remove(), 180);
-  };
+	const hide = (el: HTMLElement) => {
+		el.style.transition = "opacity 160ms ease";
+		el.style.opacity = "0";
+		window.setTimeout(() => el.remove(), 180);
+	};
 
-  document.querySelectorAll<HTMLElement>("[data-flash]").forEach((el) => {
-    const button = el.querySelector<HTMLElement>("[data-flash-close]");
-    button?.addEventListener("click", () => hide(el));
+	document.querySelectorAll<HTMLElement>("[data-flash]").forEach((el) => {
+		const button = el.querySelector<HTMLElement>("[data-flash-close]");
+		button?.addEventListener("click", () => hide(el));
 
-    const timer = window.setTimeout(() => hide(el), DISMISS_MS);
-    el.addEventListener("mouseenter", () => window.clearTimeout(timer), {
-      once: true,
-    });
-  });
+		const timer = window.setTimeout(() => hide(el), DISMISS_MS);
+		el.addEventListener("mouseenter", () => window.clearTimeout(timer), {
+			once: true,
+		});
+	});
 </script>

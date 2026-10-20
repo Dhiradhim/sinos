@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { getSession } from "../../../lib/session";
 import { apiFetch } from "../../../lib/api";
 import { currentYear } from "../../../lib/format";
-import { errorFields, submitAmbil } from "../../../lib/suratKeluar";
+import { errorFields, nomorList, submitAmbil } from "../../../lib/suratKeluar";
 import { setFormFeedback } from "../../../lib/formFeedback";
 import type { ApiUser } from "../../../lib/auth";
 
@@ -43,12 +43,45 @@ export const POST: APIRoute = async ({ cookies, request, redirect }) => {
   }
 
   if (result.ok) {
+    /**
+     * Ringkasan nomor yang baru dibuat, dibawa ke halaman daftar lewat cookie
+     * umpan balik. Halaman daftar memakainya untuk popup "Nomor Surat Berhasil
+     * Dibuat" yang teksnya dapat disalin.
+     *
+     * Nilai diambil dari respons 201: `data.nomor` (array), `data.perihal`,
+     * dan `meta.tanggal` / `meta.tahun`. `tujuan` tidak dikirim API, jadi
+     * diambil dari nilai form yang barusan dikirim.
+     */
+    const nomor = nomorList(result.data);
+    const perihal =
+      (result.data as { perihal?: unknown } | null)?.perihal ??
+      values.hal ??
+      "";
+    const tanggal =
+      String(result.meta?.tanggal ?? "") || new Date().toISOString().slice(0, 10);
+
     // Tujuan redirect mengikuti peran, seperti controller CI3.
     const me = await apiFetch<ApiUser>("/auth/me", { token });
     const tahun = String(result.meta?.tahun ?? currentYear());
     const target = me.data?.is_admin
       ? `/surat-keluar/daftar-semua?tahun=${tahun}`
       : `/surat-keluar/daftar?tahun=${tahun}`;
+
+    setFormFeedback(cookies, {
+      target,
+      type: "success",
+      message:
+        nomor.length > 0
+          ? `Nomor surat dibuat: ${nomor.join(", ")}`
+          : "Nomor surat berhasil dibuat.",
+      result: {
+        nomor: nomor.join(", "),
+        tanggal,
+        hal: String(perihal),
+        tujuan: values.tujuan ?? "",
+        mode: "ambil",
+      },
+    });
 
     return redirect(target, 303);
   }

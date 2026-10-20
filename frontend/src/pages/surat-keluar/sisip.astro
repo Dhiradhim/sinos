@@ -69,6 +69,12 @@ const nilaiTanggal =
 		? feedback.values.tanggal
 		: today;
 
+/**
+ * Ringkasan audit sisip. HANYA terisi bila route action mengalihkan kembali
+ * ke halaman ini (kasus gagal). Pada 201 route mengalihkan ke
+ * `/surat-keluar/daftar-semua`, jadi popup rincian nomor dirender di sana —
+ * bukan di sini.
+ */
 const audit = feedback?.result ?? null;
 ---
 

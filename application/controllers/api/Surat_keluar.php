@@ -19,19 +19,26 @@ require_once APPPATH . 'core/MY_Api_Controller.php';
  *   POST api/v1/surat-keluar/ID/berkas    unggah berkas PDF
  *
  * PENOMORAN - ATURAN PALING PENTING
- * Algoritma penomoran TIDAK ditulis ulang. Method ini memanggil deretan
- * method model yang sama dengan `Surat_keluar::ambil_simpan()` /
- * `sisip_simpan()` dalam urutan yang sama:
  *
- *   M_nosur::last_no_urut_tanggal($tanggal)
- *   M_nosur::last_no_urut_sebelum($tanggal)      (bila hasil pertama 0)
- *   M_nosur::huruf_terpakai($tanggal)
- *   M_nosur::nomor_terpakai($tanggal, $no_urut, $huruf)   (di dalam loop)
+ * Nomor urut bersifat GLOBAL PER TAHUN (bukan per tanggal). Deret berjalan
+ * terus melewati pergantian tanggal; nomor yang sama tidak boleh muncul dua
+ * kali meski tanggalnya berbeda. Bila nomor urut sudah terpakai, dipakai
+ * huruf berikutnya (1500 → 1500A → 1500B, dst).
+ *
+ * Urutan pemanggilan:
+ *
+ *   M_nosur::last_no_urut($tahun)                          titik awal deret
+ *   M_nosur::huruf_terpakai($tanggal)                      audit huruf
+ *   M_nosur::nomor_terpakai($no_urut, $huruf, $tahun)      (di dalam loop)
  *   M_nosur::insert_batch_nomor($rows)
  *
- * Pembantu murni (huruf_sisip, format_no_surat) juga yang sama dari
- * application/helpers/sinos_helper.php. Dengan begitu perubahan aturan
- * penomoran di masa depan cukup dilakukan di satu tempat.
+ * CATATAN PERUBAHAN: sebelumnya titik awal memakai `last_no_urut_tanggal()`
+ * dan pengecekan bentrok memakai `nomor_terpakai($tanggal, ...)`. Keduanya
+ * memfilter tanggal, sehingga sisip nomor bertanggal mundur dapat memakai
+ * nomor urut yang sudah dipakai di tanggal lain — menghasilkan nomor ganda.
+ *
+ * Pembantu murni (huruf_sisip, format_no_surat) tetap dari
+ * application/helpers/sinos_helper.php.
  *
  * CATATAN METODE: multipart PUT tidak dapat dibaca PHP ($_FILES kosong),
  * sehingga `PUT /surat-keluar/{id}` boleh dikirim sebagai POST dengan
@@ -437,20 +444,21 @@ class Surat_keluar extends MY_Api_Controller
         $bulan = getRomawi((int) date('n', $ts));
         $kode  = trim((string) $input['ks']);
 
-        // 1. Nomor terakhir pada tanggal tersebut.
-        $dasar = $this->M_nosur->last_no_urut_tanggal($tanggal);
-
-        // 2. Bila belum ada nomor pada tanggal itu, lanjutkan dari tanggal
-        //    terakhir sebelum/sama dengan tanggal tersebut.
-        $sebelum = NULL;
-        if ($dasar === 0) {
-            $sebelum = $this->M_nosur->last_no_urut_sebelum($tanggal);
-            $dasar   = $sebelum;
-        }
-
+        /**
+         * Nomor urut bersifat GLOBAL per tahun, bukan per tanggal.
+         *
+         * Karena itu titik awalnya adalah nomor urut tertinggi pada tahun
+         * tersebut — bukan nomor tertinggi pada tanggal yang dipilih. Dengan
+         * begitu menyisipkan nomor bertanggal mundur tetap melanjutkan deret
+         * yang sedang berjalan dan tidak pernah menghasilkan nomor urut yang
+         * sudah dipakai di tanggal lain.
+         */
+        $dasar   = $this->M_nosur->last_no_urut($tahun);
+        $sebelum = ($dasar === 0) ? NULL : $dasar;
         $no_urut = $dasar + 1;
 
-        // 3. Huruf yang sudah terpakai pada tanggal tersebut.
+        // Huruf yang sudah terpakai untuk nomor urut ini (semua tanggal pada
+        // tahun berjalan) — dipakai untuk audit pada respons.
         $terpakai = $this->M_nosur->huruf_terpakai($tanggal);
 
         $rows      = array();
@@ -461,10 +469,10 @@ class Surat_keluar extends MY_Api_Controller
             $index = $i;
             $huruf = huruf_sisip($index);
 
-            // 4. Hindari bentrok dengan nomor yang sudah ada (batas 200,
-            //    sama dengan controller HTML).
+            // Hindari bentrok nomor urut + huruf dengan SELURUH tanggal pada
+            // tahun berjalan (batas 200, sama dengan controller HTML).
             $pengaman = 0;
-            while ($this->M_nosur->nomor_terpakai($tanggal, $no_urut, $huruf) && $pengaman < 200) {
+            while ($this->M_nosur->nomor_terpakai($no_urut, $huruf, $tahun) && $pengaman < 200) {
                 $index++;
                 $huruf = huruf_sisip($index);
                 $pengaman++;

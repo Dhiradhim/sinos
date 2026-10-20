@@ -15,10 +15,12 @@
  *     Kode Penetapan | [Tanggal] | Kode Surat
  *     Perihal        | Tujuan
  *
- * Mode `ambil`   : Kode Penetapan 1/4 + Kode Surat 3/4 (tanpa tanggal).
+ * Mode `ambil`   : Kode Penetapan 1/4 + Kode Surat 3/4 — TANPA field tanggal
+ *                  (permintaan pengguna; tanggal penomoran ditetapkan server
+ *                  dan tidak ditampilkan sama sekali).
  * Mode `sisip`   : Kode Penetapan 1/4 + Tanggal 1/4 + Kode Surat 2/4.
- * Mode `edit`    : sama seperti ambil; field tanggal dirender halaman edit
- *                  di bawah partial, persis seperti edit.php:21.
+ * Mode `edit`    : sama seperti ambil (tanpa tanggal); halaman edit mengirim
+ *                  tanggal tersimpan lewat input hidden.
  *
  * Arah B: tidak ada kartu. Fieldset dipisah `.separator`; legenda memakai
  * `.fieldset-legend` (port input.v4.css:338).
@@ -49,14 +51,12 @@ interface Props {
 	/** Khusus sisip: batas atas + nilai awal tanggal (Y-m-d). */
 	tanggalField?: { max: string; value: string } | null;
 	/**
-	 * Khusus ambil: tanggal hari ini, ditampilkan sebagai field baca-saja.
+	 * @deprecated Tidak dipakai lagi.
 	 *
-	 * CI3 tidak merender field tanggal pada form ambil (`_form_nomor_fields.php`
-	 * hanya mengeluarkan tanggal bila `$tanggal_field` diisi, yaitu pada sisip).
-	 * Brief Fase 5c meminta kontrol "Tanggal → <input type="date">" juga di
-	 * halaman ambil, jadi field ini dirender `disabled` dengan nilai hari ini:
-	 * tanggal penomoran ditetapkan server (`date('Y-m-d')`), bukan dikirim
-	 * klien, sehingga nomor tidak pernah bisa diprediksi dari input pengguna.
+	 * Dulu menampilkan tanggal hari ini sebagai input `disabled` pada mode
+	 * `ambil`. Permintaan pengguna menghapus field tanggal dari halaman ambil
+	 * seluruhnya (tanggal penomoran memang ditetapkan server), jadi properti
+	 * ini dibiarkan ada hanya agar pemanggil lama tidak error.
 	 */
 	todayInfo?: string | null;
 }
@@ -103,9 +103,12 @@ const kodePenetapanOptions = KODE_PENETAPAN.map((item) => ({
 	label: `${item.label} [${item.kode}]`,
 }));
 
+/**
+ * Hanya mode `sisip` yang merender kolom Tanggal. Mode `ambil` dan `edit`
+ * tidak menampilkan tanggal sama sekali.
+ */
 const withTanggal = mode === "sisip";
-const withTanggalInfo = mode === "ambil" && todayInfo !== null;
-const tanggalCols = withTanggal || withTanggalInfo;
+const tanggalCols = withTanggal;
 ---
 
 <fieldset>
@@ -213,22 +216,6 @@ const tanggalCols = withTanggal || withTanggalInfo;
 						aria-invalid={errorOf("tanggal") ? "true" : undefined}
 						aria-describedby={errorOf("tanggal") ? "tanggal-error" : undefined}
 						required
-					/>
-				</Field>
-			)
-		}
-
-		{
-			withTanggalInfo && (
-				<Field label="Tanggal" name="tanggal" hint="Ditetapkan server.">
-					<input
-						class="input"
-						type="date"
-						id="tanggal"
-						name="tanggal"
-						value={todayInfo}
-						disabled
-						aria-describedby="tanggal-hint"
 					/>
 				</Field>
 			)

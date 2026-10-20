@@ -11,20 +11,14 @@ import { setFormFeedback } from "../../../lib/formFeedback";
 /**
  * Action route: sisip nomor surat (tanggal mundur).
  *
- * Meneruskan ke `POST /api/v1/surat-keluar/sisip`. Pada 201, `meta` respons
- * (`last_no_urut_sebelum`, `huruf_terpakai`, `nomor_terpakai`) diringkas dan
- * disimpan di cookie umpan balik sekali pakai, sehingga halaman dapat
- * menampilkan jejak audit setelah redirect 303 — di CI3 informasi ini hanya
- * terlihat lewat flashdata.
+ * Meneruskan ke `POST /api/v1/surat-keluar/sisip`. Pada 201, ringkasan hasil
+ * disimpan di cookie umpan balik sekali pakai.
  *
  * Hasil:
- *   201 → 303 kembali ke /surat-keluar/sisip dengan `.alert-success` berisi
- *         ringkasan meta (audit trail). DEVIASI dari CI3 (yang mengalihkan ke
- *         daftar): brief meminta ringkasan `meta.last_no_urut_sebelum` /
- *         `nomor_terpakai` / `huruf_terpakai` ditampilkan setelah 201, dan
- *         satu-satunya halaman yang merender ringkasan itu adalah form sisip.
- *         Mengalihkan ke daftar akan membuang cookie umpan balik tanpa pernah
- *         menampilkannya.
+ *   201 → 303 ke /surat-keluar/daftar-semua (permintaan pengguna), sehingga
+ *         popup "Nomor Surat Berhasil Dibuat" langsung tampil di daftar —
+ *         sama seperti alur "Ambil Nomor". Sebelumnya halaman tetap di form
+ *         sisip, sehingga popup tidak pernah muncul.
  *   422 → 303 kembali ke /surat-keluar/sisip, error per-field + nilai
  *   401 → 303 ke /login
  */
@@ -56,14 +50,35 @@ export const POST: APIRoute = async ({ cookies, request, redirect }) => {
         ? `Nomor surat disisipkan: ${nomor.join(", ")}`
         : "Nomor surat berhasil disisipkan.");
 
+    /**
+     * `result` dipakai dua hal sekaligus: ringkasan audit sisip (nomor urut
+     * sebelumnya, nomor/huruf terpakai) DAN rincian nomor untuk popup
+     * "Nomor Surat Berhasil Dibuat" (nomor, tanggal, perihal, tujuan).
+     *
+     * `nomor` (kunci yang dibaca daftar-semua untuk memicu popup) diisi
+     * nomor yang baru dibuat — bukan ringkasan audit — agar popup langsung
+     * tampil setelah redirect.
+     */
+    const tujuan = `/surat-keluar/daftar-semua?tahun=${String(
+      result.meta?.tahun ?? values.tanggal?.slice(0, 4) ?? "",
+    )}`;
+
     setFormFeedback(cookies, {
-      target: "/surat-keluar/sisip",
+      target: "/surat-keluar/daftar-semua",
       type: "success",
       message: pesan,
-      result: summarizeSisipMeta(result.meta, nomor),
+      result: {
+        ...summarizeSisipMeta(result.meta, nomor),
+        nomor: nomor.join(", "),
+        nomor_popup: nomor.join(", "),
+        tanggal: values.tanggal ?? "",
+        hal: values.hal ?? "",
+        tujuan: values.tujuan ?? "",
+        mode: "sisip",
+      },
     });
 
-    return redirect("/surat-keluar/sisip", 303);
+    return redirect(tujuan, 303);
   }
 
   setFormFeedback(cookies, {

@@ -14,13 +14,14 @@
  * `/api/surat-keluar/{id}`), karena PHP tidak mengisi `$_FILES` pada PUT.
  * `no_urut` dan `huruf` tidak pernah dikirim; server mempertahankannya.
  *
- * Field tanggal dirender di sini (di bawah partial), persis seperti
- * edit.php:21-27.
+ * TANGGAL SURAT: field tanggal TIDAK ditampilkan lagi (permintaan pengguna).
+ * Nilainya tetap dikirim sebagai input hidden berisi tanggal tersimpan, karena
+ * API update mewajibkan `tanggal`; dengan begitu menyimpan perubahan tidak
+ * menggeser bulan/tahun nomor surat.
  */
 import AppShell from "../../../layouts/AppShell.astro";
 import PageHead from "../../../components/PageHead.astro";
 import NomorFields from "../../../components/NomorFields.astro";
-import Field from "../../../components/Field.astro";
 import FeedbackAlert from "../../../components/FeedbackAlert.astro";
 import Icon from "../../../components/Icon.astro";
 import NotFoundState from "../../../components/NotFoundState.astro";
@@ -194,27 +195,19 @@ const badgeNomor = notFound
 							errors={feedback?.errors ?? null}
 						/>
 
-						<div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-							<Field
-								label="Tanggal Surat"
-								name="tanggal"
-								required
-								error={feedback?.errors?.tanggal}
-							>
-								<input
-									class="input"
-									type="date"
-									id="tanggal"
-									name="tanggal"
-									value={tanggalValue}
-									aria-invalid={feedback?.errors?.tanggal ? "true" : undefined}
-									aria-describedby={
-										feedback?.errors?.tanggal ? "tanggal-error" : undefined
-									}
-									required
-								/>
-							</Field>
-						</div>
+						{/*
+						 * Tanggal surat TIDAK lagi ditampilkan (permintaan pengguna).
+						 *
+						 * API update mewajibkan `tanggal` (`api_rules_surat_keluar_update`
+						 * → trim|required), jadi nilainya tetap dikirim sebagai input
+						 * hidden berisi tanggal yang tersimpan. Dengan begitu nomor surat
+						 * tidak berubah bulan/tahunnya saat disimpan, dan validasi server
+						 * tetap terpenuhi tanpa field yang dapat diedit pengguna.
+						 *
+						 * Bila ada nilai repopulasi dari percobaan simpan sebelumnya,
+						 * nilai itu yang dipakai agar konsisten.
+						 */}
+						<input type="hidden" name="tanggal" value={tanggalValue} />
 
 						<div class="separator" />
 
