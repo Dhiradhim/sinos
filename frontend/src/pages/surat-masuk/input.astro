@@ -22,6 +22,7 @@ import { requireUser } from "../../lib/auth";
 import { apiFetch } from "../../lib/api";
 import { getSession } from "../../lib/session";
 import { takeFormFeedback } from "../../lib/formFeedback";
+import { currentYear } from "../../lib/format";
 import type { SuratMasukRow } from "../../lib/suratMasuk";
 
 const auth = await requireUser(Astro);
@@ -41,7 +42,7 @@ const klasifikasiResult = await apiFetch<{ kode: string; nama: string }[]>(
 );
 const klasifikasi = klasifikasiResult.data ?? [];
 
-const tahun = new Date().getFullYear();
+const tahun = currentYear();
 
 /**
  * Pratinjau nomor agenda: pola `{urut}/SM/PA.Kp/{tahun}`. Nomor urut

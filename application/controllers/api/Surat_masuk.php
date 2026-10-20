@@ -87,16 +87,40 @@ class Surat_masuk extends MY_Api_Controller
         }
         $status_map = $this->M_disposisi->status_by_surmas($ids);
 
+        $nip         = (string) $this->user['sub'];
+        $is_operator = ! empty($this->user['operator']);
+
         $data = array();
         foreach ($rows as $r) {
             $sid         = (int) $r->id;
             $diarsipkan  = (isset($r->status) && $r->status === 'diarsipkan');
             $status_dis  = isset($status_map[$sid]) ? $status_map[$sid] : NULL;
 
-            // Sama dengan can_send_map pada Surat_masuk::daftar().
+            /**
+             * Hak mengirim/meneruskan disposisi.
+             *
+             * Aturannya SAMA dengan detail & daftar disposisi: yang berhak
+             * adalah PEMILIK POSISI SAAT INI, yaitu penerima disposisi
+             * terakhir surat tersebut.
+             *
+             * Sebelumnya operator selalu lolos (`! empty($this->user['operator'])`),
+             * sehingga operator yang sudah meneruskan surat ke pihak lain tetap
+             * melihat opsi disposisi. `can_send()` juga terlalu longgar: ia
+             * mengembalikan TRUE untuk siapa pun yang PERNAH menerima disposisi
+             * surat itu, termasuk penerima lama.
+             *
+             * - Surat belum pernah didisposisi -> operator (disposisi awal).
+             * - Surat sudah didisposisi       -> hanya `nip_tujuan` terakhir.
+             * - Tujuan "Arsip" (nip_tujuan kosong) -> tidak ada pemilik.
+             */
+            $nip_pemilik = ($status_dis && ! empty($status_dis->nip_tujuan))
+                ? (string) $status_dis->nip_tujuan
+                : '';
+
+            $is_pemilik = ($nip_pemilik !== '' && $nip_pemilik === $nip);
+
             $can_send = ! $diarsipkan && (
-                ! empty($this->user['operator'])
-                || $this->M_disposisi->can_send($sid, (string) $this->user['sub'], FALSE)
+                ($status_dis === NULL && $is_operator) || $is_pemilik
             );
 
             $data[] = array(
@@ -501,8 +525,22 @@ class Surat_masuk extends MY_Api_Controller
 
         // Hak aksi mengikuti view + penjaga di Surat_masuk::arsipkan() /
         // batal_arsip() / hapus(). Astro tidak perlu menurunkan ulang.
+        /**
+         * Hak mengirim/meneruskan disposisi — aturan yang sama dengan daftar:
+         * hanya PEMILIK POSISI SAAT INI (penerima disposisi terakhir) yang
+         * berhak. Operator hanya berhak pada surat yang belum pernah
+         * didisposisikan (disposisi awal).
+         *
+         * `$posisi` di atas adalah baris disposisi terakhir surat ini
+         * (lihat riwayat_surmas + `$posisi = $riwayat[count-1]`).
+         */
+        $nip_pemilik = ($posisi && ! empty($posisi->nip_tujuan))
+            ? (string) $posisi->nip_tujuan
+            : '';
+
         $can_send = ! $diarsipkan && (
-            $is_operator || $this->M_disposisi->can_send($id, $nip, FALSE)
+            (empty($riwayat) && $is_operator)
+            || ($nip_pemilik !== '' && $nip_pemilik === $nip)
         );
         $can_arsipkan = $is_operator && ! $diarsipkan
             && (! empty($riwayat) ? $this->M_disposisi->semua_dikembalikan($id) : TRUE);

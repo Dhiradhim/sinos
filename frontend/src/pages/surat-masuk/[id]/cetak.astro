@@ -25,6 +25,7 @@ import Icon from "../../../components/Icon.astro";
 import { requireUser } from "../../../lib/auth";
 import { apiFetch } from "../../../lib/api";
 import { getSession } from "../../../lib/session";
+import { currentYear } from "../../../lib/format";
 
 const auth = await requireUser(Astro);
 if (auth.redirect) return auth.redirect;
@@ -75,9 +76,8 @@ const kop = payload?.kop ?? "";
 const judul = payload?.judul ?? "Lembar Disposisi";
 
 const tahun = notFound
-  ? new Date().getFullYear()
-  : Number(String(surat?.tgl_surat.iso ?? "").slice(0, 4)) ||
-    new Date().getFullYear();
+  ? currentYear()
+  : Number(String(surat?.tgl_surat.iso ?? "").slice(0, 4)) || currentYear();
 
 /** Baris tabel metadata, urut seperti view CI3. */
 const metaRows: { label: string; value: string }[] = notFound

@@ -10,13 +10,14 @@ require_once APPPATH . 'core/MY_Api_Controller.php';
  *
  * Endpoint:
  *   GET api/v1/master/klasifikasi    daftar kode + nama klasifikasi
- *   GET api/v1/master/pegawai        seluruh pegawai aktif (penerima disposisi)
+ *   GET api/v1/master/pegawai        pegawai aktif calon penerima disposisi
  *   GET api/v1/master/tahun          tahun aktif + daftar tahun tersedia
  *   GET api/v1/master/pengambil      calon pengambil nomor surat keluar
  *   GET api/v1/master/penandatangan  pejabat penanda tangan per grup jabatan
  *
- * `pegawai` memakai M_user::penerima_aktif() (seluruh pegawai aktif, label
- * "Jabatan (Nama)") karena itulah daftar yang dipakai form disposisi.
+ * `pegawai` memakai M_user::penerima_aktif() (pegawai aktif TANPA akun
+ * administrator, label "Jabatan (Nama)") karena itulah daftar yang dipakai
+ * form disposisi — akun admin tidak boleh menjadi penerima disposisi.
  * `pengambil` dan `penandatangan` adalah dua daftar yang dipakai form
  * ambil/sisip nomor surat keluar (lihat surat_keluar/_form_nomor_fields.php);
  * keduanya hanya membaca method model yang sudah ada.
@@ -82,7 +83,8 @@ class Master extends MY_Api_Controller
     /**
      * GET /api/v1/master/pegawai
      *
-     * Seluruh pegawai AKTIF (M_user::penerima_aktif()), urut jabatan lalu nama.
+     * Pegawai AKTIF yang dapat menerima disposisi (M_user::penerima_aktif()),
+     * urut jabatan lalu nama. Akun administrator dikecualikan oleh model.
      */
     public function pegawai()
     {

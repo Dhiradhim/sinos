@@ -30,7 +30,7 @@
 import Field from "./Field.astro";
 import Select from "./Select.astro";
 import Icon from "./Icon.astro";
-import { berkasUrl } from "../lib/format";
+import { berkasUrl, currentYear } from "../lib/format";
 import type { FormFeedbackType } from "../lib/formFeedback";
 
 interface Klasifikasi {
@@ -135,7 +135,7 @@ const filePath = currentFilePath();
 const action = isEdit ? `/api/surat-masuk/${id}` : "/api/surat-masuk";
 const submitLabel = isEdit ? "Simpan Perubahan" : "Simpan";
 const backHref = isEdit
-	? `/surat-masuk/daftar?tahun=${(valueOf("tgl_surat") || "").slice(0, 4) || new Date().getFullYear()}`
+	? `/surat-masuk/daftar?tahun=${(valueOf("tgl_surat") || "").slice(0, 4) || currentYear()}`
 	: "/surat-masuk/daftar";
 ---
 
@@ -195,9 +195,11 @@ const backHref = isEdit
 				class="select"
 				id="pengolah"
 				name="pengolah"
+				aria-required="true"
 				aria-invalid={errorOf("pengolah") ? "true" : undefined}
 				aria-describedby={errorOf("pengolah") ? "pengolah-error" : undefined}
-				required
+				data-select-required="true"
+				data-select-required-message="Pilih pengolah."
 			>
 				<option value="" hidden selected={valueOf("pengolah") === ""}>
 					Pilih Pengolah

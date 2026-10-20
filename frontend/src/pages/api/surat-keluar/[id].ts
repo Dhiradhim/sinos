@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { getSession } from "../../../lib/session";
 import { apiFetch } from "../../../lib/api";
+import { currentYear } from "../../../lib/format";
 import { errorFields, submitUpdate } from "../../../lib/suratKeluar";
 import { setFormFeedback } from "../../../lib/formFeedback";
 import type { ApiUser } from "../../../lib/auth";
@@ -40,7 +41,7 @@ export const POST: APIRoute = async ({ cookies, request, params, redirect }) => 
     const me = await apiFetch<ApiUser>("/auth/me", { token });
     const tahun =
       String(result.data.tanggal?.iso ?? "").slice(0, 4) ||
-      String(new Date().getFullYear());
+      String(currentYear());
     const target = me.data?.is_admin
       ? `/surat-keluar/daftar-semua?tahun=${tahun}`
       : `/surat-keluar/daftar?tahun=${tahun}`;

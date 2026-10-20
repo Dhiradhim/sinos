@@ -12,51 +12,55 @@
  * hidden input. `page` sengaja dibuang agar pergantian tahun kembali ke
  * halaman 1.
  */
+import { currentYear } from "../lib/format";
+
 interface Props {
-  tahun?: number;
-  param?: string;
+	tahun?: number;
+	param?: string;
 }
 
-const { tahun = new Date().getFullYear(), param = "tahun" } = Astro.props;
+/** Tahun berjalan menurut zona aplikasi (UTC+8), bukan zona mesin. */
+const now = currentYear();
 
-const now = new Date().getFullYear();
+const { tahun = now, param = "tahun" } = Astro.props;
+
 const years: number[] = [];
 for (let y = now; y >= 2024; y--) years.push(y);
 
 /** Parameter yang dipertahankan saat tahun berganti. */
 const preserved = [...Astro.url.searchParams.entries()].filter(
-  ([key]) => key !== param && key !== "page",
+	([key]) => key !== param && key !== "page",
 );
 ---
 
 <form method="GET" class="inline-flex" data-tahun-form>
-  {
-    preserved.map(([key, value]) => (
-      <input type="hidden" name={key} value={value} />
-    ))
-  }
-  <label for="tahunSelect" class="sr-only">Tahun</label>
-  <select id="tahunSelect" name={param} class="select w-auto" data-tahun-select>
-    {
-      years.map((y) => (
-        <option value={y} selected={y === Number(tahun)}>
-          {y}
-        </option>
-      ))
-    }
-  </select>
-  <noscript>
-    <button type="submit" class="btn-outline btn-sm ml-2">Terapkan</button>
-  </noscript>
+	{
+		preserved.map(([key, value]) => (
+			<input type="hidden" name={key} value={value} />
+		))
+	}
+	<label for="tahunSelect" class="sr-only">Tahun</label>
+	<select id="tahunSelect" name={param} class="select w-auto" data-tahun-select>
+		{
+			years.map((y) => (
+				<option value={y} selected={y === Number(tahun)}>
+					{y}
+				</option>
+			))
+		}
+	</select>
+	<noscript>
+		<button type="submit" class="btn-outline btn-sm ml-2">Terapkan</button>
+	</noscript>
 </form>
 
 <script>
-  // Kirim form otomatis saat tahun berganti; tidak ada state di klien.
-  document
-    .querySelectorAll<HTMLSelectElement>("[data-tahun-select]")
-    .forEach((select) => {
-      select.addEventListener("change", () => {
-        select.form?.requestSubmit();
-      });
-    });
+	// Kirim form otomatis saat tahun berganti; tidak ada state di klien.
+	document
+		.querySelectorAll<HTMLSelectElement>("[data-tahun-select]")
+		.forEach((select) => {
+			select.addEventListener("change", () => {
+				select.form?.requestSubmit();
+			});
+		});
 </script>

@@ -34,7 +34,7 @@ import { requireUser } from "../../lib/auth";
 import { apiFetch } from "../../lib/api";
 import { getSession } from "../../lib/session";
 import { takeFormFeedback } from "../../lib/formFeedback";
-import { berkasUrl } from "../../lib/format";
+import { berkasUrl, currentYear } from "../../lib/format";
 import type { PageMeta, SuratKeluarRow } from "../../lib/suratKeluar";
 
 const auth = await requireUser(Astro);
@@ -50,7 +50,7 @@ const params = Astro.url.searchParams;
 const master = await apiFetch<{ tahun_aktif: number }>("/master/tahun", {
 	token,
 });
-const tahunAktif = master.data?.tahun_aktif ?? new Date().getFullYear();
+const tahunAktif = master.data?.tahun_aktif ?? currentYear();
 
 const tahunParam = Number(params.get("tahun"));
 const tahun =

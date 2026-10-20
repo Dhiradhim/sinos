@@ -85,6 +85,21 @@ export type SuratRingkas = {
   file: FileMeta;
 };
 
+/**
+ * Posisi disposisi SAAT INI untuk surat (penerima disposisi terakhir).
+ *
+ * Berbeda dari `nip_tujuan` pada baris detail: baris yang sedang dibuka bisa
+ * saja sudah diteruskan ke orang lain. `is_pemilik` dihitung server sehingga
+ * UI tidak perlu menebak dari NIP sendiri.
+ */
+export type DisposisiPosisi = {
+  nip: string | null;
+  kepada: string;
+  kategori: string;
+  tanggal: TanggalMeta;
+  is_pemilik: boolean;
+};
+
 export type DisposisiDetail = {
   id: number;
   surmas_id: number;
@@ -102,6 +117,8 @@ export type DisposisiDetail = {
   tgl_dikembalikan: TanggalMeta;
   status: string;
   tone: string;
+  /** Posisi disposisi saat ini; null bila surat belum pernah didisposisikan. */
+  posisi: DisposisiPosisi | null;
   surat: SuratRingkas | null;
   aksi: DisposisiAksi;
 };

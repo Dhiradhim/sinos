@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { getSession } from "../../../lib/session";
 import { apiFetch } from "../../../lib/api";
+import { currentYear } from "../../../lib/format";
 import { errorFields, submitAmbil } from "../../../lib/suratKeluar";
 import { setFormFeedback } from "../../../lib/formFeedback";
 import type { ApiUser } from "../../../lib/auth";
@@ -44,7 +45,7 @@ export const POST: APIRoute = async ({ cookies, request, redirect }) => {
   if (result.ok) {
     // Tujuan redirect mengikuti peran, seperti controller CI3.
     const me = await apiFetch<ApiUser>("/auth/me", { token });
-    const tahun = String(result.meta?.tahun ?? new Date().getFullYear());
+    const tahun = String(result.meta?.tahun ?? currentYear());
     const target = me.data?.is_admin
       ? `/surat-keluar/daftar-semua?tahun=${tahun}`
       : `/surat-keluar/daftar?tahun=${tahun}`;

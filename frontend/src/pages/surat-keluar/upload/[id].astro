@@ -25,7 +25,7 @@ import { requireUser } from "../../../lib/auth";
 import { apiFetch } from "../../../lib/api";
 import { getSession } from "../../../lib/session";
 import { takeFormFeedback } from "../../../lib/formFeedback";
-import { berkasUrl } from "../../../lib/format";
+import { berkasUrl, currentYear } from "../../../lib/format";
 import type { SuratKeluarDetail } from "../../../lib/suratKeluar";
 
 const auth = await requireUser(Astro);
@@ -52,8 +52,7 @@ if (notFound) Astro.response.status = 404;
 else if (forbidden) Astro.response.status = 403;
 
 const tahun =
-	Number(String(detail?.tanggal?.iso ?? "").slice(0, 4)) ||
-	new Date().getFullYear();
+	Number(String(detail?.tanggal?.iso ?? "").slice(0, 4)) || currentYear();
 
 const dashboard = await apiFetch<{ disposisi_belum_dibaca: number }>(
 	"/dashboard",

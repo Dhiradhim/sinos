@@ -29,21 +29,22 @@ import Icon from "../../components/Icon.astro";
 import { requireUser } from "../../lib/auth";
 import { apiFetch } from "../../lib/api";
 import { getSession } from "../../lib/session";
+import { currentYear } from "../../lib/format";
 
 type Opsi = { value: string; label: string };
 type Klasifikasi = { kode: string; nama: string };
 type LaporanOpsi = {
-  bulan: Opsi[];
-  tahun: number[];
-  klasifikasi: Klasifikasi[];
-  jenis: Opsi[];
-  default: {
-    tipelaporan: string;
-    bulan: string;
-    tahun: number;
-    kode: string;
-    tgl_cetak: string;
-  };
+	bulan: Opsi[];
+	tahun: number[];
+	klasifikasi: Klasifikasi[];
+	jenis: Opsi[];
+	default: {
+		tipelaporan: string;
+		bulan: string;
+		tahun: number;
+		kode: string;
+		tgl_cetak: string;
+	};
 };
 
 const auth = await requireUser(Astro);
@@ -51,7 +52,7 @@ if (auth.redirect) return auth.redirect;
 const user = auth.user;
 const token = getSession(Astro.cookies);
 
-const tahun = new Date().getFullYear();
+const tahun = currentYear();
 const isAdmin = Boolean(user.is_admin);
 
 /**
@@ -59,8 +60,8 @@ const isAdmin = Boolean(user.is_admin);
  * halaman tidak membutuhkannya. Ini juga mencegah satu request sia-sia.
  */
 const opsiRes = isAdmin
-  ? await apiFetch<LaporanOpsi>("/laporan/opsi", { token })
-  : null;
+	? await apiFetch<LaporanOpsi>("/laporan/opsi", { token })
+	: null;
 
 const opsi = opsiRes?.data ?? null;
 
@@ -79,151 +80,151 @@ const nilaiKode = d?.kode ?? "all";
 const nilaiTglCetak = d?.tgl_cetak ?? "";
 
 const dashboard = await apiFetch<{ disposisi_belum_dibaca: number }>(
-  "/dashboard",
-  { token, query: { tahun } },
+	"/dashboard",
+	{ token, query: { tahun } },
 );
 const disposisiCount = dashboard.data?.disposisi_belum_dibaca ?? 0;
 ---
 
 <AppShell
-  title="Cetak Laporan"
-  user={user}
-  disposisiCount={disposisiCount}
-  tahun={tahun}
-  topbarTitle={false}
+	title="Cetak Laporan"
+	user={user}
+	disposisiCount={disposisiCount}
+	tahun={tahun}
+	topbarTitle={false}
 >
-  <PageHead
-    title="Cetak Laporan"
-    subtitle="Pilih jenis laporan dan periode, lalu cetak sebagai PDF."
-  />
+	<PageHead
+		title="Cetak Laporan"
+		subtitle="Pilih jenis laporan dan periode, lalu cetak sebagai PDF."
+	/>
 
-  {
-    !isAdmin ? (
-      <div class="mx-auto w-full max-w-3xl px-6 py-6">
-        <div class="alert alert-destructive" role="alert">
-          <span class="mt-0.5 shrink-0">
-            <Icon name="shield" class="h-4 w-4" />
-          </span>
-          <div class="flex-1">
-            <p class="alert-title">Akses ditolak</p>
-            <p class="alert-description">
-              Halaman ini hanya untuk admin. Hubungi administrator bila Anda
-              memerlukan cetak laporan agenda surat.
-            </p>
-          </div>
-        </div>
-      </div>
-    ) : (
-      <div class="mx-auto w-full max-w-3xl px-6 py-6">
-        {opsiRes && !opsiRes.ok && (
-          <div class="alert alert-destructive mb-5" role="alert">
-            <span class="mt-0.5 shrink-0">
-              <Icon name="octagon-x" class="h-4 w-4" />
-            </span>
-            <div class="flex-1">
-              <p class="alert-title">Gagal memuat pilihan laporan</p>
-              <p class="alert-description">
-                {opsiRes.error?.message ??
-                  "Pilihan laporan tidak dapat dimuat. Coba muat ulang halaman."}
-              </p>
-            </div>
-          </div>
-        )}
+	{
+		!isAdmin ? (
+			<div class="mx-auto w-full max-w-3xl px-6 py-6">
+				<div class="alert alert-destructive" role="alert">
+					<span class="mt-0.5 shrink-0">
+						<Icon name="shield" class="h-4 w-4" />
+					</span>
+					<div class="flex-1">
+						<p class="alert-title">Akses ditolak</p>
+						<p class="alert-description">
+							Halaman ini hanya untuk admin. Hubungi administrator bila Anda
+							memerlukan cetak laporan agenda surat.
+						</p>
+					</div>
+				</div>
+			</div>
+		) : (
+			<div class="mx-auto w-full max-w-3xl px-6 py-6">
+				{opsiRes && !opsiRes.ok && (
+					<div class="alert alert-destructive mb-5" role="alert">
+						<span class="mt-0.5 shrink-0">
+							<Icon name="octagon-x" class="h-4 w-4" />
+						</span>
+						<div class="flex-1">
+							<p class="alert-title">Gagal memuat pilihan laporan</p>
+							<p class="alert-description">
+								{opsiRes.error?.message ??
+									"Pilihan laporan tidak dapat dimuat. Coba muat ulang halaman."}
+							</p>
+						</div>
+					</div>
+				)}
 
-        {/* `rel` tidak berlaku pada <form>; `noopener` sudah diberikan oleh
+				{/* `rel` tidak berlaku pada <form>; `noopener` sudah diberikan oleh
             proxy karena tab baru menerima biner, bukan dokumen HTML. */}
-        <form
-          method="post"
-          action="/api/laporan/cetak"
-          target="_blank"
-          class="w-full"
-        >
-          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div class="sm:col-span-2">
-              <Field label="Jenis Laporan" name="tipelaporan" required>
-                <select
-                  class="select"
-                  id="tipelaporan"
-                  name="tipelaporan"
-                  required
-                >
-                  {jenisOpsi.map((j) => (
-                    <option value={j.value} selected={j.value === nilaiJenis}>
-                      {j.label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </div>
+				<form
+					method="post"
+					action="/api/laporan/cetak"
+					target="_blank"
+					class="w-full"
+				>
+					<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+						<div class="sm:col-span-2">
+							<Field label="Jenis Laporan" name="tipelaporan" required>
+								<select
+									class="select"
+									id="tipelaporan"
+									name="tipelaporan"
+									required
+								>
+									{jenisOpsi.map((j) => (
+										<option value={j.value} selected={j.value === nilaiJenis}>
+											{j.label}
+										</option>
+									))}
+								</select>
+							</Field>
+						</div>
 
-            <div class="sm:col-span-2">
-              <Field label="Tanggal Cetak" name="tgl_cetak">
-                <input
-                  class="input"
-                  type="text"
-                  id="tgl_cetak"
-                  name="tgl_cetak"
-                  value={nilaiTglCetak}
-                />
-              </Field>
-            </div>
+						<div class="sm:col-span-2">
+							<Field label="Tanggal Cetak" name="tgl_cetak">
+								<input
+									class="input"
+									type="text"
+									id="tgl_cetak"
+									name="tgl_cetak"
+									value={nilaiTglCetak}
+								/>
+							</Field>
+						</div>
 
-            <div>
-              <Field label="Bulan" name="bulan" required>
-                <select class="select" id="bulan" name="bulan" required>
-                  {bulanOpsi.map((b) => (
-                    <option value={b.value} selected={b.value === nilaiBulan}>
-                      {b.label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </div>
+						<div>
+							<Field label="Bulan" name="bulan" required>
+								<select class="select" id="bulan" name="bulan" required>
+									{bulanOpsi.map((b) => (
+										<option value={b.value} selected={b.value === nilaiBulan}>
+											{b.label}
+										</option>
+									))}
+								</select>
+							</Field>
+						</div>
 
-            <div>
-              <Field label="Tahun" name="tahun" required>
-                <select class="select" id="tahun" name="tahun" required>
-                  {tahunOpsi.map((y) => (
-                    <option
-                      value={String(y)}
-                      selected={String(y) === nilaiTahun}
-                    >
-                      {y}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </div>
+						<div>
+							<Field label="Tahun" name="tahun" required>
+								<select class="select" id="tahun" name="tahun" required>
+									{tahunOpsi.map((y) => (
+										<option
+											value={String(y)}
+											selected={String(y) === nilaiTahun}
+										>
+											{y}
+										</option>
+									))}
+								</select>
+							</Field>
+						</div>
 
-            <div class="sm:col-span-2">
-              <Field label="Kode Klasifikasi" name="kode">
-                <select class="select" id="kode" name="kode">
-                  <option value="all" selected={nilaiKode === "all"}>
-                    Semua Kode
-                  </option>
-                  {klasifikasiOpsi.map((k) => (
-                    <option value={k.kode} selected={k.kode === nilaiKode}>
-                      {`${k.kode} - ${k.nama}`}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </div>
-          </div>
+						<div class="sm:col-span-2">
+							<Field label="Kode Klasifikasi" name="kode">
+								<select class="select" id="kode" name="kode">
+									<option value="all" selected={nilaiKode === "all"}>
+										Semua Kode
+									</option>
+									{klasifikasiOpsi.map((k) => (
+										<option value={k.kode} selected={k.kode === nilaiKode}>
+											{`${k.kode} - ${k.nama}`}
+										</option>
+									))}
+								</select>
+							</Field>
+						</div>
+					</div>
 
-          <div class="separator" />
+					<div class="separator" />
 
-          <div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
-            <button type="reset" class="btn-outline w-full sm:w-auto">
-              Atur Ulang
-            </button>
-            <button type="submit" class="btn-primary w-full sm:w-auto">
-              <Icon name="printer" />
-              <span>Cetak PDF</span>
-            </button>
-          </div>
-        </form>
-      </div>
-    )
-  }
+					<div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
+						<button type="reset" class="btn-outline w-full sm:w-auto">
+							Atur Ulang
+						</button>
+						<button type="submit" class="btn-primary w-full sm:w-auto">
+							<Icon name="printer" />
+							<span>Cetak PDF</span>
+						</button>
+					</div>
+				</form>
+			</div>
+		)
+	}
 </AppShell>

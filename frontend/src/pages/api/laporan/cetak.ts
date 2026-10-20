@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { API_BASE } from '../../../lib/api';
 import { getSession } from '../../../lib/session';
+import { todayISO } from '../../../lib/format';
 
 /**
  * Proxy BFF: cetak laporan PDF.
@@ -53,11 +54,10 @@ export const POST: APIRoute = async ({ cookies, request }) => {
       : fallback;
   };
 
-  const now = new Date();
-  const tahunDefault = String(now.getFullYear());
-  const tglDefault = `${String(now.getDate()).padStart(2, '0')}-${String(
-    now.getMonth() + 1,
-  ).padStart(2, '0')}-${now.getFullYear()}`;
+  // Default tanggal cetak memakai zona aplikasi (UTC+8), bukan zona mesin.
+  const [tahunNow, bulanNow, hariNow] = todayISO().split('-');
+  const tahunDefault = tahunNow;
+  const tglDefault = `${hariNow}-${bulanNow}-${tahunNow}`;
 
   const payload = {
     tipelaporan: read('tipelaporan', 'surkel'),

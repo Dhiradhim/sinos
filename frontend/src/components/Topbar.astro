@@ -6,66 +6,67 @@
 import Icon from "./Icon.astro";
 import UserMenu from "./UserMenu.astro";
 import TahunSelector from "./TahunSelector.astro";
+import { currentYear } from "../lib/format";
 import type { ApiUser } from "../lib/auth";
 
 interface Props {
-  /**
-   * Opsional. Halaman yang memakai PageHead sudah punya `<h1>` sendiri,
-   * sehingga topbar tidak boleh menampilkan judul kedua (dua `<h1>` di satu
-   * dokumen adalah pelanggaran a11y). Bila kosong, topbar menjadi bilah
-   * utilitas: tombol menu + pemilih tahun + menu pengguna.
-   */
-  title?: string;
-  subtitle?: string;
-  user: ApiUser;
-  tahun?: number;
-  showTahun?: boolean;
+	/**
+	 * Opsional. Halaman yang memakai PageHead sudah punya `<h1>` sendiri,
+	 * sehingga topbar tidak boleh menampilkan judul kedua (dua `<h1>` di satu
+	 * dokumen adalah pelanggaran a11y). Bila kosong, topbar menjadi bilah
+	 * utilitas: tombol menu + pemilih tahun + menu pengguna.
+	 */
+	title?: string;
+	subtitle?: string;
+	user: ApiUser;
+	tahun?: number;
+	showTahun?: boolean;
 }
 
 const {
-  title = "",
-  subtitle = "",
-  user,
-  tahun = new Date().getFullYear(),
-  showTahun = false,
+	title = "",
+	subtitle = "",
+	user,
+	tahun = currentYear(),
+	showTahun = false,
 } = Astro.props;
 ---
 
 <header
-  class="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-4 border-b border-[var(--color-line)] bg-[var(--color-canvas)] px-4 sm:px-6"
+	class="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-4 border-b border-[var(--color-line)] bg-[var(--color-canvas)] px-4 sm:px-6"
 >
-  <div class="flex min-w-0 items-center gap-2">
-    <button
-      type="button"
-      class="btn-icon lg:hidden"
-      data-sidebar-open
-      aria-label="Buka menu"
-      aria-controls="sidebar"
-    >
-      <Icon name="menu" class="h-4 w-4" />
-    </button>
+	<div class="flex min-w-0 items-center gap-2">
+		<button
+			type="button"
+			class="btn-icon lg:hidden"
+			data-sidebar-open
+			aria-label="Buka menu"
+			aria-controls="sidebar"
+		>
+			<Icon name="menu" class="h-4 w-4" />
+		</button>
 
-    <div class="min-w-0">
-      <slot name="breadcrumb" />
-      {
-        title !== "" && (
-          <p class="truncate text-sm font-semibold leading-tight tracking-tight text-[var(--color-ink)]">
-            {title}
-          </p>
-        )
-      }
-      {
-        subtitle !== "" && (
-          <p class="truncate text-xs leading-tight text-[var(--color-ink-subtle)]">
-            {subtitle}
-          </p>
-        )
-      }
-    </div>
-  </div>
+		<div class="min-w-0">
+			<slot name="breadcrumb" />
+			{
+				title !== "" && (
+					<p class="truncate text-sm font-semibold leading-tight tracking-tight text-[var(--color-ink)]">
+						{title}
+					</p>
+				)
+			}
+			{
+				subtitle !== "" && (
+					<p class="truncate text-xs leading-tight text-[var(--color-ink-subtle)]">
+						{subtitle}
+					</p>
+				)
+			}
+		</div>
+	</div>
 
-  <div class="flex shrink-0 items-center gap-2">
-    {showTahun && <TahunSelector tahun={tahun} />}
-    <UserMenu user={user} />
-  </div>
+	<div class="flex shrink-0 items-center gap-2">
+		{showTahun && <TahunSelector tahun={tahun} />}
+		<UserMenu user={user} />
+	</div>
 </header>

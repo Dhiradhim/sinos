@@ -3,6 +3,37 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 /*
 |--------------------------------------------------------------------------
+| Zona Waktu Aplikasi
+|--------------------------------------------------------------------------
+| Seluruh tanggal/waktu yang ditulis PHP (`date()`, `strtotime()`, dsb.)
+| memakai WITA (UTC+8). Tanpa ini PHP memakai default php.ini — biasanya
+| UTC — sehingga `tgl_disposisi` dan `tgl_dikembalikan` tercatat 8 jam
+| lebih awal daripada jam dinding kantor.
+|
+| Dapat ditimpa lewat `.env` (APP_TIMEZONE) tanpa mengubah kode. `.env`
+| dibaca di sini karena berkas ini dimuat SEBELUM config/database.php,
+| sehingga variabel `$env` milik database.php belum tersedia.
+*/
+$app_timezone = 'Asia/Makassar';
+
+$app_env_file = FCPATH . '.env';
+if (file_exists($app_env_file)) {
+    $app_env = parse_ini_file($app_env_file, FALSE, INI_SCANNER_RAW);
+    if (
+        is_array($app_env) && isset($app_env['APP_TIMEZONE'])
+        && trim((string) $app_env['APP_TIMEZONE']) !== ''
+    ) {
+        $app_timezone = trim((string) $app_env['APP_TIMEZONE']);
+    }
+    unset($app_env);
+}
+
+date_default_timezone_set($app_timezone);
+
+unset($app_timezone, $app_env_file);
+
+/*
+|--------------------------------------------------------------------------
 | Base Site URL
 |--------------------------------------------------------------------------
 */

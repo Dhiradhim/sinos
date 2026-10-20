@@ -1,6 +1,7 @@
 ---
 import Base from "./Base.astro";
 import Sidebar from "../components/Sidebar.astro";
+import { currentYear } from "../lib/format";
 import Topbar from "../components/Topbar.astro";
 import LogoutModal from "../components/LogoutModal.astro";
 import Flash from "../components/Flash.astro";
@@ -36,7 +37,7 @@ const {
 } = Astro.props;
 
 const pathname = Astro.url.pathname;
-const footerYear = new Date().getFullYear();
+const footerYear = currentYear();
 ---
 
 <Base title={title}>
@@ -90,6 +91,128 @@ const footerYear = new Date().getFullYear();
 	<LogoutModal />
 
 	<script>
+		/**
+		 * Validasi select wajib (Preline advanced select).
+		 *
+		 * Preline menyembunyikan <select> asli (`display:none`). Bila atribut
+		 * `required` bawaan dipakai, browser memblokir submit dengan
+		 * "An invalid form control is not focusable" TANPA pesan apa pun.
+		 * Karena itu kontrol memakai `data-select-required` dan validasi
+		 * ditegakkan di sini: form ditahan, pesan tampil di bawah kontrol,
+		 * lalu dropdown dibuka agar pengguna langsung memilih.
+		 *
+		 * Delegasi pada `document` dipakai supaya select yang disuntikkan
+		 * belakangan (modal disposisi) ikut tercakup.
+		 */
+		const pesanSelectKosong = (el: HTMLSelectElement): string =>
+			el.dataset.selectRequiredMessage || "Pilih salah satu opsi.";
+
+		const wrapperSelect = (el: HTMLSelectElement): HTMLElement | null =>
+			el.closest<HTMLElement>(".hs-select");
+
+		/** Elemen yang menjadi jangkar galat: wrapper Preline, atau <select>. */
+		const jangkarSelect = (el: HTMLSelectElement): HTMLElement | null =>
+			wrapperSelect(el) ?? el;
+
+		function bersihkanGalatSelect(el: HTMLSelectElement) {
+			el.removeAttribute("aria-invalid");
+			// Kelas toggle memakai `aria-[invalid=true]`; atribut pada <select>
+			// tersembunyi saja tidak akan terlihat.
+			wrapperSelect(el)
+				?.querySelector(".hs-select-toggle")
+				?.removeAttribute("aria-invalid");
+			jangkarSelect(el)
+				?.parentElement?.querySelector<HTMLElement>(
+					`[data-select-error="${el.id}"]`,
+				)
+				?.remove();
+		}
+
+		function tampilkanGalatSelect(el: HTMLSelectElement) {
+			el.setAttribute("aria-invalid", "true");
+			const jangkar = jangkarSelect(el);
+			if (!jangkar || !jangkar.parentElement) return;
+
+			wrapperSelect(el)
+				?.querySelector(".hs-select-toggle")
+				?.setAttribute("aria-invalid", "true");
+
+			let box = jangkar.parentElement.querySelector<HTMLElement>(
+				`[data-select-error="${el.id}"]`,
+			);
+			if (!box) {
+				box = document.createElement("p");
+				box.className = "field-error";
+				box.setAttribute("role", "alert");
+				box.dataset.selectError = el.id;
+				jangkar.after(box);
+			}
+			box.textContent = pesanSelectKosong(el);
+		}
+
+		document.addEventListener(
+			"submit",
+			(event) => {
+				const form = event.target;
+				if (!(form instanceof HTMLFormElement)) return;
+
+				const kosong = Array.from(
+					form.querySelectorAll<HTMLSelectElement>("[data-select-required]"),
+				).filter((el) => el.value === "" && !el.disabled);
+
+				if (kosong.length === 0) return;
+
+				event.preventDefault();
+				event.stopImmediatePropagation();
+				kosong.forEach(tampilkanGalatSelect);
+
+				const first = kosong[0];
+				const toggle =
+					wrapperSelect(first)?.querySelector<HTMLElement>(".hs-select-toggle");
+				if (toggle) {
+					toggle.focus();
+					toggle.click();
+				} else {
+					// Select native (tanpa Preline): fokuskan kontrolnya.
+					first.focus();
+				}
+			},
+			true,
+		);
+
+		// Hapus galat begitu pilihan diisi (Preline men-dispatch `change`).
+		document.addEventListener("change", (event) => {
+			const el = event.target;
+			if (!(el instanceof HTMLSelectElement)) return;
+			if (!el.hasAttribute("data-select-required")) return;
+			if (el.value !== "") bersihkanGalatSelect(el);
+		});
+
+		document.addEventListener("reset", (event) => {
+			const form = event.target;
+			if (!(form instanceof HTMLFormElement)) return;
+			form
+				.querySelectorAll<HTMLSelectElement>("[data-select-required]")
+				.forEach(bersihkanGalatSelect);
+		});
+
+		/**
+		 * Salin `aria-invalid` dari <select> tersembunyi ke toggle agar bingkai
+		 * merah (`aria-[invalid=true]`) terlihat saat repopulasi 422.
+		 */
+		function sinkronkanSelectTidakValid() {
+			document
+				.querySelectorAll<HTMLSelectElement>('select[aria-invalid="true"]')
+				.forEach((el) => {
+					wrapperSelect(el)
+						?.querySelector(".hs-select-toggle")
+						?.setAttribute("aria-invalid", "true");
+				});
+		}
+
+		sinkronkanSelectTidakValid();
+		window.addEventListener("load", sinkronkanSelectTidakValid);
+
 		// Slide-over sidebar untuk < lg. Satu sumber transformasi: kelas rail di
 		// Sidebar.astro (-translate-x-full, lg:translate-x-0).
 		const sidebar = document.getElementById("sidebar");

@@ -11,6 +11,7 @@
  */
 import Base from "../layouts/Base.astro";
 import Icon from "../components/Icon.astro";
+import { currentYear } from "../lib/format";
 
 const error = Astro.url.searchParams.get("error");
 
@@ -21,113 +22,113 @@ const error = Astro.url.searchParams.get("error");
  * kondisi yang dipetakan Astro ke `?error=sso`.
  */
 const SSO_ERROR_MESSAGE =
-  "Sesi SSO tidak valid. Silakan coba lagi atau gunakan login lokal.";
+	"Sesi SSO tidak valid. Silakan coba lagi atau gunakan login lokal.";
 
 const errorMessage = error ? SSO_ERROR_MESSAGE : "";
-const year = new Date().getFullYear();
+const year = currentYear();
 ---
 
 <Base title="Masuk">
-  <main class="grid min-h-screen lg:grid-cols-[40%_1fr]">
-    <!-- Panel rail (desktop): merek + satu baris penjelasan -->
-    <aside
-      class="hidden flex-col justify-between px-10 py-10 lg:flex"
-      style="background: var(--color-rail);"
-      aria-label="Tentang SINOS"
-    >
-      <div class="flex items-center gap-3">
-        <span
-          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[rgb(255_255_255_/_0.10)] text-white"
-        >
-          <Icon name="bank" class="h-5 w-5" />
-        </span>
-        <div class="leading-tight">
-          <p class="text-sm font-semibold tracking-tight text-white">SINOS</p>
-          <p class="text-[0.6875rem] text-[rgb(255_255_255_/_0.55)]">
-            Pengadilan Agama Kupang
-          </p>
-        </div>
-      </div>
+	<main class="grid min-h-screen lg:grid-cols-[40%_1fr]">
+		<!-- Panel rail (desktop): merek + satu baris penjelasan -->
+		<aside
+			class="hidden flex-col justify-between px-10 py-10 lg:flex"
+			style="background: var(--color-rail);"
+			aria-label="Tentang SINOS"
+		>
+			<div class="flex items-center gap-3">
+				<span
+					class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[rgb(255_255_255_/_0.10)] text-white"
+				>
+					<Icon name="bank" class="h-5 w-5" />
+				</span>
+				<div class="leading-tight">
+					<p class="text-sm font-semibold tracking-tight text-white">SINOS</p>
+					<p class="text-[0.6875rem] text-[rgb(255_255_255_/_0.55)]">
+						Pengadilan Agama Kupang
+					</p>
+				</div>
+			</div>
 
-      <div class="max-w-sm">
-        <p
-          class="text-[1.75rem] font-semibold leading-tight tracking-tight text-white"
-        >
-          Sistem Informasi<br />Nomor Surat
-        </p>
-        <p
-          class="mt-4 text-[0.8125rem] leading-relaxed text-[var(--color-rail-text)]"
-        >
-          Pencatatan surat masuk, pengambilan nomor surat keluar, disposisi, dan
-          pelaporan dalam satu tempat.
-        </p>
-      </div>
+			<div class="max-w-sm">
+				<p
+					class="text-[1.75rem] font-semibold leading-tight tracking-tight text-white"
+				>
+					Sistem Informasi<br />Nomor Surat
+				</p>
+				<p
+					class="mt-4 text-[0.8125rem] leading-relaxed text-[var(--color-rail-text)]"
+				>
+					Pencatatan surat masuk, pengambilan nomor surat keluar, disposisi, dan
+					pelaporan dalam satu tempat.
+				</p>
+			</div>
 
-      <p class="text-[0.6875rem] text-[rgb(255_255_255_/_0.35)]">
-        SINOS &middot; {year}
-      </p>
-    </aside>
+			<p class="text-[0.6875rem] text-[rgb(255_255_255_/_0.35)]">
+				SINOS &middot; {year}
+			</p>
+		</aside>
 
-    <!-- Kanvas masuk -->
-    <div class="flex flex-col bg-[var(--color-canvas)]">
-      <!-- Strip navy ringkas (< lg): hanya mark + wordmark -->
-      <div
-        class="flex items-center gap-3 px-5 py-4 lg:hidden"
-        style="background: var(--color-rail);"
-      >
-        <span
-          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[rgb(255_255_255_/_0.10)] text-white"
-        >
-          <Icon name="bank" class="h-4 w-4" />
-        </span>
-        <p class="text-sm font-semibold tracking-tight text-white">SINOS</p>
-      </div>
+		<!-- Kanvas masuk -->
+		<div class="flex flex-col bg-[var(--color-canvas)]">
+			<!-- Strip navy ringkas (< lg): hanya mark + wordmark -->
+			<div
+				class="flex items-center gap-3 px-5 py-4 lg:hidden"
+				style="background: var(--color-rail);"
+			>
+				<span
+					class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[rgb(255_255_255_/_0.10)] text-white"
+				>
+					<Icon name="bank" class="h-4 w-4" />
+				</span>
+				<p class="text-sm font-semibold tracking-tight text-white">SINOS</p>
+			</div>
 
-      <div class="flex flex-1 items-center justify-center px-6 py-12">
-        <div class="w-full max-w-[26rem]">
-          <h1 class="page-head-title">Masuk ke SINOS</h1>
-          <p
-            class="mt-1.5 text-sm leading-relaxed text-[var(--color-ink-subtle)]"
-          >
-            Autentikasi dilakukan melalui SSO. Anda akan diarahkan ke halaman
-            login terpusat.
-          </p>
+			<div class="flex flex-1 items-center justify-center px-6 py-12">
+				<div class="w-full max-w-[26rem]">
+					<h1 class="page-head-title">Masuk ke SINOS</h1>
+					<p
+						class="mt-1.5 text-sm leading-relaxed text-[var(--color-ink-subtle)]"
+					>
+						Autentikasi dilakukan melalui SSO. Anda akan diarahkan ke halaman
+						login terpusat.
+					</p>
 
-          {
-            errorMessage && (
-              <div class="alert-destructive mt-5" role="alert">
-                <span class="mt-0.5 shrink-0">
-                  <Icon name="octagon-x" class="h-4 w-4" />
-                </span>
-                <div>
-                  <p class="alert-title">Login gagal</p>
-                  <p class="alert-description">{errorMessage}</p>
-                </div>
-              </div>
-            )
-          }
+					{
+						errorMessage && (
+							<div class="alert-destructive mt-5" role="alert">
+								<span class="mt-0.5 shrink-0">
+									<Icon name="octagon-x" class="h-4 w-4" />
+								</span>
+								<div>
+									<p class="alert-title">Login gagal</p>
+									<p class="alert-description">{errorMessage}</p>
+								</div>
+							</div>
+						)
+					}
 
-          <a href="/api/auth/login" class="btn-primary btn-lg mt-6 w-full">
-            <Icon name="log-out" class="h-4 w-4 rotate-180" />
-            <span>Lanjut ke SSO</span>
-          </a>
+					<a href="/api/auth/login" class="btn-primary btn-lg mt-6 w-full">
+						<Icon name="log-out" class="h-4 w-4 rotate-180" />
+						<span>Lanjut ke SSO</span>
+					</a>
 
-          <div class="separator"></div>
+					<div class="separator"></div>
 
-          <p
-            class="text-center text-[0.6875rem] leading-relaxed text-[var(--color-ink-subtle)]"
-          >
-            Kredensial dikelola oleh SSO Gateway instansi. SINOS tidak menyimpan
-            kata sandi.
-          </p>
+					<p
+						class="text-center text-[0.6875rem] leading-relaxed text-[var(--color-ink-subtle)]"
+					>
+						Kredensial dikelola oleh SSO Gateway instansi. SINOS tidak menyimpan
+						kata sandi.
+					</p>
 
-          <p
-            class="mt-8 text-center text-[0.6875rem] text-[var(--color-ink-subtle)]"
-          >
-            &copy; {year} Pengadilan Agama Kupang
-          </p>
-        </div>
-      </div>
-    </div>
-  </main>
+					<p
+						class="mt-8 text-center text-[0.6875rem] text-[var(--color-ink-subtle)]"
+					>
+						&copy; {year} Pengadilan Agama Kupang
+					</p>
+				</div>
+			</div>
+		</div>
+	</main>
 </Base>

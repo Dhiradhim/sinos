@@ -25,7 +25,12 @@ import { requireUser } from "../../../lib/auth";
 import { apiFetch } from "../../../lib/api";
 import { getSession } from "../../../lib/session";
 import { takeFormFeedback } from "../../../lib/formFeedback";
-import { berkasUrl, formatDateTime, toneClass } from "../../../lib/format";
+import {
+  berkasUrl,
+  currentYear,
+  formatDateTime,
+  toneClass,
+} from "../../../lib/format";
 import type { SuratMasukDetail } from "../../../lib/suratMasuk";
 
 const auth = await requireUser(Astro);
@@ -73,9 +78,8 @@ const aksi: SuratMasukDetail["aksi"] = result?.data?.aksi ?? {
 };
 
 const tahun = notFound
-  ? new Date().getFullYear()
-  : Number(String(row.tgl_surat.iso ?? "").slice(0, 4)) ||
-    new Date().getFullYear();
+  ? currentYear()
+  : Number(String(row.tgl_surat.iso ?? "").slice(0, 4)) || currentYear();
 
 const dashboard = await apiFetch<{ disposisi_belum_dibaca: number }>(
   "/dashboard",

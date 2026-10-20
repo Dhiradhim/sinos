@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { getSession } from "../../../../lib/session";
+import { currentYear } from "../../../../lib/format";
 import { errorFields, submitBerkas } from "../../../../lib/suratKeluar";
 import { setFormFeedback } from "../../../../lib/formFeedback";
 
@@ -39,7 +40,7 @@ export const POST: APIRoute = async ({ cookies, request, params, redirect }) => 
   if (result.ok && result.data) {
     const tahun =
       String(result.data.tanggal?.iso ?? "").slice(0, 4) ||
-      String(new Date().getFullYear());
+      String(currentYear());
 
     setFormFeedback(cookies, {
       target: "/surat-keluar/daftar",

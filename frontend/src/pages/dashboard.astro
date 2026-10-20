@@ -25,7 +25,7 @@ import TahunSelector from "../components/TahunSelector.astro";
 import { requireUser } from "../lib/auth";
 import { apiFetch } from "../lib/api";
 import { getSession } from "../lib/session";
-import { berkasUrl } from "../lib/format";
+import { berkasUrl, currentYear } from "../lib/format";
 
 const auth = await requireUser(Astro);
 if (auth.redirect) return auth.redirect;
@@ -33,35 +33,35 @@ const user = auth.user;
 const token = getSession(Astro.cookies);
 
 type Stat = {
-  key: string;
-  label: string;
-  value: number;
-  href: string;
-  tone: string;
-  icon: string;
+	key: string;
+	label: string;
+	value: number;
+	href: string;
+	tone: string;
+	icon: string;
 };
 
 type FileMeta = {
-  state: "none" | "pending" | "ready";
-  path: string | null;
-  label: string;
+	state: "none" | "pending" | "ready";
+	path: string | null;
+	label: string;
 };
 
 type Latest = {
-  id: number;
-  no: string;
-  tanggal: { iso: string | null; teks: string };
-  hal: string;
-  tujuan: string;
-  nama: string;
-  file: FileMeta;
+	id: number;
+	no: string;
+	tanggal: { iso: string | null; teks: string };
+	hal: string;
+	tujuan: string;
+	nama: string;
+	file: FileMeta;
 };
 
 type DashboardPayload = {
-  tahun: number;
-  stats: Stat[];
-  latest: Latest[];
-  disposisi_belum_dibaca: number;
+	tahun: number;
+	stats: Stat[];
+	latest: Latest[];
+	disposisi_belum_dibaca: number;
 };
 
 type MasterTahun = { tahun_aktif: number; daftar: number[] };
@@ -69,13 +69,13 @@ type MasterTahun = { tahun_aktif: number; daftar: number[] };
 // Tahun: `?tahun=` menang; selain itu tahun_aktif dari master.
 const tahunParam = Number(Astro.url.searchParams.get("tahun"));
 const master = await apiFetch<MasterTahun>("/master/tahun", { token });
-const tahunAktif = master.data?.tahun_aktif ?? new Date().getFullYear();
+const tahunAktif = master.data?.tahun_aktif ?? currentYear();
 const tahun =
-  Number.isInteger(tahunParam) && tahunParam > 2000 ? tahunParam : tahunAktif;
+	Number.isInteger(tahunParam) && tahunParam > 2000 ? tahunParam : tahunAktif;
 
 const result = await apiFetch<DashboardPayload>("/dashboard", {
-  token,
-  query: { tahun },
+	token,
+	query: { tahun },
 });
 
 const data = result.data;
@@ -88,18 +88,18 @@ const disposisiCount = data?.disposisi_belum_dibaca ?? 0;
  * lewat renderer di prop `cells`, sehingga isi sel sepenuhnya milik halaman.
  */
 const columns: Column[] = [
-  { key: "no", label: "No. Surat", width: "18rem", className: "col-no" },
-  { key: "tanggal.teks", label: "Tanggal", nowrap: true, width: "10rem" },
-  { key: "hal", label: "Perihal", prose: true },
-  { key: "tujuan", label: "Tujuan", prose: true },
-  { key: "berkas", label: "Berkas", width: "8rem" },
-  {
-    key: "aksi",
-    label: "Aksi",
-    align: "right",
-    width: "1%",
-    className: "col-aksi",
-  },
+	{ key: "no", label: "No. Surat", width: "18rem", className: "col-no" },
+	{ key: "tanggal.teks", label: "Tanggal", nowrap: true, width: "10rem" },
+	{ key: "hal", label: "Perihal", prose: true },
+	{ key: "tujuan", label: "Tujuan", prose: true },
+	{ key: "berkas", label: "Berkas", width: "8rem" },
+	{
+		key: "aksi",
+		label: "Aksi",
+		align: "right",
+		width: "1%",
+		className: "col-aksi",
+	},
 ];
 
 /** Kolom yang isinya dirender oleh slot default (bukan nilai dot-path). */
@@ -107,97 +107,97 @@ const renderKeys = ["berkas", "aksi"];
 ---
 
 <AppShell
-  title="Beranda"
-  user={user}
-  disposisiCount={disposisiCount}
-  tahun={tahun}
-  topbarTitle={false}
+	title="Beranda"
+	user={user}
+	disposisiCount={disposisiCount}
+	tahun={tahun}
+	topbarTitle={false}
 >
-  <PageHead
-    title={`Ringkasan ${tahun}`}
-    subtitle="Aktivitas surat masuk dan keluar pada tahun berjalan."
-  >
-    <TahunSelector slot="actions" tahun={tahun} />
-  </PageHead>
+	<PageHead
+		title={`Ringkasan ${tahun}`}
+		subtitle="Aktivitas surat masuk dan keluar pada tahun berjalan."
+	>
+		<TahunSelector slot="actions" tahun={tahun} />
+	</PageHead>
 
-  <StatRow stats={stats} />
+	<StatRow stats={stats} />
 
-  <section aria-labelledby="terbaru-title">
-    <div class="page-head">
-      <div class="min-w-0">
-        <h2 class="page-head-title" id="terbaru-title">Nomor Surat Terbaru</h2>
-        <p class="page-head-subtitle">
-          5 nomor surat keluar terakhir milik Anda pada {tahun}
-        </p>
-      </div>
-      <a
-        href={`/surat-keluar/daftar-semua?tahun=${tahun}`}
-        class="btn-outline btn-sm shrink-0"
-      >
-        <span>Lihat semua</span>
-        <Icon name="arrow-right" class="h-4 w-4" />
-      </a>
-    </div>
+	<section aria-labelledby="terbaru-title">
+		<div class="page-head">
+			<div class="min-w-0">
+				<h2 class="page-head-title" id="terbaru-title">Nomor Surat Terbaru</h2>
+				<p class="page-head-subtitle">
+					5 nomor surat keluar terakhir milik Anda pada {tahun}
+				</p>
+			</div>
+			<a
+				href={`/surat-keluar/daftar-semua?tahun=${tahun}`}
+				class="btn-outline btn-sm shrink-0"
+			>
+				<span>Lihat semua</span>
+				<Icon name="arrow-right" class="h-4 w-4" />
+			</a>
+		</div>
 
-    <DataTable
-      columns={columns}
-      rows={latest}
-      renderKeys={renderKeys}
-      startIndex={1}
-      caption="Nomor surat keluar terbaru"
-    >
-      {
-        (row: Latest, _index: number, key: string) =>
-          key === "berkas" ? (
-            row.file.state === "ready" ? (
-              <a
-                class="badge-success"
-                href={berkasUrl(row.file.path)}
-                target="_blank"
-                rel="noopener"
-              >
-                <Icon name="eye" class="h-3 w-3" />
-                Lihat
-              </a>
-            ) : row.file.state === "pending" ? (
-              <span class="badge-warning">Belum ada</span>
-            ) : (
-              <span class="badge-muted">&mdash;</span>
-            )
-          ) : (
-            /*
-             * Astro tidak punya halaman detail surat keluar (CI3 juga tidak).
-             * Tujuan yang setara adalah form edit nomor, yang menampilkan
-             * nomor lengkap, tanggal, perihal, dan tujuan sebelum diubah.
-             */
-            <a
-              class="btn-icon"
-              href={`/surat-keluar/edit/${row.id}`}
-              title="Lihat detail"
-              aria-label={`Lihat detail ${row.no}`}
-            >
-              <Icon name="eye" class="h-4 w-4" />
-            </a>
-          )
-      }
+		<DataTable
+			columns={columns}
+			rows={latest}
+			renderKeys={renderKeys}
+			startIndex={1}
+			caption="Nomor surat keluar terbaru"
+		>
+			{
+				(row: Latest, _index: number, key: string) =>
+					key === "berkas" ? (
+						row.file.state === "ready" ? (
+							<a
+								class="badge-success"
+								href={berkasUrl(row.file.path)}
+								target="_blank"
+								rel="noopener"
+							>
+								<Icon name="eye" class="h-3 w-3" />
+								Lihat
+							</a>
+						) : row.file.state === "pending" ? (
+							<span class="badge-warning">Belum ada</span>
+						) : (
+							<span class="badge-muted">&mdash;</span>
+						)
+					) : (
+						/*
+						 * Astro tidak punya halaman detail surat keluar (CI3 juga tidak).
+						 * Tujuan yang setara adalah form edit nomor, yang menampilkan
+						 * nomor lengkap, tanggal, perihal, dan tujuan sebelum diubah.
+						 */
+						<a
+							class="btn-icon"
+							href={`/surat-keluar/edit/${row.id}`}
+							title="Lihat detail"
+							aria-label={`Lihat detail ${row.no}`}
+						>
+							<Icon name="eye" class="h-4 w-4" />
+						</a>
+					)
+			}
 
-      <Fragment slot="empty">
-        <span class="empty-state-icon">
-          <Icon name="file-text" class="h-5 w-5" />
-        </span>
-        <div>
-          <p class="text-sm font-medium text-[var(--color-ink)]">
-            Belum ada nomor surat
-          </p>
-          <p class="mt-1 text-sm text-[var(--color-ink-subtle)]">
-            Nomor surat untuk tahun ini belum dibuat.
-          </p>
-        </div>
-        <a href="/surat-keluar/ambil" class="btn-primary btn-sm mt-1">
-          <Icon name="plus" class="h-4 w-4" />
-          <span>Ambil Nomor</span>
-        </a>
-      </Fragment>
-    </DataTable>
-  </section>
+			<Fragment slot="empty">
+				<span class="empty-state-icon">
+					<Icon name="file-text" class="h-5 w-5" />
+				</span>
+				<div>
+					<p class="text-sm font-medium text-[var(--color-ink)]">
+						Belum ada nomor surat
+					</p>
+					<p class="mt-1 text-sm text-[var(--color-ink-subtle)]">
+						Nomor surat untuk tahun ini belum dibuat.
+					</p>
+				</div>
+				<a href="/surat-keluar/ambil" class="btn-primary btn-sm mt-1">
+					<Icon name="plus" class="h-4 w-4" />
+					<span>Ambil Nomor</span>
+				</a>
+			</Fragment>
+		</DataTable>
+	</section>
 </AppShell>

@@ -212,14 +212,24 @@ class M_user extends MY_Model
     /**
      * Penerima disposisi berupa daftar pegawai AKTIF, label "Jabatan (Nama)".
      *
+     * Akun administrator DIKECUALIKAN (sama seperti pengambil_nomor()): akun
+     * `admin` maupun pegawai dengan jabatan `Administrator` bukan penerima
+     * disposisi, sehingga tidak boleh muncul pada dropdown "Disposisi Kepada"
+     * maupun daftar pegawai master.
+     *
      * @return array of object {id, nip, nama, jabatan, label}
      */
     public function penerima_aktif()
     {
+        $id_admin = self::ID_JABATAN_ADMIN;
+
         $this->db->select('p.id, p.nip, p.nama, j.jabatan, j.subbag');
         $this->db->from(self::T_PEGAWAI . ' p');
         $this->db->join(self::T_JABATAN . ' j', 'p.id_jabatan = j.id', 'left');
         $this->db->where('p.aktif', 1);
+        // Kecualikan akun administrator (nip `admin` dan jabatan Administrator).
+        $this->db->where('p.nip !=', 'admin');
+        $this->db->where('p.id_jabatan IS NULL OR p.id_jabatan !=', $id_admin, FALSE);
         $this->db->order_by('j.id', 'ASC');
         $this->db->order_by('p.nama', 'ASC');
         $rows = $this->db->get()->result();

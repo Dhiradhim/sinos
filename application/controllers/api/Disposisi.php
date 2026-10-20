@@ -220,8 +220,35 @@ class Disposisi extends MY_Api_Controller
 
         $surat = $this->M_surmas->get((int) $row->surmas_id);
 
-        $can_forward = $is_operator
-            || $this->M_disposisi->can_send((int) $row->surmas_id, $nip, FALSE);
+        /**
+         * PEMILIK DISPOSISI SAAT INI.
+         *
+         * `$row` adalah disposisi yang sedang dibuka, yang bisa saja sudah
+         * diteruskan ke orang lain. Pemilik yang sah untuk meneruskan adalah
+         * penerima disposisi TERAKHIR surat ini (posisi surat saat ini),
+         * bukan penerima baris yang sedang dilihat.
+         *
+         * Sebelumnya `can_forward` hanya memakai `$is_operator`, sehingga
+         * semua operator — termasuk yang sudah meneruskan surat ke pihak lain
+         * — tetap dapat meneruskan. Itu keliru.
+         */
+        $posisi_saat_ini = $this->M_disposisi->posisi_terakhir(array((int) $row->surmas_id));
+        $terakhir        = isset($posisi_saat_ini[(int) $row->surmas_id])
+            ? $posisi_saat_ini[(int) $row->surmas_id]
+            : NULL;
+
+        $nip_pemilik = ($terakhir && ! empty($terakhir->nip_tujuan))
+            ? (string) $terakhir->nip_tujuan
+            : '';
+
+        // Pemilik saat ini, ATAU operator pada surat yang belum pernah
+        // didisposisikan (tidak terjadi di endpoint ini, tetapi dijaga agar
+        // logika tetap konsisten dengan can_send()).
+        $is_pemilik = ($nip_pemilik !== '' && $nip_pemilik === $nip)
+            || ($terakhir === NULL && $is_operator);
+
+        $can_forward = $is_pemilik
+            && ($is_operator || $this->M_disposisi->can_send((int) $row->surmas_id, $nip, FALSE));
 
         $this->ok(array(
             'id'           => (int) $row->id,
@@ -242,6 +269,15 @@ class Disposisi extends MY_Api_Controller
             'tgl_dikembalikan' => api_datetime(isset($row->tgl_dikembalikan) ? $row->tgl_dikembalikan : NULL),
             'status'       => $dibaca ? 'Sudah dibaca' : 'Belum dibaca',
             'tone'         => $dibaca ? 'ok' : 'warning',
+            // Posisi disposisi SAAT INI untuk surat ini (penerima terakhir).
+            // Dipakai UI untuk menjelaskan siapa yang berhak meneruskan.
+            'posisi'       => $terakhir ? array(
+                'nip'      => $nip_pemilik !== '' ? $nip_pemilik : NULL,
+                'kepada'   => isset($terakhir->kepada) ? (string) $terakhir->kepada : '',
+                'kategori' => isset($terakhir->kategori) ? (string) $terakhir->kategori : '',
+                'tanggal'  => api_datetime(isset($terakhir->tanggal) ? $terakhir->tanggal : NULL),
+                'is_pemilik' => (bool) ($nip_pemilik !== '' && $nip_pemilik === $nip),
+            ) : NULL,
             'surat'        => $surat ? array(
                 'id'           => (int) $surat->id,
                 'kode'         => isset($surat->kode) ? (string) $surat->kode : '',

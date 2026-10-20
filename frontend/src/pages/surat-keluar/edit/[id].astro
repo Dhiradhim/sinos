@@ -28,6 +28,7 @@ import { requireUser } from "../../../lib/auth";
 import { apiFetch } from "../../../lib/api";
 import { getSession } from "../../../lib/session";
 import { takeFormFeedback } from "../../../lib/formFeedback";
+import { currentYear } from "../../../lib/format";
 import type {
 	Klasifikasi,
 	PenandatanganGrup,
@@ -61,8 +62,7 @@ if (notFound) Astro.response.status = 404;
 else if (forbidden) Astro.response.status = 403;
 
 const tahun =
-	Number(String(detail?.tanggal?.iso ?? "").slice(0, 4)) ||
-	new Date().getFullYear();
+	Number(String(detail?.tanggal?.iso ?? "").slice(0, 4)) || currentYear();
 
 const [pengambilRes, penandatanganRes, klasifikasiRes] = await Promise.all([
 	apiFetch<Pengambil[]>("/master/pengambil", { token }),

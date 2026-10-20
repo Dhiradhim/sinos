@@ -47,7 +47,7 @@ import { requireUser } from "../../lib/auth";
 import { apiFetch } from "../../lib/api";
 import { getSession } from "../../lib/session";
 import { takeFormFeedback } from "../../lib/formFeedback";
-import { toneClass } from "../../lib/format";
+import { currentYear, toneClass } from "../../lib/format";
 import {
 	emptyDescription,
 	pageSubtitle,
@@ -66,7 +66,7 @@ const tahunParam = Number(params.get("tahun"));
 const tahun =
 	Number.isInteger(tahunParam) && tahunParam > 2000
 		? tahunParam
-		: new Date().getFullYear();
+		: currentYear();
 
 const page = Math.max(1, Number(params.get("page")) || 1);
 const q = (params.get("q") ?? "").trim();
@@ -108,8 +108,21 @@ const disposisiCount = dashboard.data?.disposisi_belum_dibaca ?? 0;
 const feedback = takeFormFeedback(Astro.cookies, Astro.url.pathname);
 
 /**
- * Kolom tabel — delapan kolom brief. "No." ditambahkan DataTable lewat
- * `startIndex`, sehingga `columns` memuat tujuh sisanya.
+ * Kolom tabel — DISAMAKAN dengan `/surat-masuk/daftar`.
+ *
+ * Sebelumnya halaman ini memakai kolom "Tanggal" (satu tanggal), "Posisi Saat
+ * Ini", dan "Instruksi" terpisah. Agar kedua daftar terbaca sebagai satu
+ * keluarga, susunannya sekarang identik:
+ *
+ *   Agenda / No. Surat · Tanggal Surat · Tanggal Diterima · Pengirim Surat ·
+ *   Perihal · Disposisi · Aksi
+ *
+ * "No." ditambahkan DataTable lewat `startIndex`, jadi `columns` memuat
+ * sisanya. "Posisi Saat Ini" + "Instruksi" digabung menjadi "Disposisi" tiga
+ * baris (posisi, instruksi, status dibaca) — lihat renderer `disposisi`.
+ *
+ * Tanggal diterima tersedia di payload (`tgl_diterima`, api/Disposisi.php:139),
+ * jadi tidak perlu request tambahan.
  */
 const columns: Column[] = [
 	{
@@ -118,11 +131,21 @@ const columns: Column[] = [
 		nowrap: true,
 		width: "13rem",
 	},
-	{ key: "tgl_surat.teks", label: "Tanggal", nowrap: true, width: "9rem" },
+	{
+		key: "tgl_surat.teks",
+		label: "Tanggal Surat",
+		nowrap: true,
+		width: "9rem",
+	},
+	{
+		key: "tgl_diterima.teks",
+		label: "Tanggal Diterima",
+		nowrap: true,
+		width: "9rem",
+	},
 	{ key: "pengirim", label: "Pengirim Surat", prose: true },
 	{ key: "perihal", label: "Perihal", prose: true },
-	{ key: "posisi", label: "Posisi Saat Ini", width: "13rem" },
-	{ key: "instruksi", label: "Instruksi", width: "14rem" },
+	{ key: "disposisi", label: "Disposisi", width: "16rem" },
 	{
 		key: "aksi",
 		label: "Aksi",
@@ -132,7 +155,7 @@ const columns: Column[] = [
 	},
 ];
 
-const renderKeys = ["agenda", "posisi", "instruksi", "aksi"];
+const renderKeys = ["agenda", "disposisi", "aksi"];
 
 /** Tint baris terarsip: kelas, bukan inline style. */
 const rowClass = (row: DisposisiRow) =>
@@ -243,40 +266,68 @@ const kembali = `/disposisi${arsip ? `?arsip=${arsip}` : ""}`;
 								{row.no_agenda}
 							</span>
 							{row.diarsipkan && (
-								<span class="badge-muted mt-1">Diarsipkan</span>
+								<span class="badge-muted mt-1 inline-flex">Diarsipkan</span>
 							)}
 						</div>
 					);
 				}
 
-				if (key === "posisi") {
-					// Brief: `lokasi` + badge dari `status`/`tone` lewat toneClass.
-					// `status` berasal dari api_status_posisi_disposisi(), port 1:1 rantai
-					// badge CI3 (Sudah diarsipkan / Dikembalikan / Dibaca / Belum dibaca).
-					return (
-						<div>
-							<span class="badge-info">{row.lokasi || row.kepada}</span>
-							<span class="mt-1 block text-xs text-[var(--color-ink-subtle)]">
-								{row.kategori}
-							</span>
-							<span class="mt-1 block">
-								<span class={toneClass(row.tone)}>{row.status}</span>
-							</span>
-						</div>
-					);
-				}
+				if (key === "disposisi") {
+					// Susunan identik dengan kolom "Disposisi" pada
+					// /surat-masuk/daftar: (1) posisi disposisi saat ini,
+					// (2) instruksi, (3) status dibaca.
+					//
+					// `status` dari api_status_posisi_disposisi() memuat label
+					// yang lebih spesifik (Sudah diarsipkan / Dikembalikan)
+					// sekaligus "Dibaca"/"Belum dibaca" yang sudah diwakili
+					// badge di bawah — yang terakhir disembunyikan agar tidak
+					// ada dua badge berbunyi sama dalam satu sel.
+					const posisi = row.lokasi || row.kepada;
+					const statusTambahan =
+						row.status !== "Dibaca" && row.status !== "Belum dibaca"
+							? row.status
+							: null;
 
-				if (key === "instruksi") {
 					return (
-						<div>
-							<span class="block text-sm text-[var(--color-ink-muted)]">
-								{row.instruksi ?? "—"}
-							</span>
-							{!row.dibaca && (
-								<span class="mt-1 block">
-									<span class="badge-warning">Belum dibaca</span>
+						<div class="space-y-1">
+							<div class="flex items-center gap-1.5">
+								<Icon
+									name="user"
+									class="h-3 w-3 shrink-0 text-[var(--color-ink-subtle)]"
+								/>
+								<span
+									class="truncate text-[var(--color-ink)]"
+									title={`${posisi}${row.kategori ? ` — ${row.kategori}` : ""}`}
+								>
+									{posisi}
 								</span>
-							)}
+								{/* Kategori (jabatan penerima) dipertahankan sebagai
+								    teks sekunder agar informasi tidak hilang saat
+								    kolom "Posisi Saat Ini" lama digabung. */}
+								{row.kategori && (
+									<span class="shrink-0 truncate text-xs text-[var(--color-ink-subtle)]">
+										· {row.kategori}
+									</span>
+								)}
+							</div>
+
+							<p class="line-clamp-2 text-xs text-[var(--color-ink-muted)]">
+								{row.instruksi ?? "—"}
+							</p>
+
+							<div class="flex items-center gap-1.5">
+								{row.dibaca ? (
+									<span class="badge-success">
+										<Icon name="check" class="h-3 w-3" />
+										Sudah dibaca
+									</span>
+								) : (
+									<span class="badge-warning">Belum dibaca</span>
+								)}
+								{statusTambahan && (
+									<span class={toneClass(row.tone)}>{statusTambahan}</span>
+								)}
+							</div>
 						</div>
 					);
 				}

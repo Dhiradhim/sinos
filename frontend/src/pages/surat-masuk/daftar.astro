@@ -24,12 +24,24 @@
  *   - Placeholder pencarian: view CI3 tidak punya filter bar; teks pencarian
  *     berasal dari DataTables (`searchPlaceholder: 'Cari…'`, master.php:88).
  *   - Label kolom mengikuti brief. View CI3 menampilkan 7 kolom dengan
- *     "Pengirim" dan "Status & Berkas"; brief memecahnya menjadi "Pengirim
- *     Surat", "Posisi Saat Ini", dan "Instruksi".
+ *     "Pengirim" dan "Status & Berkas".
  *   - Tanggal dipecah menjadi dua kolom terpisah — "Tanggal Surat" dan
  *     "Tanggal Diterima" — karena keduanya dipakai untuk menyaring dan
  *     menelusuri agenda. Keduanya sudah tersedia di payload daftar
  *     (`tgl_surat` dan `tgl_diterima`, lihat api/Surat_masuk.php:107-108).
+ *
+ * PENYUSUNAN ULANG KOLOM (permintaan pengguna, 2026-10-20):
+ *   - "Posisi Saat Ini" dan "Instruksi" DIHAPUS sebagai kolom terpisah.
+ *   - Keduanya digabung menjadi satu kolom "Disposisi" bertiga baris:
+ *       1. nama posisi disposisi saat ini, atau "Belum didisposisi";
+ *       2. instruksi disposisi;
+ *       3. status dibaca ("Sudah dibaca" / "Belum dibaca").
+ *     Sumbernya tetap `row.disposisi` (api_status_disposisi_surat()), jadi
+ *     tidak ada request tambahan.
+ *   - Status arsip yang dulu menempel di kolom "Posisi Saat Ini" dipindah ke
+ *     kolom "Agenda / No. Surat" agar tidak hilang dari daftar.
+ *   - Tautan berkas yang dulu berada di kolom "Posisi Saat Ini" menjadi
+ *     tombol aksi "Lihat berkas" (kolom Aksi), sejajar dengan aksi lain.
  */
 import AppShell from "../../layouts/AppShell.astro";
 import PageHead from "../../components/PageHead.astro";
@@ -44,7 +56,7 @@ import { requireUser } from "../../lib/auth";
 import { apiFetch } from "../../lib/api";
 import { getSession } from "../../lib/session";
 import { takeFormFeedback } from "../../lib/formFeedback";
-import { berkasUrl, toneClass } from "../../lib/format";
+import { berkasUrl, currentYear, toneClass } from "../../lib/format";
 import type { PageMeta, SuratMasukRow } from "../../lib/suratMasuk";
 
 const auth = await requireUser(Astro);
@@ -65,7 +77,7 @@ const tahunParam = Number(params.get("tahun"));
 const master = await apiFetch<{ tahun_aktif: number }>("/master/tahun", {
 	token,
 });
-const tahunAktif = master.data?.tahun_aktif ?? new Date().getFullYear();
+const tahunAktif = master.data?.tahun_aktif ?? currentYear();
 const tahun =
 	Number.isInteger(tahunParam) && tahunParam > 2000 ? tahunParam : tahunAktif;
 
@@ -108,8 +120,12 @@ const isAdmin = Boolean(user.is_admin);
 const isOperator = Boolean(user.is_operator);
 
 /**
- * Kolom tabel. `agenda`, `posisi`, `instruksi`, dan `aksi` dirender oleh
- * renderer slot default; sisanya dot-path biasa.
+ * Kolom tabel. `agenda`, `disposisi`, dan `aksi` dirender oleh renderer slot
+ * default; sisanya dot-path biasa.
+ *
+ * "Posisi Saat Ini" dan "Instruksi" digabung menjadi "Disposisi" (3 baris)
+ * agar satu baris tabel cukup memuat satu ringkasan disposisi, bukan dua
+ * kolom yang isinya saling melengkapi.
  */
 const columns: Column[] = [
 	{
@@ -132,8 +148,7 @@ const columns: Column[] = [
 	},
 	{ key: "pengirim", label: "Pengirim Surat", prose: true },
 	{ key: "perihal", label: "Perihal", prose: true },
-	{ key: "posisi", label: "Posisi Saat Ini", width: "13rem" },
-	{ key: "instruksi", label: "Instruksi", width: "14rem" },
+	{ key: "disposisi", label: "Disposisi", width: "16rem" },
 	{
 		key: "aksi",
 		label: "Aksi",
@@ -143,7 +158,7 @@ const columns: Column[] = [
 	},
 ];
 
-const renderKeys = ["agenda", "posisi", "instruksi", "aksi"];
+const renderKeys = ["agenda", "disposisi", "aksi"];
 
 /**
  * Aksi sekunder per baris, menyalin `$aksi_lain` pada view CI3:
@@ -319,49 +334,75 @@ const disposisiValue =
 							<span class="mt-0.5 block text-xs tabular text-[var(--color-ink-subtle)]">
 								{row.no_agenda}
 							</span>
+							{/* Status arsip dipindah dari kolom "Posisi Saat Ini" agar
+				              tidak hilang saat kolom itu digabung menjadi "Disposisi". */}
+							{row.diarsipkan && (
+								<span class="badge-muted mt-1 inline-flex">Diarsipkan</span>
+							)}
 						</div>
 					);
 				}
 
-				if (key === "posisi") {
+				if (key === "disposisi") {
+					// Tiga baris: (1) posisi disposisi saat ini atau "Belum
+					// didisposisi", (2) instruksi, (3) status dibaca.
+					const { disposisi } = row;
+					const belum = !disposisi.lokasi;
+
+					// `status` dari API memuat label yang lebih spesifik
+					// (Sudah Diarsipkan / Dikembalikan ke operator / Diarsipkan
+					// oleh penerima) sekaligus dua label yang sudah diwakili
+					// badge dibaca di bawah (Sudah dibaca / Belum dibaca).
+					// Yang terakhir disembunyikan agar tidak ada dua badge
+					// berbunyi sama dalam satu sel.
+					const statusTambahan =
+						!belum &&
+						disposisi.status !== "Sudah dibaca" &&
+						disposisi.status !== "Belum dibaca"
+							? disposisi.status
+							: null;
+
 					return (
-						<div class="flex flex-wrap items-center gap-1.5">
-							<span class={toneClass(row.disposisi.tone)}>
-								{row.disposisi.status}
-							</span>
-							{row.diarsipkan && <span class="badge-muted">Diarsipkan</span>}
-							{/* Tautan berkas, sama dengan `badge-success` "Berkas" pada
-                  kolom "Status & Berkas" view CI3. */}
-							{row.file.state === "ready" && (
-								<a
-									href={berkasUrl(row.file.path)}
-									target="_blank"
-									rel="noopener"
-									class="badge-success"
+						<div class="space-y-1">
+							<div class="flex items-center gap-1.5">
+								<Icon
+									name="user"
+									class="h-3 w-3 shrink-0 text-[var(--color-ink-subtle)]"
+								/>
+								<span
+									class:list={[
+										"truncate text-[var(--color-ink)]",
+										belum && "italic text-[var(--color-ink-subtle)]",
+									]}
+									title={disposisi.lokasi ?? "Belum didisposisi"}
 								>
-									<Icon name="eye" class="h-3 w-3" />
-									Berkas
-								</a>
-							)}
-							{row.disposisi.lokasi && (
-								<span class="flex w-full items-center gap-1 text-xs text-[var(--color-ink-subtle)]">
-									<Icon name="user" class="h-3 w-3 shrink-0" />
-									<span class="truncate">{row.disposisi.lokasi}</span>
+									{disposisi.lokasi ?? "Belum didisposisi"}
 								</span>
-							)}
-						</div>
-					);
-				}
+							</div>
 
-				if (key === "instruksi") {
-					return (
-						<div class="flex flex-wrap items-center gap-1.5">
-							<span class="text-[var(--color-ink-muted)]">
-								{row.disposisi.instruksi ?? "—"}
-							</span>
-							{row.disposisi.instruksi && !row.disposisi.dibaca && (
-								<span class="badge-warning">Belum dibaca</span>
-							)}
+							<p class="line-clamp-2 text-xs text-[var(--color-ink-muted)]">
+								{disposisi.instruksi ?? "—"}
+							</p>
+
+							<div class="flex items-center gap-1.5">
+								{belum ? (
+									<span class="badge-outline">Belum didisposisi</span>
+								) : disposisi.dibaca ? (
+									<span class="badge-success">
+										<Icon name="check" class="h-3 w-3" />
+										Sudah dibaca
+									</span>
+								) : (
+									<span class="badge-warning">Belum dibaca</span>
+								)}
+								{/* Status tambahan dari API (Sudah Diarsipkan /
+								            Dikembalikan ke operator / Diarsipkan oleh penerima). */}
+								{statusTambahan && (
+									<span class={toneClass(disposisi.tone)}>
+										{statusTambahan}
+									</span>
+								)}
+							</div>
 						</div>
 					);
 				}
@@ -378,6 +419,22 @@ const disposisiValue =
 						>
 							<Icon name="eye" class="h-4 w-4" />
 						</a>
+
+						{/* Lihat berkas: dulu berupa badge di kolom "Posisi Saat Ini".
+				            Kini menjadi tombol aksi agar sejajar dengan aksi lain dan
+				            tetap dapat dijangkau saat kolom disposisi dipadatkan. */}
+						{row.file.state === "ready" && (
+							<a
+								class="btn-icon"
+								href={berkasUrl(row.file.path)}
+								target="_blank"
+								rel="noopener"
+								title="Lihat berkas"
+								aria-label={`Lihat berkas ${row.no_surat}`}
+							>
+								<Icon name="paperclip" class="h-4 w-4" />
+							</a>
+						)}
 
 						{row.can_send && (
 							<button
@@ -579,7 +636,8 @@ const disposisiValue =
 				"block w-full text-sm border border-gray-300 rounded-lg py-2 px-3 focus:border-brand-900 focus:outline-none focus:ring-1 focus:ring-brand-900",
 			searchNoResultText: "Tidak ditemukan",
 			searchNoResultClasses: "px-3 py-2 text-sm text-gray-500",
-			optionAllowEmptyOption: true,
+			// Tanpa optionAllowEmptyOption: opsi kosong hanya placeholder pada
+			// toggle, tidak dirender sebagai baris di dalam dropdown.
 		};
 		return JSON.stringify(cfg).replace(/\\\//g, "/");
 	}
@@ -667,8 +725,8 @@ const disposisiValue =
         <div class="grid gap-4 sm:grid-cols-2">
           <div class="sm:col-span-2">
             <label class="label" for="target">Disposisi Kepada <span class="text-[var(--color-danger)]">*</span></label>
-            <select class="select" id="target" name="target" required data-hs-select='${hsSelectAttr("Pilih penerima", "Cari nama penerima…")}'>
-              <option value="">Pilih Penerima</option>
+            <select class="select" id="target" name="target" aria-required="true" data-select-required="true" data-select-required-message="Pilih penerima disposisi." data-hs-select='${hsSelectAttr("Pilih Penerima", "Cari nama penerima…")}'>
+              <option value="" hidden selected>Pilih Penerima</option>
               ${opsiPenerima}
               <option value="Arsip">Arsip</option>
             </select>
@@ -678,7 +736,7 @@ const disposisiValue =
           <div>
             <label class="label" for="instruksi">Instruksi</label>
             <select class="select" id="instruksi" name="instruksi">
-              <option value="">Pilih Instruksi</option>
+              <option value="" hidden selected>Pilih Instruksi</option>
               ${opsiInstruksi}
             </select>
           </div>

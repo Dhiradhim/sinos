@@ -19,6 +19,27 @@ import {
   feedbackPath,
 } from "./lib/formFeedback";
 
+/**
+ * Deklarasi lokal `process` — proyek ini sengaja tidak memasang `@types/node`
+ * (pola yang sama dipakai src/lib/sso.ts:27).
+ */
+declare const process:
+  | { env?: Record<string, string | undefined> }
+  | undefined;
+
+/**
+ * Zona waktu proses server: WITA (UTC+8).
+ *
+ * `astro.config.mjs` menyetel TZ saat dev/build, tetapi server hasil build
+ * (`node ./dist/server/entry.mjs`) tidak membaca berkas itu. Modul middleware
+ * dievaluasi sekali saat server menyala, jadi baris ini memastikan `Date`
+ * di sisi server — termasuk `new Date().getFullYear()` pada fallback tahun —
+ * memakai UTC+8, bukan zona mesin.
+ */
+if (typeof process !== "undefined" && process.env) {
+  process.env.TZ = process.env.SINOS_TZ ?? "Asia/Makassar";
+}
+
 export const onRequest = defineMiddleware((context, next) => {
   const cookie = context.cookies.get(FEEDBACK_COOKIE);
 

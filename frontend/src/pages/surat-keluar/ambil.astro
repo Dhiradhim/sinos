@@ -34,6 +34,7 @@ import { requireUser } from "../../lib/auth";
 import { apiFetch } from "../../lib/api";
 import { getSession } from "../../lib/session";
 import { takeFormFeedback } from "../../lib/formFeedback";
+import { currentYear, todayISO } from "../../lib/format";
 import type {
 	Klasifikasi,
 	PenandatanganGrup,
@@ -46,7 +47,7 @@ if (auth.redirect) return auth.redirect;
 const user = auth.user;
 const token = getSession(Astro.cookies);
 
-const tahun = new Date().getFullYear();
+const tahun = currentYear();
 
 const [pengambilRes, penandatanganRes, klasifikasiRes] = await Promise.all([
 	apiFetch<Pengambil[]>("/master/pengambil", { token }),
@@ -80,11 +81,11 @@ const belumUpload = (sendiriRes.data ?? []).filter(
 	(row) => row.file.state === "pending" && row.hal !== "Belum Diambil",
 );
 
-/** Tanggal penomoran hari ini — ditetapkan server, hanya ditampilkan. */
-const now = new Date();
-const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
-	now.getDate(),
-).padStart(2, "0")}`;
+/**
+ * Tanggal penomoran hari ini menurut zona waktu aplikasi (UTC+8 / WITA) —
+ * ditetapkan server, hanya ditampilkan.
+ */
+const today = todayISO();
 
 const pesanBerkas = "Mohon upload softcopy nomor surat sebelumnya!";
 const kode409 = feedback?.code === "BERKAS_BELUM_LENGKAP";

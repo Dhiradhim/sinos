@@ -434,10 +434,65 @@
 		@apply whitespace-nowrap;
 	}
 
+	/*
+	 * Kolom Aksi "menempel" di tepi kanan `.table-wrap`.
+	 *
+	 * Tanpa ini, tabel yang lebih lebar dari kanvas membuat kolom Aksi
+	 * tergulir keluar layar sehingga tombol aksi baris (termasuk menu titik
+	 * tiga) tampak tidak dapat diklik — pengguna harus menggulir tabel lebih
+	 * dulu, dan pada beberapa lebar kolom tombolnya benar-benar di luar area
+	 * pandang. `position: sticky; right: 0` menjaga kolom ini selalu terlihat
+	 * tanpa mengubah lebar tabel.
+	 *
+	 * Latar wajib eksplisit: sel sticky menutupi isi yang lewat di bawahnya.
+	 * Warna disamakan dengan baris (canvas) dan berubah pada hover agar
+	 * konsisten dengan `.table tbody tr:hover`.
+	 */
 	.table th.col-aksi,
 	.table td.col-aksi {
 		@apply whitespace-nowrap text-right;
 		width: 1px;
+		position: sticky;
+		right: 0;
+		z-index: 1;
+	}
+
+	.table th.col-aksi {
+		background-color: var(--color-surface-muted);
+	}
+
+	.table td.col-aksi {
+		background-color: var(--color-canvas);
+	}
+
+	.table tbody tr:hover td.col-aksi {
+		background-color: var(--color-surface-muted);
+	}
+
+	.table tbody tr.row-archived td.col-aksi {
+		background-color: var(--color-surface-muted);
+	}
+
+	/* Garis pemisah halus agar kolom sticky terbaca sebagai lapisan terpisah
+	   saat tabel digulir mendatar. */
+	.table th.col-aksi,
+	.table td.col-aksi {
+		box-shadow: inset 1px 0 0 var(--color-line);
+	}
+
+	/*
+	 * Setiap `td.col-aksi` yang sticky membentuk stacking context sendiri
+	 * (`position: sticky` + `z-index`). Baris yang datang BELAKANG menang
+	 * urutan cat, sehingga sel Aksi baris berikutnya menutupi panel dropdown
+	 * baris sebelumnya — gejalanya: menu terbuka (opacity 1) tetapi klik pada
+	 * item tetap mengenai sel tabel di bawahnya.
+	 *
+	 * Saat dropdown terbuka, Preline menambahkan kelas `.open` pada
+	 * `.hs-dropdown`. Sel Aksi baris tersebut dinaikkan di atas sel Aksi baris
+	 * lain agar panel dan item menunya dapat diklik.
+	 */
+	.table td.col-aksi:has(.hs-dropdown.open) {
+		z-index: 20;
 	}
 
 	.table td.col-aksi > * {
@@ -452,17 +507,26 @@
 		color: var(--color-ink);
 	}
 
-	/* Tabel hanya menggulir mendatar pada layar sempit; di kanvas lebar
-	   tabel memakai seluruh lebar tanpa scrollbar horizontal. */
+	/*
+	 * Tabel SELALU menggulir di dalam pembungkusnya, bukan meluber ke halaman.
+	 *
+	 * Sebelumnya `overflow-x: visible` dipakai di atas 1024px agar "tabel
+	 * memakai seluruh lebar tanpa scrollbar horizontal". Efek sampingnya:
+	 * begitu jumlah kolom melebihi lebar kanvas, tabel melebar melewati
+	 * viewport dan mendorong kolom terakhir (Aksi) keluar layar —
+	 * `document.scrollWidth` > `innerWidth`. Akibatnya tombol aksi baris
+	 * (termasuk menu titik tiga) berada di luar area pandang dan tidak dapat
+	 * diklik tanpa menggulir seluruh halaman.
+	 *
+	 * Dengan `auto` di semua lebar, tabel yang lebih lebar dari kanvas
+	 * menggulir di dalam `.table-wrap`; kolom Aksi tetap dapat dijangkau.
+	 * Panel dropdown tetap tidak terpotong karena memakai
+	 * `strategy: fixed` (lihat daftar.astro), yang melepasnya dari
+	 * clipping ancestor.
+	 */
 	.table-wrap {
 		width: 100%;
-		overflow-x: visible;
-	}
-
-	@media (max-width: 63.9375rem) {
-		.table-wrap {
-			overflow-x: auto;
-		}
+		overflow-x: auto;
 	}
 
 	/* -------------------------------- Page head --------------------------------

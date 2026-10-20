@@ -82,16 +82,37 @@ export function fileLabel(state?: string | null): string {
   }
 }
 
-const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+/**
+ * Zona waktu aplikasi: WITA (UTC+8).
+ *
+ * SEMUA tanggal/waktu yang ditampilkan dirender pada zona ini, bukan zona
+ * server atau browser, supaya staf di lapangan melihat jam yang sama dengan
+ * yang tercatat di database. Nilai dari API biasanya "naif" (tanpa offset,
+ * mis. `2026-10-20 00:02:00`), jadi nilai naif ditafsirkan SEBAGAI waktu
+ * UTC+8 — bukan waktu lokal server.
+ */
+export const TIMEZONE = 'Asia/Makassar';
+
+/** Offset tetap UTC+8 (WITA tidak memakai DST). */
+const TIMEZONE_OFFSET = '+08:00';
+
+/** Naif: YYYY-MM-DD, opsional dengan jam tanpa offset/Z. */
+const NAIVE = /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?)?$/;
 
 function toDate(iso?: string | null): Date | null {
   if (!iso) return null;
   const value = String(iso).trim();
   if (value === '') return null;
 
-  // Tanggal tanpa waktu: hindari pergeseran zona waktu saat diparse sebagai UTC.
-  const normalized = DATE_ONLY.test(value) ? `${value}T00:00:00` : value.replace(' ', 'T');
-  const date = new Date(normalized);
+  // Nilai naif: tempelkan offset UTC+8 agar tidak bergeser mengikuti zona
+  // server. Ini juga menangani tanggal tanpa waktu (00:00 WITA).
+  if (NAIVE.test(value)) {
+    const date = new Date(`${value.replace(' ', 'T')}${TIMEZONE_OFFSET}`);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  // Nilai ber-offset (Z / ±HH:MM) dipakai apa adanya.
+  const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
@@ -100,6 +121,7 @@ export function formatDate(iso?: string | null): string {
   const date = toDate(iso);
   if (!date) return '—';
   return new Intl.DateTimeFormat('id-ID', {
+    timeZone: TIMEZONE,
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -111,12 +133,51 @@ export function formatDateTime(iso?: string | null): string {
   const date = toDate(iso);
   if (!date) return '—';
   return new Intl.DateTimeFormat('id-ID', {
+    timeZone: TIMEZONE,
     day: 'numeric',
     month: 'long',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
   }).format(date);
+}
+
+/** Komponen tanggal (YYYY-MM-DD) menurut UTC+8. */
+function zonedDateParts(date: Date): {
+  year: number;
+  month: string;
+  day: string;
+} {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const pick = (type: string): string =>
+    parts.find((part) => part.type === type)?.value ?? '';
+
+  return {
+    year: Number(pick('year')),
+    month: pick('month'),
+    day: pick('day'),
+  };
+}
+
+/**
+ * Tahun berjalan menurut UTC+8.
+ *
+ * Dipakai sebagai fallback `tahun` di halaman dan sebagai pengganti
+ * `new Date().getFullYear()` (yang memakai zona server).
+ */
+export function currentYear(date: Date = new Date()): number {
+  return zonedDateParts(date).year;
+}
+
+/** Tanggal hari ini (YYYY-MM-DD) menurut UTC+8 — untuk nilai awal input. */
+export function todayISO(date: Date = new Date()): string {
+  const { year, month, day } = zonedDateParts(date);
+  return `${year}-${month}-${day}`;
 }
 
 /** "1.536" — angka statistik memakai pemisah ribuan Indonesia. */

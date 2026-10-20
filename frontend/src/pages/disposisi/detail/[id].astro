@@ -35,7 +35,12 @@ import { requireUser } from "../../../lib/auth";
 import { apiFetch } from "../../../lib/api";
 import { getSession } from "../../../lib/session";
 import { takeFormFeedback } from "../../../lib/formFeedback";
-import { berkasUrl, formatDateTime, toneClass } from "../../../lib/format";
+import {
+  berkasUrl,
+  currentYear,
+  formatDateTime,
+  toneClass,
+} from "../../../lib/format";
 import type { DisposisiDetail } from "../../../lib/disposisi";
 
 const auth = await requireUser(Astro);
@@ -69,8 +74,33 @@ const aksi = row?.aksi ?? {
 };
 
 const tahun =
-  Number(String(surat?.tgl_surat.iso ?? "").slice(0, 4)) ||
-  new Date().getFullYear();
+  Number(String(surat?.tgl_surat.iso ?? "").slice(0, 4)) || currentYear();
+
+/**
+ * Hak meneruskan.
+ *
+ * PENTING: pemilik yang sah adalah penerima disposisi TERAKHIR surat ini
+ * (`row.posisi`), bukan penerima baris yang sedang dibuka (`row.nip_tujuan`).
+ * Baris ini bisa saja sudah diteruskan ke orang lain — pada kasus itu `dari`
+ * baris ini adalah si penerima lama, sehingga memakai `nip_tujuan` baris
+ * membuat orang yang sudah meneruskan tetap bisa meneruskan lagi.
+ *
+ * Server kini menghitung `aksi.can_forward` dari posisi terakhir tersebut dan
+ * mengirim `row.posisi.is_pemilik`, jadi halaman cukup memakai nilai otoritatif
+ * itu. Fallback ke `posisi.is_pemilik`/`nip_tujuan` menjaga kompatibilitas bila
+ * API belum diperbarui.
+ */
+const isPemilik =
+  row?.posisi?.is_pemilik ??
+  (row?.nip_tujuan
+    ? String(row.nip_tujuan) === String(user.nip ?? "")
+    : false);
+
+/** Teruskan hanya bila pemilik disposisi saat ini DAN API mengizinkan. */
+const bisaTeruskan = isPemilik && Boolean(aksi.can_forward);
+
+/** Nama pemilik disposisi saat ini, untuk pesan penjelasan. */
+const namaPemilik = row?.posisi?.kepada || row?.kepada || "";
 
 const dashboard = await apiFetch<{ disposisi_belum_dibaca: number }>(
   "/dashboard",
@@ -147,80 +177,44 @@ const kembali = "/disposisi";
     title={surat?.no_surat ?? "Detail Disposisi"}
     subtitle="Detail disposisi"
   >
-    <div slot="actions" class="flex flex-wrap items-center gap-2">
-      {/* Status baca — badge yang sama dengan kartu CI3. */}
-      {
-        row.dibaca ? (
-          <span class="badge-success">Sudah dibaca</span>
-        ) : (
-          <span class="badge-warning">Belum dibaca</span>
-        )
-      }
+    {
+      /*
+       * Status baca, "Teruskan Disposisi", dan "Kembali" sudah tampil di kolom
+       * kanan (badge Status + tombol aksi), jadi tidak diulang di header.
+       * Header hanya menyisakan aksi yang TIDAK ada di kolom kanan.
+       */
+      (aksi.can_archive || aksi.can_delete) && (
+        <div slot="actions" class="flex flex-wrap items-center gap-2">
+          {aksi.can_archive && (
+            <form
+              method="post"
+              action={`/api/disposisi/surmas/${row.surmas_id}/arsip?kembali=${encodeURIComponent(
+                `/disposisi/detail/${row.id}`,
+              )}`}
+              data-confirm="Arsipkan surat ini?"
+            >
+              <button type="submit" class="btn-outline btn-sm">
+                <Icon name="archive" class="h-4 w-4" />
+                <span>Arsipkan surat</span>
+              </button>
+            </form>
+          )}
 
-      {
-        surat?.file.state === "ready" && (
-          <a
-            href={berkasUrl(surat.file.path)}
-            target="_blank"
-            rel="noopener"
-            class="btn-outline btn-sm"
-          >
-            <Icon name="file-text" class="h-4 w-4" />
-            <span>Lihat Berkas Surat</span>
-          </a>
-        )
-      }
-
-      {
-        aksi.can_forward && (
-          <button
-            type="button"
-            class="btn-primary btn-sm"
-            data-disposisi-open={row.surmas_id}
-          >
-            <Icon name="send" class="h-4 w-4" />
-            <span>Teruskan Disposisi</span>
-          </button>
-        )
-      }
-
-      {
-        aksi.can_archive && (
-          <form
-            method="post"
-            action={`/api/disposisi/surmas/${row.surmas_id}/arsip?kembali=${encodeURIComponent(
-              `/disposisi/detail/${row.id}`,
-            )}`}
-            data-confirm="Arsipkan surat ini?"
-          >
-            <button type="submit" class="btn-outline btn-sm">
-              <Icon name="archive" class="h-4 w-4" />
-              <span>Arsipkan surat</span>
-            </button>
-          </form>
-        )
-      }
-
-      {
-        aksi.can_delete && (
-          <form
-            method="post"
-            action={`/api/disposisi/${row.id}?kembali=${encodeURIComponent(kembali)}`}
-            data-confirm="Hapus disposisi ini?"
-          >
-            <button type="submit" class="btn-outline btn-sm">
-              <Icon name="trash" class="h-4 w-4" />
-              <span>Hapus disposisi</span>
-            </button>
-          </form>
-        )
-      }
-
-      <a href={kembali} class="btn-outline btn-sm">
-        <Icon name="arrow-left" class="h-4 w-4" />
-        <span>Kembali</span>
-      </a>
-    </div>
+          {aksi.can_delete && (
+            <form
+              method="post"
+              action={`/api/disposisi/${row.id}?kembali=${encodeURIComponent(kembali)}`}
+              data-confirm="Hapus disposisi ini?"
+            >
+              <button type="submit" class="btn-outline btn-sm">
+                <Icon name="trash" class="h-4 w-4" />
+                <span>Hapus disposisi</span>
+              </button>
+            </form>
+          )}
+        </div>
+      )
+    }
   </PageHead>
 
   {/* Catatan satu kali: GET ini yang baru saja membalik status baca. */}
@@ -360,17 +354,50 @@ const kembali = "/disposisi";
 
       <div class="space-y-2">
         {
-          aksi.can_forward && (
-            <button
-              type="button"
-              class="btn-primary w-full"
-              data-disposisi-open={row.surmas_id}
+          surat?.file.state === "ready" && (
+            <a
+              href={berkasUrl(surat.file.path)}
+              target="_blank"
+              rel="noopener"
+              class="btn-outline w-full"
             >
-              <Icon name="send" />
-              <span>Teruskan Disposisi</span>
-            </button>
+              <Icon name="file-text" />
+              <span>Lihat Berkas Surat</span>
+            </a>
           )
         }
+        {
+          /*
+           * Tombol SELALU dirender, tetapi `disabled` bila pemanggil bukan
+           * pemilik disposisi (atau API menutup aksi ini). `disabled` dipakai
+           * — bukan menyembunyikan tombol — agar pengguna melihat bahwa
+           * tindakan itu ada namun bukan haknya.
+           *
+           * Saat nonaktif, `data-disposisi-open` TIDAK dipasang sehingga tidak
+           * ada pemicu modal yang tidak sah.
+           */
+          <button
+            type="button"
+            class="btn-primary w-full"
+            disabled={!bisaTeruskan}
+            title={
+              bisaTeruskan
+                ? undefined
+                : "Hanya penerima disposisi ini yang dapat meneruskan."
+            }
+            data-disposisi-open={bisaTeruskan ? row.surmas_id : undefined}
+          >
+            <Icon name="send" />
+            <span>Teruskan Disposisi</span>
+          </button>
+        }
+        {!bisaTeruskan && (
+          <p class="text-xs text-[var(--color-ink-subtle)]">
+            Posisi disposisi saat ini ada pada{" "}
+            <span class="font-medium">{namaPemilik || "penerima disposisi"}</span>
+            , hanya penerima tersebut yang dapat meneruskan.
+          </p>
+        )}
         <a href={kembali} class="btn-outline w-full">
           <Icon name="arrow-left" />
           <span>Kembali</span>
@@ -444,6 +471,24 @@ const kembali = "/disposisi";
 
       const payload = await response.json();
       const riwayat: Riwayat[] = payload?.data?.riwayat ?? [];
+
+      /*
+       * Endpoint form mengirim riwayat urut TERBARU DULU (tanggal DESC) karena
+       * itu yang dipakai modal "Teruskan Disposisi". Halaman detail menampilkan
+       * riwayat sebagai alur, jadi urutannya dibalik menjadi ASC (terlama →
+       * terbaru) agar kronologi surat terbaca dari atas ke bawah.
+       *
+       * Pengurutan dilakukan di sini, bukan di API, supaya modal tetap memakai
+       * urutan aslinya. `id` dipakai sebagai pemecah seri karena `tanggal`
+       * beresolusi detik dan dua disposisi bisa tersimpan pada detik yang sama.
+       */
+      const waktu = (rw: Riwayat): number => {
+        const iso = rw.tanggal?.iso;
+        const ms = iso ? Date.parse(iso) : NaN;
+        return Number.isNaN(ms) ? 0 : ms;
+      };
+
+      riwayat.sort((a, b) => waktu(a) - waktu(b) || a.id - b.id);
 
       if (riwayat.length === 0) {
         box.innerHTML =

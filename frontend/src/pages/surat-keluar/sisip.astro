@@ -25,6 +25,7 @@ import { requireUser } from "../../lib/auth";
 import { apiFetch } from "../../lib/api";
 import { getSession } from "../../lib/session";
 import { takeFormFeedback } from "../../lib/formFeedback";
+import { currentYear, todayISO } from "../../lib/format";
 import type {
 	Klasifikasi,
 	PenandatanganGrup,
@@ -36,7 +37,7 @@ if (auth.redirect) return auth.redirect;
 const user = auth.user;
 const token = getSession(Astro.cookies);
 
-const tahun = new Date().getFullYear();
+const tahun = currentYear();
 
 const [pengambilRes, penandatanganRes, klasifikasiRes] = await Promise.all([
 	apiFetch<Pengambil[]>("/master/pengambil", { token }),
@@ -57,13 +58,11 @@ const disposisiCount = dashboard.data?.disposisi_belum_dibaca ?? 0;
 const feedback = takeFormFeedback(Astro.cookies, Astro.url.pathname);
 
 /**
- * Tanggal hari ini menurut zona waktu server Astro. Dihitung sekali di sini
- * agar `max` dan nilai awal selalu sama.
+ * Tanggal hari ini menurut zona waktu aplikasi (UTC+8 / WITA). Dihitung sekali
+ * di sini agar `max` dan nilai awal selalu sama. Memakai helper `todayISO()`,
+ * bukan `new Date()` mentah, agar hasilnya tidak bergantung pada zona mesin.
  */
-const now = new Date();
-const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
-	now.getDate(),
-).padStart(2, "0")}`;
+const today = todayISO();
 
 const nilaiTanggal =
 	feedback?.values && typeof feedback.values.tanggal === "string"
