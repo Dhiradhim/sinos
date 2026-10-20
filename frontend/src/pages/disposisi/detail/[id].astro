@@ -79,16 +79,14 @@ const tahun =
 /**
  * Hak meneruskan.
  *
- * PENTING: pemilik yang sah adalah penerima disposisi TERAKHIR surat ini
- * (`row.posisi`), bukan penerima baris yang sedang dibuka (`row.nip_tujuan`).
- * Baris ini bisa saja sudah diteruskan ke orang lain — pada kasus itu `dari`
- * baris ini adalah si penerima lama, sehingga memakai `nip_tujuan` baris
- * membuat orang yang sudah meneruskan tetap bisa meneruskan lagi.
+ * PENTING: pemilik yang sah adalah pemilik POSISI SAAT INI (`row.posisi`),
+ * bukan penerima baris yang sedang dibuka (`row.nip_tujuan`). Baris ini bisa
+ * saja sudah diteruskan ke orang lain — pada kasus itu memakai `nip_tujuan`
+ * baris membuat orang yang sudah meneruskan tetap bisa meneruskan lagi.
  *
- * Server kini menghitung `aksi.can_forward` dari posisi terakhir tersebut dan
- * mengirim `row.posisi.is_pemilik`, jadi halaman cukup memakai nilai otoritatif
- * itu. Fallback ke `posisi.is_pemilik`/`nip_tujuan` menjaga kompatibilitas bila
- * API belum diperbarui.
+ * Server menghitung `aksi.can_forward` dari posisi tersebut dan mengirim
+ * `row.posisi.is_pemilik`, jadi halaman cukup memakai nilai otoritatif itu.
+ * Fallback ke `nip_tujuan` menjaga kompatibilitas bila API belum diperbarui.
  */
 const isPemilik =
   row?.posisi?.is_pemilik ??
@@ -99,8 +97,21 @@ const isPemilik =
 /** Teruskan hanya bila pemilik disposisi saat ini DAN API mengizinkan. */
 const bisaTeruskan = isPemilik && Boolean(aksi.can_forward);
 
-/** Nama pemilik disposisi saat ini, untuk pesan penjelasan. */
-const namaPemilik = row?.posisi?.kepada || row?.kepada || "";
+/**
+ * Nama pemilik posisi saat ini, untuk pesan penjelasan.
+ *
+ * Surat yang sudah DIKEMBALIKAN berada di meja operator: `posisi.nip` NULL dan
+ * `posisi.di_operator` TRUE. Pesannya memakai istilah "operator surat", bukan
+ * nama penerima lama, agar tidak menyesatkan.
+ */
+const posisiSaatIni = row?.posisi ?? null;
+const kembaliKeOperator = Boolean(posisiSaatIni?.di_operator);
+const namaPemilik = kembaliKeOperator
+  ? "operator surat"
+  : posisiSaatIni?.kepada || row?.kepada || "";
+
+/** Boleh mengarsipkan? Dihitung server (posisi harus di meja operator). */
+const bisaArsipkan = Boolean(aksi.can_archive);
 
 const dashboard = await apiFetch<{ disposisi_belum_dibaca: number }>(
   "/dashboard",
@@ -183,9 +194,9 @@ const kembali = "/disposisi";
        * kanan (badge Status + tombol aksi), jadi tidak diulang di header.
        * Header hanya menyisakan aksi yang TIDAK ada di kolom kanan.
        */
-      (aksi.can_archive || aksi.can_delete) && (
+      (bisaArsipkan || aksi.can_delete) && (
         <div slot="actions" class="flex flex-wrap items-center gap-2">
-          {aksi.can_archive && (
+          {bisaArsipkan && (
             <form
               method="post"
               action={`/api/disposisi/surmas/${row.surmas_id}/arsip?kembali=${encodeURIComponent(
@@ -393,9 +404,21 @@ const kembali = "/disposisi";
         }
         {!bisaTeruskan && (
           <p class="text-xs text-[var(--color-ink-subtle)]">
-            Posisi disposisi saat ini ada pada{" "}
-            <span class="font-medium">{namaPemilik || "penerima disposisi"}</span>
-            , hanya penerima tersebut yang dapat meneruskan.
+            {kembaliKeOperator ? (
+              <>
+                Surat sudah dikembalikan ke operator. Hanya{" "}
+                <span class="font-medium">operator surat</span> yang dapat
+                meneruskan atau mengarsipkannya.
+              </>
+            ) : (
+              <>
+                Posisi disposisi saat ini ada pada{" "}
+                <span class="font-medium">
+                  {namaPemilik || "penerima disposisi"}
+                </span>
+                , hanya penerima tersebut yang dapat meneruskan.
+              </>
+            )}
           </p>
         )}
         <a href={kembali} class="btn-outline w-full">

@@ -462,6 +462,102 @@ class M_disposisi extends MY_Model
     }
 
     /**
+     * Pemilik posisi disposisi SAAT INI untuk sebuah surat.
+     *
+     * Posisi surat mengikuti disposisi TERAKHIR:
+     *   - belum pernah didisposisi          -> operator (disposisi awal)
+     *   - disposisi terakhir DIKEMBALIKAN   -> operator (surat kembali ke
+     *                                          meja operator, siap diarsipkan
+     *                                          atau didisposisikan ulang)
+     *   - selain itu                        -> penerima disposisi terakhir
+     *                                          (`nip_tujuan`)
+     *
+     * Sebelumnya "dikembalikan" hanya dipakai untuk menampilkan badge; posisi
+     * surat tidak pernah berpindah kembali ke operator, sehingga surat yang
+     * sudah dikembalikan tidak dapat diarsipkan oleh siapa pun
+     * (`POSISI_BUKAN_OPERATOR`).
+     *
+     * @param  int $surmas_id
+     * @return array{nip:string|null,kepada:string,kategori:string,
+     *               dikembalikan:bool,di_operator:bool,belum:bool,
+     *               terakhir:object|null}
+     */
+    public function pemilik_posisi($surmas_id)
+    {
+        $posisi = $this->posisi_terakhir(array((int) $surmas_id));
+        $last   = isset($posisi[(int) $surmas_id]) ? $posisi[(int) $surmas_id] : NULL;
+
+        // Belum pernah didisposisi: posisi ada di operator surat.
+        if ($last === NULL) {
+            return array(
+                'nip'          => NULL,
+                'kepada'       => '',
+                'kategori'     => '',
+                'dikembalikan' => FALSE,
+                'di_operator'  => TRUE,
+                'belum'        => TRUE,
+                'terakhir'     => NULL,
+            );
+        }
+
+        $kepada   = isset($last->kepada) ? (string) $last->kepada : '';
+        $kategori = isset($last->kategori) ? (string) $last->kategori : '';
+        $kembali  = ! empty($last->dikembalikan);
+
+        // Dikembalikan ke operator: posisi kembali ke operator surat.
+        if ($kembali) {
+            return array(
+                'nip'          => NULL,
+                'kepada'       => $kepada,
+                'kategori'     => $kategori,
+                'dikembalikan' => TRUE,
+                'di_operator'  => TRUE,
+                'belum'        => FALSE,
+                'terakhir'     => $last,
+            );
+        }
+
+        $nip = (isset($last->nip_tujuan) && $last->nip_tujuan !== '')
+            ? (string) $last->nip_tujuan
+            : NULL;
+
+        return array(
+            'nip'          => $nip,
+            'kepada'       => $kepada,
+            'kategori'     => $kategori,
+            'dikembalikan' => FALSE,
+            // Tujuan "Arsip" (nip_tujuan kosong) tidak punya pemilik.
+            'di_operator'  => ($nip === NULL),
+            'belum'        => FALSE,
+            'terakhir'     => $last,
+        );
+    }
+
+    /**
+     * Apakah user adalah pemilik posisi disposisi saat ini.
+     *
+     * Dipakai untuk menyamakan hak "teruskan" dan "arsipkan" di seluruh modul:
+     * operator berhak selama posisi surat ada di meja operator (belum
+     * didisposisi atau sudah dikembalikan), selain itu hanya `nip_tujuan`
+     * terakhir.
+     *
+     * @param  int    $surmas_id
+     * @param  string $nip
+     * @param  bool   $is_operator
+     * @return bool
+     */
+    public function apakah_pemilik($surmas_id, $nip, $is_operator = FALSE)
+    {
+        $p = $this->pemilik_posisi($surmas_id);
+
+        if ($p['belum'] || $p['di_operator']) {
+            return (bool) $is_operator;
+        }
+
+        return ($p['nip'] !== NULL && $p['nip'] === (string) $nip);
+    }
+
+    /**
      * Tandai disposisi sebagai dikembalikan ke operator surat.
      */
     public function kembalikan($id)

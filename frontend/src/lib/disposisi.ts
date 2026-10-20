@@ -86,17 +86,24 @@ export type SuratRingkas = {
 };
 
 /**
- * Posisi disposisi SAAT INI untuk surat (penerima disposisi terakhir).
+ * Posisi disposisi SAAT INI untuk surat.
  *
  * Berbeda dari `nip_tujuan` pada baris detail: baris yang sedang dibuka bisa
- * saja sudah diteruskan ke orang lain. `is_pemilik` dihitung server sehingga
- * UI tidak perlu menebak dari NIP sendiri.
+ * saja sudah diteruskan ke orang lain. Semua flag dihitung server sehingga UI
+ * tidak perlu menebak dari NIP sendiri.
+ *
+ * `di_operator` TRUE bila surat belum pernah didisposisi ATAU disposisi
+ * terakhir sudah dikembalikan — saat itulah operator menjadi pemilik posisi
+ * dan berhak mengarsipkan surat.
  */
 export type DisposisiPosisi = {
   nip: string | null;
   kepada: string;
   kategori: string;
   tanggal: TanggalMeta;
+  dikembalikan: boolean;
+  di_operator: boolean;
+  belum: boolean;
   is_pemilik: boolean;
 };
 

@@ -275,16 +275,22 @@ const kembali = `/disposisi${arsip ? `?arsip=${arsip}` : ""}`;
 				if (key === "disposisi") {
 					// Susunan identik dengan kolom "Disposisi" pada
 					// /surat-masuk/daftar: (1) posisi disposisi saat ini,
-					// (2) instruksi, (3) status dibaca.
+					// (2) instruksi, (3) status.
 					//
+					// Bila disposisi sudah diarahkan ke "Arsip", status baca
+					// tidak relevan lagi: yang ditampilkan adalah status ARSIP
+					// (Sudah/Belum diarsipkan), bukan "Belum dibaca" maupun
+					// "Diarsipkan oleh penerima".
+					const posisi = row.lokasi || row.kepada;
+					const keArsip = posisi === "Arsip";
+
 					// `status` dari api_status_posisi_disposisi() memuat label
 					// yang lebih spesifik (Sudah diarsipkan / Dikembalikan)
 					// sekaligus "Dibaca"/"Belum dibaca" yang sudah diwakili
-					// badge di bawah — yang terakhir disembunyikan agar tidak
-					// ada dua badge berbunyi sama dalam satu sel.
-					const posisi = row.lokasi || row.kepada;
+					// badge di bawah — keduanya disembunyikan agar tidak ada
+					// dua badge berbunyi sama dalam satu sel.
 					const statusTambahan =
-						row.status !== "Dibaca" && row.status !== "Belum dibaca"
+						!keArsip && row.status !== "Dibaca" && row.status !== "Belum dibaca"
 							? row.status
 							: null;
 
@@ -316,7 +322,19 @@ const kembali = `/disposisi${arsip ? `?arsip=${arsip}` : ""}`;
 							</p>
 
 							<div class="flex items-center gap-1.5">
-								{row.dibaca ? (
+								{keArsip ? (
+									row.diarsipkan ? (
+										<span class="badge-success">
+											<Icon name="archive" class="h-3 w-3" />
+											Sudah diarsipkan
+										</span>
+									) : (
+										<span class="badge-warning">
+											<Icon name="archive" class="h-3 w-3" />
+											Belum diarsipkan
+										</span>
+									)
+								) : row.dibaca ? (
 									<span class="badge-success">
 										<Icon name="check" class="h-3 w-3" />
 										Sudah dibaca
@@ -332,6 +350,16 @@ const kembali = `/disposisi${arsip ? `?arsip=${arsip}` : ""}`;
 					);
 				}
 
+				/**
+				 * Disposisi sudah berakhir di "Arsip".
+				 *
+				 * Pada kondisi ini menu titik tiga tidak ditampilkan; aksi
+				 * pengarsipan diberikan langsung sebagai ikon agar satu klik.
+				 * "Batalkan arsip" dipakai bila surat sudah diarsipkan
+				 * (tersedia di daftar surat masuk), "Arsipkan surat" bila belum.
+				 */
+				const keArsip = (row.lokasi || row.kepada) === "Arsip";
+
 				return (
 					<div class="flex items-center justify-end gap-1">
 						<a
@@ -343,71 +371,104 @@ const kembali = `/disposisi${arsip ? `?arsip=${arsip}` : ""}`;
 							<Icon name="eye" class="h-4 w-4" />
 						</a>
 
-						{row.aksi.can_forward && (
-							<button
-								type="button"
-								class="btn-icon"
-								title="Teruskan disposisi"
-								aria-label={`Teruskan disposisi ${row.no_surat}`}
-								data-disposisi-open={row.surmas_id}
-							>
-								<Icon name="send" class="h-4 w-4" />
-							</button>
-						)}
-
-						{(row.aksi.can_archive || row.aksi.can_delete) && (
-							<div
-								class="hs-dropdown relative inline-flex [--placement:bottom-right]"
-								data-hs-dropdown-options='{"strategy":"fixed"}'
-							>
-								<button
-									type="button"
-									class="hs-dropdown-toggle btn-icon"
-									aria-haspopup="menu"
-									aria-expanded="false"
-									title="Aksi lainnya"
+						{keArsip ? (
+							row.diarsipkan ? (
+								<span
+									class="btn-icon cursor-not-allowed opacity-50"
+									title="Surat sudah diarsipkan"
+									aria-label={`Surat ${row.no_surat} sudah diarsipkan`}
+									aria-disabled="true"
 								>
-									<Icon name="ellipsis" class="h-4 w-4" />
-								</button>
-								<div
-									class="hs-dropdown-menu dropdown-menu absolute right-0 top-full mt-1 hidden w-56 opacity-0 transition-[opacity,margin] duration-150 hs-dropdown-open:opacity-100"
-									role="menu"
-								>
-									{row.aksi.can_archive && (
-										<form
-											method="post"
-											action={`/api/disposisi/surmas/${row.surmas_id}/arsip?kembali=${encodeURIComponent(kembali)}`}
-											data-confirm="Arsipkan surat ini?"
+									<Icon name="archive" class="h-4 w-4" />
+								</span>
+							) : (
+								row.aksi.can_archive && (
+									<form
+										method="post"
+										action={`/api/disposisi/surmas/${row.surmas_id}/arsip?kembali=${encodeURIComponent(kembali)}`}
+										data-confirm="Arsipkan surat ini?"
+										role="none"
+									>
+										<button
+											type="submit"
+											class="btn-icon"
+											title="Arsipkan surat"
+											aria-label={`Arsipkan surat ${row.no_surat}`}
 										>
-											<button
-												type="submit"
-												class="dropdown-item"
-												role="menuitem"
-											>
-												<Icon name="archive" class="h-4 w-4" />
-												<span>Arsipkan surat</span>
-											</button>
-										</form>
-									)}
+											<Icon name="archive" class="h-4 w-4" />
+										</button>
+									</form>
+								)
+							)
+						) : (
+							<>
+								{row.aksi.can_forward && (
+									<button
+										type="button"
+										class="btn-icon"
+										title="Teruskan disposisi"
+										aria-label={`Teruskan disposisi ${row.no_surat}`}
+										data-disposisi-open={row.surmas_id}
+									>
+										<Icon name="send" class="h-4 w-4" />
+									</button>
+								)}
 
-									{row.aksi.can_delete && (
-										<form
-											method="post"
-											action={`/api/disposisi/${row.id}?kembali=${encodeURIComponent(kembali)}`}
-											data-confirm="Hapus disposisi ini?"
+								{(row.aksi.can_archive || row.aksi.can_delete) && (
+									<div
+										class="hs-dropdown relative inline-flex [--placement:bottom-right]"
+										data-hs-dropdown-options='{"strategy":"fixed"}'
+									>
+										<button
+											type="button"
+											class="hs-dropdown-toggle btn-icon"
+											aria-haspopup="menu"
+											aria-expanded="false"
+											title="Aksi lainnya"
 										>
-											<button
-												type="submit"
-												class="dropdown-item dropdown-item-destructive"
-												role="menuitem"
-											>
-												<Icon name="trash" class="h-4 w-4" />
-												<span>Hapus disposisi</span>
-											</button>
-										</form>
-									)}
-								</div>
-							</div>
+											<Icon name="ellipsis" class="h-4 w-4" />
+										</button>
+										<div
+											class="hs-dropdown-menu dropdown-menu absolute right-0 top-full mt-1 hidden w-56 opacity-0 transition-[opacity,margin] duration-150 hs-dropdown-open:opacity-100"
+											role="menu"
+										>
+											{row.aksi.can_archive && (
+												<form
+													method="post"
+													action={`/api/disposisi/surmas/${row.surmas_id}/arsip?kembali=${encodeURIComponent(kembali)}`}
+													data-confirm="Arsipkan surat ini?"
+												>
+													<button
+														type="submit"
+														class="dropdown-item"
+														role="menuitem"
+													>
+														<Icon name="archive" class="h-4 w-4" />
+														<span>Arsipkan surat</span>
+													</button>
+												</form>
+											)}
+
+											{row.aksi.can_delete && (
+												<form
+													method="post"
+													action={`/api/disposisi/${row.id}?kembali=${encodeURIComponent(kembali)}`}
+													data-confirm="Hapus disposisi ini?"
+												>
+													<button
+														type="submit"
+														class="dropdown-item dropdown-item-destructive"
+														role="menuitem"
+													>
+														<Icon name="trash" class="h-4 w-4" />
+														<span>Hapus disposisi</span>
+													</button>
+												</form>
+											)}
+										</div>
+									</div>
+								)}
+							</>
 						)}
 					</div>
 				);

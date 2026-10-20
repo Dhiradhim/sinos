@@ -47,7 +47,9 @@ class Surat_masuk extends MY_Api_Controller
         parent::__construct();
 
         $this->load->helper(array('api_present', 'api_validation', 'api_berkas'));
-        $this->load->model(array('M_surmas', 'M_disposisi'));
+        // M_user dipakai lembar disposisi cetak untuk mengambil nama Ketua
+        // dari data pegawai (blok tanda tangan).
+        $this->load->model(array('M_surmas', 'M_disposisi', 'M_user'));
     }
 
     /**
@@ -100,27 +102,28 @@ class Surat_masuk extends MY_Api_Controller
              * Hak mengirim/meneruskan disposisi.
              *
              * Aturannya SAMA dengan detail & daftar disposisi: yang berhak
-             * adalah PEMILIK POSISI SAAT INI, yaitu penerima disposisi
-             * terakhir surat tersebut.
+             * adalah PEMILIK POSISI SAAT INI.
              *
-             * Sebelumnya operator selalu lolos (`! empty($this->user['operator'])`),
-             * sehingga operator yang sudah meneruskan surat ke pihak lain tetap
-             * melihat opsi disposisi. `can_send()` juga terlalu longgar: ia
-             * mengembalikan TRUE untuk siapa pun yang PERNAH menerima disposisi
-             * surat itu, termasuk penerima lama.
-             *
-             * - Surat belum pernah didisposisi -> operator (disposisi awal).
-             * - Surat sudah didisposisi       -> hanya `nip_tujuan` terakhir.
-             * - Tujuan "Arsip" (nip_tujuan kosong) -> tidak ada pemilik.
+             * - Belum pernah didisposisi       -> operator (disposisi awal).
+             * - Disposisi terakhir DIKEMBALIKAN -> operator (surat kembali ke
+             *   meja operator dan siap diarsipkan / didisposisikan ulang).
+             * - Disposisi terakhir ke pegawai  -> hanya `nip_tujuan` terakhir.
+             * - Tujuan "Arsip" (nip kosong)    -> tidak ada pemilik.
              */
             $nip_pemilik = ($status_dis && ! empty($status_dis->nip_tujuan))
                 ? (string) $status_dis->nip_tujuan
                 : '';
 
+            $dikembalikan = ($status_dis && ! empty($status_dis->dikembalikan));
+            $belum        = ($status_dis === NULL);
+
+            // Posisi di meja operator: belum didisposisi atau sudah dikembalikan.
+            $di_operator = ($belum || $dikembalikan);
+
             $is_pemilik = ($nip_pemilik !== '' && $nip_pemilik === $nip);
 
             $can_send = ! $diarsipkan && (
-                ($status_dis === NULL && $is_operator) || $is_pemilik
+                ($di_operator && $is_operator) || $is_pemilik
             );
 
             $data[] = array(
@@ -357,8 +360,22 @@ class Surat_masuk extends MY_Api_Controller
             return;
         }
 
-        $disposisi_ada = $this->db->where('surmas_id', (int) $row->id)->count_all_results('disposisi');
-        if ($disposisi_ada > 0 && ! $this->M_disposisi->semua_dikembalikan((int) $row->id)) {
+        /**
+         * Surat hanya dapat diarsipkan ketika POSISINYA berada di operator.
+         *
+         * `pemilik_posisi()` memusatkan aturan:
+         *   - belum pernah didisposisi          -> operator
+         *   - disposisi terakhir DIKEMBALIKAN   -> operator (surat kembali ke
+         *     meja operator, siap diarsipkan)
+         *   - disposisi terakhir ke pegawai     -> bukan posisi operator
+         *
+         * Sebelumnya dipakai `semua_dikembalikan()`, yang menuntut SELURUH
+         * baris disposisi dikembalikan. Pada surat yang pernah diteruskan
+         * (A -> B -> C), pengembalian oleh C saja tidak pernah cukup sehingga
+         * surat tak dapat diarsipkan meski sudah kembali ke operator.
+         */
+        $pemilik = $this->M_disposisi->pemilik_posisi((int) $row->id);
+        if (! $pemilik['di_operator']) {
             $this->fail(
                 'ARSIP_DITOLAK',
                 'Surat belum dapat diarsipkan. Menunggu disposisi dikembalikan ke operator.',
@@ -428,6 +445,44 @@ class Surat_masuk extends MY_Api_Controller
             return;
         }
 
+        /**
+         * Riwayat disposisi surat ini, urut naik (terlama -> terbaru).
+         *
+         * Lembar cetak menampilkan riwayat tersebut; urutan naik dipilih agar
+         * alur disposisi terbaca kronologis dari atas ke bawah, sama dengan
+         * blok "Riwayat" pada halaman detail disposisi.
+         */
+        $riwayat_rows = $this->M_disposisi->riwayat_surmas((int) $row->id);
+        $riwayat      = array();
+
+        foreach ($riwayat_rows as $rw) {
+            $riwayat[] = array(
+                'id'           => (int) $rw->id,
+                'kepada'       => (string) $rw->kepada,
+                'kategori'     => (string) $rw->kategori,
+                'nip_tujuan'   => isset($rw->nip_tujuan) && $rw->nip_tujuan !== ''
+                    ? (string) $rw->nip_tujuan
+                    : NULL,
+                'instruksi'    => isset($rw->instruksi) ? $rw->instruksi : NULL,
+                'catatan'      => isset($rw->catatan) ? $rw->catatan : NULL,
+                'dari'         => isset($rw->dari) ? (string) $rw->dari : '',
+                'tanggal'      => api_datetime(isset($rw->tanggal) ? $rw->tanggal : NULL),
+                'dibaca'       => ! empty($rw->dibaca),
+                'dikembalikan' => ! empty($rw->dikembalikan),
+            );
+        }
+
+        // Disposisi terakhir (tanggalnya dipakai sebagai tanggal lembar cetak).
+        $terakhir = ! empty($riwayat) ? $riwayat[count($riwayat) - 1] : NULL;
+
+        /**
+         * Penanda tangan lembar disposisi: Ketua Pengadilan Agama.
+         *
+         * Diambil dari database pegawai (jabatan `Ketua`) supaya nama pejabat
+         * selalu mengikuti data kepegawaian, bukan teks tetap di view.
+         */
+        $ketua = $this->M_user->ketua();
+
         $this->ok(array(
             'surat' => array(
                 'id'           => (int) $row->id,
@@ -451,6 +506,14 @@ class Surat_masuk extends MY_Api_Controller
                 'Diteruskan kepada',
                 'Instruksi',
                 'Catatan',
+            ),
+            'riwayat'   => $riwayat,
+            'terakhir'  => $terakhir,
+            // Blok tanda tangan: jabatan tetap + nama dari data pegawai.
+            'penandatangan' => array(
+                'jabatan' => 'Ketua Pengadilan Agama Kupang',
+                'nama'    => $ketua ? (string) $ketua->nama : '',
+                'nip'     => $ketua && isset($ketua->nip) ? (string) $ketua->nip : '',
             ),
         ));
     }
@@ -527,23 +590,20 @@ class Surat_masuk extends MY_Api_Controller
         // batal_arsip() / hapus(). Astro tidak perlu menurunkan ulang.
         /**
          * Hak mengirim/meneruskan disposisi — aturan yang sama dengan daftar:
-         * hanya PEMILIK POSISI SAAT INI (penerima disposisi terakhir) yang
-         * berhak. Operator hanya berhak pada surat yang belum pernah
-         * didisposisikan (disposisi awal).
-         *
-         * `$posisi` di atas adalah baris disposisi terakhir surat ini
-         * (lihat riwayat_surmas + `$posisi = $riwayat[count-1]`).
+         * hanya PEMILIK POSISI SAAT INI yang berhak. `pemilik_posisi()`
+         * memusatkan aturannya: surat yang belum didisposisi atau sudah
+         * DIKEMBALIKAN berada di meja operator, selain itu pada penerima
+         * disposisi terakhir.
          */
-        $nip_pemilik = ($posisi && ! empty($posisi->nip_tujuan))
-            ? (string) $posisi->nip_tujuan
-            : '';
+        $pemilik_posisi = $this->M_disposisi->pemilik_posisi($id);
 
         $can_send = ! $diarsipkan && (
-            (empty($riwayat) && $is_operator)
-            || ($nip_pemilik !== '' && $nip_pemilik === $nip)
+            ($pemilik_posisi['di_operator'] && $is_operator)
+            || ($pemilik_posisi['nip'] !== NULL && $pemilik_posisi['nip'] === $nip)
         );
-        $can_arsipkan = $is_operator && ! $diarsipkan
-            && (! empty($riwayat) ? $this->M_disposisi->semua_dikembalikan($id) : TRUE);
+        // Arsip hanya bila posisinya di operator (belum didisposisi atau
+        // sudah dikembalikan) — sama dengan penjaga di arsipkan().
+        $can_arsipkan = $is_operator && ! $diarsipkan && $pemilik_posisi['di_operator'];
 
         return array(
             'id'           => $id,

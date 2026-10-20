@@ -119,12 +119,22 @@ class Disposisi extends MY_Api_Controller
             $status_surat = isset($r->status_surat) ? (string) $r->status_surat : '';
             $diarsipkan   = ($status_surat === 'diarsipkan');
 
-            // Posisi surat berada di operator (penerima disposisi terakhir
-            // adalah pegawai bertag operator, belum dikembalikan/diarsip).
+            /**
+             * Posisi surat berada di operator.
+             *
+             * Dulu syaratnya `dikembalikan === 0`, sehingga surat yang SUDAH
+             * dikembalikan justru dianggap bukan posisi operator — padahal
+             * justru saat itulah surat kembali ke meja operator dan siap
+             * diarsipkan.
+             *
+             * Sekarang memakai `M_disposisi::pemilik_posisi()`:
+             *   - belum didisposisi / sudah dikembalikan -> di operator
+             *   - diteruskan ke pegawai non-operator      -> bukan posisi operator
+             */
+            $pemilik = $this->M_disposisi->pemilik_posisi((int) $r->surmas_id);
+
             $posisi_di_operator = ($status_surat !== 'diarsipkan'
-                && (int) $r->dikembalikan === 0
-                && ! empty($r->nip_tujuan)
-                && isset($operator_nips[(string) $r->nip_tujuan]));
+                && $pemilik['di_operator']);
 
             $status_posisi = api_status_posisi_disposisi($r);
 
@@ -163,8 +173,14 @@ class Disposisi extends MY_Api_Controller
                     'can_archive' => (bool) ($is_operator && $posisi_di_operator),
                     'can_delete'  => (bool) ($is_admin
                         || (isset($r->dari) && (string) $r->dari === $nip)),
-                    'can_forward' => (bool) ($is_operator
-                        || $this->M_disposisi->can_send((int) $r->surmas_id, $nip, FALSE)),
+                    // Sama dengan detail: hanya pemilik posisi saat ini.
+                    // Surat yang sudah dikembalikan berada di meja operator,
+                    // jadi operator berhak meneruskannya kembali.
+                    'can_forward' => (bool) $this->M_disposisi->apakah_pemilik(
+                        (int) $r->surmas_id,
+                        $nip,
+                        $is_operator
+                    ),
                 ),
             );
         }
@@ -232,23 +248,29 @@ class Disposisi extends MY_Api_Controller
          * semua operator — termasuk yang sudah meneruskan surat ke pihak lain
          * — tetap dapat meneruskan. Itu keliru.
          */
-        $posisi_saat_ini = $this->M_disposisi->posisi_terakhir(array((int) $row->surmas_id));
-        $terakhir        = isset($posisi_saat_ini[(int) $row->surmas_id])
-            ? $posisi_saat_ini[(int) $row->surmas_id]
-            : NULL;
+        $pemilik = $this->M_disposisi->pemilik_posisi((int) $row->surmas_id);
+        $terakhir = $pemilik['terakhir'];
 
-        $nip_pemilik = ($terakhir && ! empty($terakhir->nip_tujuan))
-            ? (string) $terakhir->nip_tujuan
-            : '';
+        // Surat yang sudah dikembalikan berada di meja operator, sehingga
+        // `nip` pemiliknya NULL dan `di_operator` TRUE.
+        $nip_pemilik = $pemilik['nip'];
 
-        // Pemilik saat ini, ATAU operator pada surat yang belum pernah
-        // didisposisikan (tidak terjadi di endpoint ini, tetapi dijaga agar
-        // logika tetap konsisten dengan can_send()).
-        $is_pemilik = ($nip_pemilik !== '' && $nip_pemilik === $nip)
-            || ($terakhir === NULL && $is_operator);
+        $is_pemilik = $this->M_disposisi->apakah_pemilik(
+            (int) $row->surmas_id,
+            $nip,
+            $is_operator
+        );
 
-        $can_forward = $is_pemilik
-            && ($is_operator || $this->M_disposisi->can_send((int) $row->surmas_id, $nip, FALSE));
+        $can_forward = $is_pemilik;
+
+        // Surat yang sudah dikembalikan kembali ke meja operator dan siap
+        // diarsipkan. Sebelumnya hanya bisa ketika penerima terakhir masih
+        // seorang operator yang belum mengembalikan surat.
+        $can_archive = $is_operator
+            && $surat
+            && $surat->status !== 'diarsipkan'
+            && $pemilik['di_operator']
+            && ! empty($row->surmas_id);
 
         $this->ok(array(
             'id'           => (int) $row->id,
@@ -269,15 +291,21 @@ class Disposisi extends MY_Api_Controller
             'tgl_dikembalikan' => api_datetime(isset($row->tgl_dikembalikan) ? $row->tgl_dikembalikan : NULL),
             'status'       => $dibaca ? 'Sudah dibaca' : 'Belum dibaca',
             'tone'         => $dibaca ? 'ok' : 'warning',
-            // Posisi disposisi SAAT INI untuk surat ini (penerima terakhir).
-            // Dipakai UI untuk menjelaskan siapa yang berhak meneruskan.
-            'posisi'       => $terakhir ? array(
-                'nip'      => $nip_pemilik !== '' ? $nip_pemilik : NULL,
-                'kepada'   => isset($terakhir->kepada) ? (string) $terakhir->kepada : '',
-                'kategori' => isset($terakhir->kategori) ? (string) $terakhir->kategori : '',
-                'tanggal'  => api_datetime(isset($terakhir->tanggal) ? $terakhir->tanggal : NULL),
-                'is_pemilik' => (bool) ($nip_pemilik !== '' && $nip_pemilik === $nip),
-            ) : NULL,
+            // Posisi disposisi SAAT INI untuk surat ini.
+            // `di_operator` TRUE bila surat belum didisposisi atau sudah
+            // dikembalikan — yaitu saat operator menjadi pemilik posisi.
+            'posisi'       => array(
+                'nip'          => $nip_pemilik,
+                'kepada'       => $pemilik['kepada'],
+                'kategori'     => $pemilik['kategori'],
+                'tanggal'      => $terakhir
+                    ? api_datetime(isset($terakhir->tanggal) ? $terakhir->tanggal : NULL)
+                    : array('iso' => NULL, 'teks' => ''),
+                'dikembalikan' => (bool) $pemilik['dikembalikan'],
+                'di_operator'  => (bool) $pemilik['di_operator'],
+                'belum'        => (bool) $pemilik['belum'],
+                'is_pemilik'   => (bool) $is_pemilik,
+            ),
             'surat'        => $surat ? array(
                 'id'           => (int) $surat->id,
                 'kode'         => isset($surat->kode) ? (string) $surat->kode : '',
@@ -294,11 +322,7 @@ class Disposisi extends MY_Api_Controller
             'aksi'         => array(
                 'can_view'    => TRUE,
                 'can_forward' => (bool) $can_forward,
-                'can_archive' => (bool) ($is_operator
-                    && $surat
-                    && $surat->status !== 'diarsipkan'
-                    && (int) $row->dikembalikan === 0
-                    && $this->M_disposisi->is_operator_nip($row->nip_tujuan)),
+                'can_archive' => (bool) $can_archive,
                 'can_delete'  => (bool) ($is_admin
                     || (isset($row->dari) && (string) $row->dari === $nip)),
             ),
@@ -560,18 +584,24 @@ class Disposisi extends MY_Api_Controller
             return;
         }
 
-        $posisi = $this->M_disposisi->posisi_terakhir(array($surmas_id));
-        $last   = isset($posisi[$surmas_id]) ? $posisi[$surmas_id] : NULL;
+        /**
+         * Posisi surat harus berada di meja operator.
+         *
+         * `pemilik_posisi()` memusatkan aturannya:
+         *   - belum pernah didisposisi          -> operator
+         *   - disposisi terakhir DIKEMBALIKAN   -> operator (inilah kasus yang
+         *     sebelumnya ditolak: badge "Dikembalikan" hanya tampilan, posisi
+         *     surat tidak pernah kembali ke operator sehingga arsip selalu
+         *     gagal dengan POSISI_BUKAN_OPERATOR)
+         *   - disposisi terakhir ke pegawai non-operator -> bukan posisi operator
+         */
+        $pemilik = $this->M_disposisi->pemilik_posisi($surmas_id);
 
-        $posisi_di_operator = ($last
-            && (int) $last->dikembalikan === 0
-            && ! empty($last->nip_tujuan)
-            && $this->M_disposisi->is_operator_nip($last->nip_tujuan));
-
-        if (! $posisi_di_operator) {
+        if (! $pemilik['di_operator']) {
             $this->fail(
                 'POSISI_BUKAN_OPERATOR',
-                'Surat hanya dapat diarsipkan ketika posisinya berada di operator.',
+                'Surat hanya dapat diarsipkan ketika posisinya berada di operator. '
+                    . 'Minta penerima disposisi mengembalikan surat terlebih dahulu.',
                 409
             );
             return;

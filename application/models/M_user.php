@@ -38,6 +38,14 @@ class M_user extends MY_Model
     /** ID jabatan `Administrator` pada `ref_jabatan`. */
     const ID_JABATAN_ADMIN = 1;
 
+    /**
+     * ID jabatan `Ketua` pada `ref_jabatan`.
+     *
+     * Sumber: `ref_jabatan` id 2 (`Ketua`, kode `KPA`) — sama dengan kunci
+     * "Ketua" pada config `penandatangan_jabatan`.
+     */
+    const ID_JABATAN_KETUA = 2;
+
     public function __construct()
     {
         parent::__construct();
@@ -47,6 +55,35 @@ class M_user extends MY_Model
         // tidak ada query yang jatuh ke schema lokal.
         $this->table = self::T_PEGAWAI;
         $this->primary_key = 'id';
+    }
+
+    /**
+     * Pegawai aktif yang menjabat Ketua Pengadilan Agama.
+     *
+     * Dipakai lembar disposisi cetak untuk mengisi blok tanda tangan:
+     * jabatan "Ketua Pengadilan Agama Kupang" beserta nama pejabatnya.
+     *
+     * Memakai `id_jabatan` (bukan nama) karena grant SINOS hanya mencakup
+     * kolom id/jabatan/subbag/kode pada `ref_jabatan`, dan ID tidak perlu
+     * di-escape. Bila ada lebih dari satu baris aktif, yang dipakai adalah
+     * yang pertama menurut `id` (stabil).
+     *
+     * @return object|null {nip, nama, jabatan}
+     */
+    public function ketua()
+    {
+        $row = $this->db
+            ->select('p.nip, p.nama, j.jabatan')
+            ->from(self::T_PEGAWAI . ' p')
+            ->join(self::T_JABATAN . ' j', 'p.id_jabatan = j.id', 'left')
+            ->where('p.id_jabatan', self::ID_JABATAN_KETUA)
+            ->where('p.aktif', 1)
+            ->order_by('p.id', 'ASC')
+            ->limit(1)
+            ->get()
+            ->row();
+
+        return $row ? $row : NULL;
     }
 
     /**

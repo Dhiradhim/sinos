@@ -160,61 +160,14 @@ const columns: Column[] = [
 
 const renderKeys = ["agenda", "disposisi", "aksi"];
 
-/**
- * Aksi sekunder per baris, menyalin `$aksi_lain` pada view CI3:
- * edit + cetak untuk admin/operator, batal-arsip untuk operator pada surat
- * yang diarsipkan, hapus hanya untuk admin.
+/*
+ * CATATAN: menu titik tiga ("Aksi lainnya") sudah DIHAPUS dari halaman ini.
+ * Seluruh aksi baris kini tampil sebagai tombol ikon datar dengan aturan
+ * peran × status yang didokumentasikan di renderer kolom "Aksi".
  *
- * `formAction` dipakai untuk aksi yang mengubah data. CI3 memakai tautan GET
- * ber-`data-confirm`; Astro mengirim POST ke route aksi (pola yang sama dengan
- * halaman detail) agar tidak ada aksi destruktif yang dapat dipicu perayap.
+ * "Cetak lembar disposisi" tidak lagi menjadi aksi baris; lembar disposisi
+ * dibuka dari halaman detail surat (`/surat-masuk/detail/{id}`).
  */
-type RowAction = {
-	href?: string;
-	formAction?: string;
-	icon: string;
-	label: string;
-	blank?: boolean;
-	danger?: boolean;
-};
-
-function aksiLain(row: SuratMasukRow): RowAction[] {
-	const out: RowAction[] = [];
-	const kembali = `/surat-masuk/daftar?tahun=${tahun}`;
-
-	if (isAdmin || isOperator) {
-		out.push({
-			href: `/surat-masuk/edit/${row.id}`,
-			icon: "edit",
-			label: "Edit surat",
-		});
-		out.push({
-			href: `/surat-masuk/${row.id}/cetak`,
-			icon: "printer",
-			label: "Cetak lembar disposisi",
-			blank: true,
-		});
-	}
-
-	if (isOperator && row.status === "diarsipkan") {
-		out.push({
-			formAction: `/api/surat-masuk/${row.id}/batal-arsip?kembali=${encodeURIComponent(kembali)}`,
-			icon: "archive-restore",
-			label: "Batalkan arsip",
-		});
-	}
-
-	if (isAdmin) {
-		out.push({
-			formAction: `/api/surat-masuk/${row.id}/hapus?kembali=${encodeURIComponent(kembali)}`,
-			icon: "trash",
-			label: "Hapus surat",
-			danger: true,
-		});
-	}
-
-	return out;
-}
 
 /** Nilai filter aktif, untuk select di filter bar. */
 const arsipValue = arsip === "diarsipkan" || arsip === "aktif" ? arsip : "";
@@ -325,6 +278,17 @@ const disposisiValue =
 	>
 		{
 			(row: SuratMasukRow, _index: number, key: string) => {
+				/**
+				 * Disposisi sudah diarahkan ke "Arsip" (`lokasi === "Arsip"`).
+				 *
+				 * Dipakai DUA kolom: "Disposisi" (badge status arsip) dan
+				 * "Aksi" (tombol Arsipkan/Batalkan arsip menggantikan tombol
+				 * kirim disposisi). Dihitung di awal agar kedua cabang tidak
+				 * menduplikasi aturannya.
+				 */
+				const keArsip =
+					Boolean(row.disposisi.lokasi) && row.disposisi.lokasi === "Arsip";
+
 				if (key === "agenda") {
 					return (
 						<div>
@@ -345,18 +309,23 @@ const disposisiValue =
 
 				if (key === "disposisi") {
 					// Tiga baris: (1) posisi disposisi saat ini atau "Belum
-					// didisposisi", (2) instruksi, (3) status dibaca.
+					// didisposisi", (2) instruksi, (3) status.
 					const { disposisi } = row;
 					const belum = !disposisi.lokasi;
+
+					// `keArsip` dihitung di awal renderer (dipakai juga oleh
+					// kolom Aksi). Surat yang sudah didisposisikan ke "Arsip"
+					// tidak lagi menampilkan status baca, melainkan status
+					// ARSIP: "Sudah diarsipkan" / "Belum diarsipkan".
 
 					// `status` dari API memuat label yang lebih spesifik
 					// (Sudah Diarsipkan / Dikembalikan ke operator / Diarsipkan
 					// oleh penerima) sekaligus dua label yang sudah diwakili
-					// badge dibaca di bawah (Sudah dibaca / Belum dibaca).
-					// Yang terakhir disembunyikan agar tidak ada dua badge
-					// berbunyi sama dalam satu sel.
+					// badge di bawah (Sudah dibaca / Belum dibaca).
+					// Keduanya disembunyikan agar tidak ada badge ganda.
 					const statusTambahan =
 						!belum &&
+						!keArsip &&
 						disposisi.status !== "Sudah dibaca" &&
 						disposisi.status !== "Belum dibaca"
 							? disposisi.status
@@ -385,7 +354,19 @@ const disposisiValue =
 							</p>
 
 							<div class="flex items-center gap-1.5">
-								{belum ? (
+								{keArsip ? (
+									row.diarsipkan ? (
+										<span class="badge-success">
+											<Icon name="archive" class="h-3 w-3" />
+											Sudah diarsipkan
+										</span>
+									) : (
+										<span class="badge-warning">
+											<Icon name="archive" class="h-3 w-3" />
+											Belum diarsipkan
+										</span>
+									)
+								) : belum ? (
 									<span class="badge-outline">Belum didisposisi</span>
 								) : disposisi.dibaca ? (
 									<span class="badge-success">
@@ -395,8 +376,7 @@ const disposisiValue =
 								) : (
 									<span class="badge-warning">Belum dibaca</span>
 								)}
-								{/* Status tambahan dari API (Sudah Diarsipkan /
-								            Dikembalikan ke operator / Diarsipkan oleh penerima). */}
+								{/* Status tambahan dari API (Dikembalikan ke operator, dsb). */}
 								{statusTambahan && (
 									<span class={toneClass(disposisi.tone)}>
 										{statusTambahan}
@@ -407,10 +387,35 @@ const disposisiValue =
 					);
 				}
 
-				const lain = aksiLain(row);
+				/**
+				 * AKSI BARIS — matriks peran × status surat.
+				 *
+				 * Menu titik tiga DIHAPUS; seluruh aksi tampil sebagai tombol
+				 * ikon datar agar jumlah klik tetap satu. Daftar tombol
+				 * ditentukan di satu tempat (`tombolAksi`) supaya aturan peran
+				 * mudah dibaca dan tidak tersebar di template.
+				 *
+				 * ┌──────────┬──────────────────────┬───────────────────────────┬──────────────────────────────┐
+				 * │ Peran    │ belum / proses       │ kembali ke Arsip, belum   │ sudah diarsipkan             │
+				 * │          │                      │ diarsipkan                │                              │
+				 * ├──────────┼──────────────────────┼───────────────────────────┼──────────────────────────────┤
+				 * │ Admin    │ Detail, Berkas,      │ Detail, Berkas, Arsipkan, │ Detail, Berkas, Cetak,       │
+				 * │          │ Kirim, Edit, Hapus   │ Edit, Hapus               │ Batalkan Arsip               │
+				 * │ Operator │ Detail, Berkas,      │ Detail, Berkas, Arsipkan, │ Detail, Berkas, Cetak,       │
+				 * │ (owner)  │ Kirim, Edit          │ Edit                      │ Batalkan Arsip               │
+				 * │ User     │ Detail, Berkas       │ Detail, Berkas            │ Detail, Berkas               │
+				 * └──────────┴──────────────────────┴───────────────────────────┴──────────────────────────────┘
+				 *
+				 * "Owner disposisi" = pemilik posisi saat ini (`row.can_send`),
+				 * dihitung server. Aksi arsip memakai form POST (mengubah data)
+				 * sehingga tetap melalui ConfirmModal lewat `data-confirm`.
+				 */
+				const adaBerkas = row.file.state === "ready";
+				const kembaliKe = `/surat-masuk/daftar?tahun=${tahun}`;
 
 				return (
 					<div class="flex items-center justify-end gap-1">
+						{/* 1. Lihat Detail — semua peran, semua status. */}
 						<a
 							class="btn-icon"
 							href={`/surat-masuk/detail/${row.id}`}
@@ -420,10 +425,8 @@ const disposisiValue =
 							<Icon name="eye" class="h-4 w-4" />
 						</a>
 
-						{/* Lihat berkas: dulu berupa badge di kolom "Posisi Saat Ini".
-				            Kini menjadi tombol aksi agar sejajar dengan aksi lain dan
-				            tetap dapat dijangkau saat kolom disposisi dipadatkan. */}
-						{row.file.state === "ready" && (
+						{/* 2. Lihat Berkas — semua peran, hanya bila berkas siap. */}
+						{adaBerkas && (
 							<a
 								class="btn-icon"
 								href={berkasUrl(row.file.path)}
@@ -436,74 +439,103 @@ const disposisiValue =
 							</a>
 						)}
 
-						{row.can_send && (
-							<button
-								type="button"
+						{/* 3. Aksi yang bergantung status surat. */}
+						{row.diarsipkan
+							? // Surat SUDAH diarsipkan: cetak lembar disposisi lalu
+								// batalkan arsip — keduanya untuk admin & operator.
+								(isOperator || isAdmin) && (
+									<>
+										<a
+											class="btn-icon"
+											href={`/surat-masuk/${row.id}/cetak`}
+											target="_blank"
+											rel="noopener"
+											title="Cetak lembar disposisi"
+											aria-label={`Cetak lembar disposisi ${row.no_surat}`}
+										>
+											<Icon name="printer" class="h-4 w-4" />
+										</a>
+										<form
+											method="post"
+											action={`/api/surat-masuk/${row.id}/batal-arsip?kembali=${encodeURIComponent(kembaliKe)}`}
+											data-confirm="Batalkan arsip surat ini?"
+											role="none"
+										>
+											<button
+												type="submit"
+												class="btn-icon"
+												title="Batalkan arsip"
+												aria-label={`Batalkan arsip ${row.no_surat}`}
+											>
+												<Icon name="archive-restore" class="h-4 w-4" />
+											</button>
+										</form>
+									</>
+								)
+							: keArsip
+								? // Surat dikembalikan ke Arsip dan BELUM diarsipkan:
+									// tombol Kirim diganti Arsipkan Surat.
+									(isOperator || isAdmin) && (
+										<form
+											method="post"
+											action={`/api/surat-masuk/${row.id}/arsip?kembali=${encodeURIComponent(kembaliKe)}`}
+											data-confirm="Arsipkan surat ini?"
+											role="none"
+										>
+											<button
+												type="submit"
+												class="btn-icon"
+												title="Arsipkan surat"
+												aria-label={`Arsipkan surat ${row.no_surat}`}
+											>
+												<Icon name="archive" class="h-4 w-4" />
+											</button>
+										</form>
+									)
+								: // Belum didisposisi / sedang dalam proses: tombol
+									// Kirim Disposisi untuk admin dan pemilik
+									// posisi saat ini (`row.can_send` dari server).
+									(isAdmin || row.can_send) && (
+										<button
+											type="button"
+											class="btn-icon"
+											title="Kirim / teruskan disposisi"
+											aria-label={`Kirim disposisi ${row.no_surat}`}
+											data-disposisi-open={row.id}
+										>
+											<Icon name="send" class="h-4 w-4" />
+										</button>
+									)}
+
+						{/* 4. Edit Surat — admin & operator, selama belum diarsipkan. */}
+						{(isAdmin || isOperator) && !row.diarsipkan && (
+							<a
 								class="btn-icon"
-								title="Kirim / teruskan disposisi"
-								aria-label={`Kirim disposisi ${row.no_surat}`}
-								data-disposisi-open={row.id}
+								href={`/surat-masuk/edit/${row.id}`}
+								title="Edit surat"
+								aria-label={`Edit surat ${row.no_surat}`}
 							>
-								<Icon name="send" class="h-4 w-4" />
-							</button>
+								<Icon name="edit" class="h-4 w-4" />
+							</a>
 						)}
 
-						{lain.length > 0 && (
-							<div
-								class="hs-dropdown relative inline-flex [--placement:bottom-right]"
-								data-hs-dropdown-options='{"strategy":"fixed"}'
+						{/* 5. Hapus Surat — hanya admin, selama belum diarsipkan. */}
+						{isAdmin && !row.diarsipkan && (
+							<form
+								method="post"
+								action={`/api/surat-masuk/${row.id}/hapus?kembali=${encodeURIComponent(kembaliKe)}`}
+								data-confirm="Hapus surat ini?"
+								role="none"
 							>
 								<button
-									type="button"
-									class="hs-dropdown-toggle btn-icon"
-									aria-haspopup="menu"
-									aria-expanded="false"
-									title="Aksi lainnya"
+									type="submit"
+									class="btn-icon text-[var(--color-danger)] hover:text-[var(--color-danger)]"
+									title="Hapus surat"
+									aria-label={`Hapus surat ${row.no_surat}`}
 								>
-									<Icon name="ellipsis" class="h-4 w-4" />
+									<Icon name="trash" class="h-4 w-4" />
 								</button>
-								<div
-									class="hs-dropdown-menu dropdown-menu absolute right-0 top-full mt-1 hidden w-56 opacity-0 transition-[opacity,margin] duration-150 hs-dropdown-open:opacity-100"
-									role="menu"
-								>
-									{lain.map((a) =>
-										a.formAction ? (
-											<form
-												method="post"
-												action={a.formAction}
-												data-confirm={`${a.label}?`}
-												role="none"
-											>
-												<button
-													type="submit"
-													class:list={[
-														"dropdown-item w-full text-left",
-														a.danger && "dropdown-item-destructive",
-													]}
-													role="menuitem"
-												>
-													<Icon name={a.icon} class="h-4 w-4" />
-													<span>{a.label}</span>
-												</button>
-											</form>
-										) : (
-											<a
-												href={a.href}
-												class:list={[
-													"dropdown-item",
-													a.danger && "dropdown-item-destructive",
-												]}
-												target={a.blank ? "_blank" : undefined}
-												rel={a.blank ? "noopener" : undefined}
-												role="menuitem"
-											>
-												<Icon name={a.icon} class="h-4 w-4" />
-												<span>{a.label}</span>
-											</a>
-										),
-									)}
-								</div>
-							</div>
+							</form>
 						)}
 					</div>
 				);

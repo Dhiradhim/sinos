@@ -3,12 +3,25 @@
  * Lembar Disposisi — `/surat-masuk/{id}/cetak`.
  *
  * Sumber: sinos/application/views/surat_masuk/disposisi.php.
- * Data: `GET /surat-masuk/{id}/disposisi` → `{ surat, kop, judul, kolom_isi_tangan }`.
+ * Data: `GET /surat-masuk/{id}/disposisi` →
+ *   `{ surat, kop, judul, kolom_isi_tangan, riwayat, terakhir, penandatangan }`.
  *
  * Halaman berdiri sendiri (tanpa AppShell): rail navigasi dan topbar tidak
  * boleh ikut tercetak. Tata letak lembar menyalin view CI3:
- *   kop surat → judul → tabel metadata → baris "Disposisi" bertitik-titik →
- *   blok tanda tangan.
+ *   kop surat → judul → tabel metadata → riwayat disposisi → blok tanda tangan.
+ *
+ * PENYESUAIAN (permintaan pengguna, 2026-10-20):
+ *   - Baris "Disposisi" kini memuat RIWAYAT DISPOSISI surat (urut naik).
+ *     Sebelumnya sel itu hanya berisi tiga garis kosong sehingga riwayat tidak
+ *     pernah terlihat pada lembar cetak.
+ *   - Kop dicetak selebar lembar (kanan ke kiri), bukan `mx-auto max-h-24`
+ *     yang menyisakan ruang kosong di kedua sisi.
+ *   - Tanggal lembar memakai tanggal RIWAYAT DISPOSISI TERAKHIR
+ *     (`terakhir.tanggal`), bukan tanggal diterimanya surat, dan selalu
+ *     diformat Indonesia ("20 Oktober 2026") lewat helper `lib/format.ts`.
+ *   - Jabatan penanda tangan berubah dari "Kepala" menjadi
+ *     "Ketua Pengadilan Agama Kupang", dengan nama diambil dari data pegawai
+ *     (jabatan `Ketua`) lewat API.
  *
  * PRINT CSS (scoped di halaman ini, tidak menyentuh global.css):
  *   @media print { .no-print{display:none} body{background:#fff}
@@ -25,7 +38,11 @@ import Icon from "../../../components/Icon.astro";
 import { requireUser } from "../../../lib/auth";
 import { apiFetch } from "../../../lib/api";
 import { getSession } from "../../../lib/session";
-import { currentYear } from "../../../lib/format";
+import {
+  currentYear,
+  formatDate,
+  formatDateTime,
+} from "../../../lib/format";
 
 const auth = await requireUser(Astro);
 if (auth.redirect) return auth.redirect;
@@ -35,6 +52,19 @@ const id = Number(Astro.params.id);
 const idValid = Number.isInteger(id) && id > 0;
 
 type Tanggal = { iso: string | null; teks: string };
+
+type RiwayatItem = {
+  id: number;
+  kepada: string;
+  kategori: string;
+  nip_tujuan: string | null;
+  instruksi: string | null;
+  catatan: string | null;
+  dari: string;
+  tanggal: Tanggal;
+  dibaca: boolean;
+  dikembalikan: boolean;
+};
 
 type Payload = {
   surat: {
@@ -54,6 +84,12 @@ type Payload = {
   kop: string;
   judul: string;
   kolom_isi_tangan: string[];
+  /** Riwayat disposisi, urut naik (terlama -> terbaru). */
+  riwayat: RiwayatItem[];
+  /** Disposisi terakhir; tanggalnya dipakai sebagai tanggal lembar. */
+  terakhir: RiwayatItem | null;
+  /** Blok tanda tangan: jabatan tetap + nama Ketua dari data pegawai. */
+  penandatangan: { jabatan: string; nama: string; nip: string };
 };
 
 const result = idValid
@@ -75,6 +111,50 @@ const surat = payload?.surat;
 const kop = payload?.kop ?? "";
 const judul = payload?.judul ?? "Lembar Disposisi";
 
+const riwayat: RiwayatItem[] = payload?.riwayat ?? [];
+const terakhir = payload?.terakhir ?? null;
+
+/**
+ * Tanggal pada lembar mengikuti TANGGAL RIWAYAT DISPOSISI TERAKHIR, bukan
+ * tanggal diterimanya surat. Bila surat belum pernah didisposisi, tanggal
+ * diterima dipakai sebagai fallback agar lembar tetap bertanggal.
+ *
+ * Format SELALU Indonesia, mis. "20 Oktober 2026" — bukan "20-10-2026 11:48".
+ * Nilai `teks` dari API berbentuk `dd-mm-yyyy hh:mm`, jadi yang diformat
+ * adalah `iso` (sumber mentah) lewat helper di lib/format.ts. Helper itu
+ * menafsirkan tanggal naif sebagai WITA dan memakai `Intl` id-ID, sehingga
+ * nama bulan selalu Bahasa Indonesia.
+ *
+ * `formatDate` (tanpa jam) dipakai karena baris "Kupang, …" pada lembar cetak
+ * tidak memerlukan jam; `formatDateTime` dipakai untuk riwayat agar jam
+ * disposisi tetap terbaca. Bila `iso` kosong, `teks` mentah dipakai sebagai
+ * upaya terakhir agar tidak kehilangan informasi.
+ */
+const tanggalLembar =
+  formatDate(terakhir?.tanggal?.iso) !== "—"
+    ? formatDate(terakhir?.tanggal?.iso)
+    : surat?.tgl_diterima?.iso
+      ? formatDate(surat.tgl_diterima.iso)
+      : surat?.tgl_diterima?.teks || "";
+
+/** Tanggal + jam untuk baris riwayat: "20 Oktober 2026, 11.48". */
+function tanggalRiwayat(item: RiwayatItem): string {
+  const hasil = formatDateTime(item.tanggal?.iso);
+  return hasil !== "—" ? hasil : item.tanggal?.teks || "";
+}
+
+/**
+ * Penanda tangan. Jabatan selalu "Ketua Pengadilan Agama Kupang"; namanya
+ * berasal dari data pegawai (`ref_jabatan` = Ketua) yang dikirim API. Bila
+ * belum ada pejabat Ketua yang aktif, nama dikosongkan (garis tanda tangan
+ * tetap dicetak untuk diisi tangan).
+ */
+const penandatangan = payload?.penandatangan ?? {
+  jabatan: "Ketua Pengadilan Agama Kupang",
+  nama: "",
+  nip: "",
+};
+
 const tahun = notFound
   ? currentYear()
   : Number(String(surat?.tgl_surat.iso ?? "").slice(0, 4)) || currentYear();
@@ -84,8 +164,20 @@ const metaRows: { label: string; value: string }[] = notFound
   ? []
   : [
       { label: "Nomor Surat", value: surat.no_surat },
-      { label: "Tanggal Surat", value: surat.tgl_surat.teks },
-      { label: "Tanggal Diterima", value: surat.tgl_diterima.teks },
+      {
+        label: "Tanggal Surat",
+        value:
+          formatDate(surat.tgl_surat.iso) !== "—"
+            ? formatDate(surat.tgl_surat.iso)
+            : surat.tgl_surat.teks,
+      },
+      {
+        label: "Tanggal Diterima",
+        value:
+          formatDate(surat.tgl_diterima.iso) !== "—"
+            ? formatDate(surat.tgl_diterima.iso)
+            : surat.tgl_diterima.teks,
+      },
       { label: "Pengirim", value: surat.pengirim },
       { label: "Perihal", value: surat.perihal },
       { label: "Kode / Pengolah", value: `${surat.kode} / ${surat.pengolah}` },
@@ -162,8 +254,17 @@ const metaRows: { label: string; value: string }[] = notFound
     <div
       class="sheet mx-auto max-w-3xl rounded-[var(--radius-panel)] border border-[var(--color-line)] bg-white shadow-[var(--shadow-panel)]"
     >
-      <div class="border-b border-[var(--color-line)] p-4 text-center">
-        <img src={kop} alt="Kop Surat" class="mx-auto max-h-24" />
+      {/*
+        Kop dicetak selebar lembar (kanan ke kiri), bukan `mx-auto max-h-24`
+        yang menyisakan ruang kosong di kedua sisi. `block w-full` +
+        `object-contain` menjaga rasio gambar tanpa terpotong.
+      */}
+      <div class="border-b border-[var(--color-line)] p-0">
+        <img
+          src={kop}
+          alt="Kop Surat"
+          class="kop block w-full object-contain"
+        />
       </div>
 
       <div
@@ -190,25 +291,61 @@ const metaRows: { label: string; value: string }[] = notFound
             >
               Disposisi
             </td>
-            <td class="px-3 py-2">
-              <div class="h-32"></div>
-              <p class="text-xs text-[var(--color-ink-subtle)]">
-                Diteruskan kepada / instruksi:
-              </p>
-              <div class="mt-2 space-y-4">
-                <div
-                  class="border-b border-dashed border-[var(--color-line-strong)]"
-                >
-                </div>
-                <div
-                  class="border-b border-dashed border-[var(--color-line-strong)]"
-                >
-                </div>
-                <div
-                  class="border-b border-dashed border-[var(--color-line-strong)]"
-                >
-                </div>
-              </div>
+            <td class="px-3 py-2 align-top">
+              {
+                /*
+                 * Riwayat disposisi surat ini (urut naik). Sebelumnya sel ini
+                 * hanya berisi tiga garis kosong, sehingga lembar cetak tidak
+                 * pernah memuat riwayat disposisi yang sebenarnya.
+                 */
+                riwayat.length > 0 ? (
+                  <ol class="space-y-2">
+                    {riwayat.map((r, i) => (
+                      <li class="flex gap-2 text-xs">
+                        <span class="w-4 shrink-0 text-right tabular text-[var(--color-ink-subtle)]">
+                          {i + 1}.
+                        </span>
+                        <div class="min-w-0 flex-1">
+                          <p class="font-medium text-[var(--color-ink)]">
+                            {r.kepada}
+                            {r.kategori && (
+                              <span class="font-normal text-[var(--color-ink-subtle)]">
+                                {" "}
+                                &middot; {r.kategori}
+                              </span>
+                            )}
+                          </p>
+                          <p class="text-[var(--color-ink-subtle)]">
+                            {tanggalRiwayat(r)}
+                            {r.dikembalikan && " · Dikembalikan ke operator"}
+                          </p>
+                          {r.instruksi && (
+                            <p class="text-[var(--color-ink-muted)]">
+                              Instruksi: {r.instruksi}
+                            </p>
+                          )}
+                          {r.catatan && (
+                            <p class="text-[var(--color-ink-subtle)]">
+                              Catatan: {r.catatan}
+                            </p>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <div>
+                    <p class="text-xs text-[var(--color-ink-subtle)]">
+                      Belum ada disposisi. Diteruskan kepada / instruksi:
+                    </p>
+                    <div class="mt-2 space-y-4">
+                      <div class="border-b border-dashed border-[var(--color-line-strong)]" />
+                      <div class="border-b border-dashed border-[var(--color-line-strong)]" />
+                      <div class="border-b border-dashed border-[var(--color-line-strong)]" />
+                    </div>
+                  </div>
+                )
+              }
             </td>
           </tr>
         </tbody>
@@ -216,13 +353,18 @@ const metaRows: { label: string; value: string }[] = notFound
 
       <!-- Blok tanda tangan -->
       <div class="flex justify-end px-3 py-6">
-        <div class="w-64 text-center text-sm">
-          <p>Kupang, {surat.tgl_diterima.teks}</p>
-          <p class="mt-1">Kepala,</p>
+        <div class="w-72 text-center text-sm">
+          <p>Kupang, {tanggalLembar}</p>
+          <p class="mt-1">{penandatangan.jabatan},</p>
           <div class="h-20"></div>
           <p class="border-t border-[var(--color-ink)] pt-1 font-medium">
-            &nbsp;
+            {penandatangan.nama || "&nbsp;"}
           </p>
+          {penandatangan.nip && (
+            <p class="text-xs text-[var(--color-ink-subtle)]">
+              NIP. {penandatangan.nip}
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -255,6 +397,14 @@ const metaRows: { label: string; value: string }[] = notFound
       margin: 0 !important;
       padding: 0 !important;
       max-width: none !important;
+    }
+
+    /* Kop selebar area cetak (kanan ke kiri), tanpa margin tambahan. */
+    .kop {
+      width: 100% !important;
+      max-width: none !important;
+      max-height: none !important;
+      display: block !important;
     }
 
     @page {
