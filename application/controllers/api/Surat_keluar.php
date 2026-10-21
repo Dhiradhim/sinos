@@ -13,32 +13,46 @@ require_once APPPATH . 'core/MY_Api_Controller.php';
  *   GET api/v1/surat-keluar/ID       detail satu nomor
  *
  * Endpoint tulis:
- *   POST api/v1/surat-keluar/ambil        ambil nomor baru (hari ini)
- *   POST api/v1/surat-keluar/sisip        sisip nomor (tanggal mundur)
- *   PUT  api/v1/surat-keluar/ID           ubah nomor surat
- *   POST api/v1/surat-keluar/ID/berkas    unggah berkas PDF
+ *   POST   api/v1/surat-keluar/ambil      ambil nomor baru (hari ini)
+ *   POST   api/v1/surat-keluar/sisip      sisip nomor (tanggal mundur)
+ *   PUT    api/v1/surat-keluar/ID         ubah nomor surat
+ *   POST   api/v1/surat-keluar/ID/berkas  unggah berkas PDF
+ *   DELETE api/v1/surat-keluar/ID         hapus nomor surat (ADMIN)
+ *
+ *   Hapus menerima POST + `_method=DELETE` (atau header
+ *   `X-HTTP-Method-Override`) karena form HTML tidak dapat mengirim DELETE.
  *
  * PENOMORAN - ATURAN PALING PENTING
  *
- * Nomor urut bersifat GLOBAL PER TAHUN (bukan per tanggal). Deret berjalan
- * terus melewati pergantian tanggal; nomor yang sama tidak boleh muncul dua
- * kali meski tanggalnya berbeda. Bila nomor urut sudah terpakai, dipakai
- * huruf berikutnya (1500 → 1500A → 1500B, dst).
+ * Nomor urut bersifat GLOBAL PER TAHUN (bukan per tanggal), tetapi cara
+ * memilih angkanya berbeda antara "ambil" dan "sisip":
  *
- * Urutan pemanggilan:
+ *   AMBIL  (tanggal hari ini, ujung deret)
+ *          → nomor urut tertinggi tahun + 1, tanpa huruf.
+ *          Contoh: terakhir 1500 → 1501.
  *
- *   M_nosur::last_no_urut($tahun)                          titik awal deret
- *   M_nosur::huruf_terpakai($tanggal)                      audit huruf
- *   M_nosur::nomor_terpakai($no_urut, $huruf, $tahun)      (di dalam loop)
+ *   SISIP  (tanggal mundur, tengah riwayat)
+ *          → nomor urut yang BERLAKU pada tanggal itu (tertinggi pada baris
+ *            bertanggal <= tanggal tersebut), lalu huruf bebas pertama.
+ *            Contoh: pada 10 Sep berlaku 100 → 100A; bila 100A ada → 100B.
+ *
+ * Karena itu surat sisipan selalu tampil SETELAH surat aslinya pada tanggal
+ * tersebut (100 → 100A → 100B) dan tidak pernah mendahuluinya, persis seperti
+ * perilaku legacy (kolom `huruf` diisi 'A', 'B', … selama tanggalnya bukan
+ * tanggal terakhir yang tercatat).
+ *
+ * Seluruh aturan itu kini berada di SATU tempat:
+ *
+ *   M_nosur::nomor_berikut($tanggal, $tahun)   → ['no_urut','huruf','mode',…]
  *   M_nosur::insert_batch_nomor($rows)
  *
- * CATATAN PERUBAHAN: sebelumnya titik awal memakai `last_no_urut_tanggal()`
- * dan pengecekan bentrok memakai `nomor_terpakai($tanggal, ...)`. Keduanya
- * memfilter tanggal, sehingga sisip nomor bertanggal mundur dapat memakai
- * nomor urut yang sudah dipakai di tanggal lain — menghasilkan nomor ganda.
- *
- * Pembantu murni (huruf_sisip, format_no_surat) tetap dari
+ * Pembantu murni (huruf_sisip, huruf_berikut, format_no_surat) tetap dari
  * application/helpers/sinos_helper.php.
+ *
+ * CATATAN PERUBAHAN: sebelumnya titik awal selalu `last_no_urut($tahun)`
+ * sehingga sisip nomor bertanggal mundur ikut melanjutkan deret tahun dan
+ * melompati nomor yang seharusnya berlaku pada tanggal itu. Penentuan nomor
+ * sekarang dipusatkan di model agar controller HTML dan API tidak berbeda.
  *
  * CATATAN METODE: multipart PUT tidak dapat dibaca PHP ($_FILES kosong),
  * sehingga `PUT /surat-keluar/{id}` boleh dikirim sebagai POST dengan
@@ -105,8 +119,13 @@ class Surat_keluar extends MY_Api_Controller
             return;
         }
 
+        if ($method === 'DELETE') {
+            $this->destroy($id);
+            return;
+        }
+
         if ($method !== 'GET') {
-            $this->fail('METHOD_NOT_ALLOWED', 'Gunakan metode GET atau PUT.', 405);
+            $this->fail('METHOD_NOT_ALLOWED', 'Gunakan metode GET, PUT, atau DELETE.', 405);
             return;
         }
 
@@ -122,12 +141,12 @@ class Surat_keluar extends MY_Api_Controller
     /**
      * POST api/v1/surat-keluar/ambil
      *
-     * Meniru Surat_keluar::ambil() + ambil_simpan():
+     * Alur:
      *   - peringatan "Mohon upload softcopy…" untuk non-admin bila masih ada
-     *     berkas berstatus '1' pada tahun berjalan (controller HTML
-     *     memblokir navigasi dengan pesan yang sama),
-     *   - penomoran melanjutkan nomor terakhir hari ini,
-     *   - huruf A/B/C… dipakai bila nomor urut sudah terpakai.
+     *     berkas berstatus '1' pada tahun berjalan,
+     *   - nomor = nomor urut tertinggi tahun + 1, tanpa huruf (mode 'urut'),
+     *   - alokasi + penyimpanan dibungkus `dengan_kunci_penomoran()` supaya
+     *     dua request bersamaan tidak mendapat nomor yang sama.
      */
     public function ambil()
     {
@@ -173,14 +192,14 @@ class Surat_keluar extends MY_Api_Controller
         $tanggal = date('Y-m-d');
         $tahun   = (int) date('Y', strtotime($tanggal));
 
-        $rows = $this->susun_nomor(
-            $input,
-            $penandatangan,
-            $tanggal,
-            FALSE
-        );
+        $diagnostik = array();
 
-        $this->M_nosur->insert_batch_nomor($rows);
+        // Alokasi nomor + simpan harus atomik terhadap request lain.
+        $rows = $this->M_nosur->dengan_kunci_penomoran($tahun, function () use ($input, $penandatangan, $tanggal, &$diagnostik) {
+            $rows = $this->susun_nomor($input, $penandatangan, $tanggal, 'ambil', $diagnostik);
+            $this->M_nosur->insert_batch_nomor($rows);
+            return $rows;
+        });
 
         $daftar_no = array();
         foreach ($rows as $r) {
@@ -197,24 +216,30 @@ class Surat_keluar extends MY_Api_Controller
             'pesan'  => $pesan,
             'perihal' => (string) $input['hal'],
         ), array(
-            'tahun'   => $tahun,
-            'tanggal' => $tanggal,
-            'mode'    => 'ambil',
+            'tahun'                => $tahun,
+            'tanggal'              => $tanggal,
+            'mode'                 => 'ambil',
+            'mode_penomoran'       => $diagnostik['mode_penomoran'],
+            'tanggal_acuan'        => $diagnostik['tanggal_acuan'],
+            'last_no_urut_sebelum' => $diagnostik['last_no_urut_sebelum'],
+            'nomor_terpakai'       => $diagnostik['nomor_terpakai'],
         ));
     }
 
     /**
      * POST api/v1/surat-keluar/sisip
      *
-     * Meniru Surat_keluar::sisip_simpan():
-     *   - tanggal wajib tanggal mundur,
-     *   - nomor melanjutkan nomor terakhir pada tanggal tersebut; bila belum
-     *     ada, melanjutkan `last_no_urut_sebelum()`,
-     *   - huruf berikutnya dipakai bila kombinasi tanggal+no_urut+huruf
-     *     sudah terpakai.
+     * Aturan (lihat M_nosur::nomor_berikut()):
+     *   - tanggal wajib tanggal mundur (tidak melebihi hari ini),
+     *   - bila tanggal itu masih di UJUNG deret (tidak ada nomor bertanggal
+     *     setelahnya), deret tahun tetap dilanjutkan: nomor tertinggi + 1;
+     *   - bila tanggal itu berada di TENGAH riwayat, dipakai nomor yang
+     *     BERLAKU pada tanggal tersebut lalu huruf bebas pertama (A, B, …),
+     *     sehingga nomor sisipan tidak pernah mendahului surat aslinya.
      *
-     * Meta respons memuat `last_no_urut_sebelum`, `huruf_terpakai`, dan
-     * `nomor_terpakai` agar perilaku penomoran dapat diaudit tanpa membaca DB.
+     * Meta respons memuat `last_no_urut_sebelum`, `huruf_terpakai`,
+     * `nomor_terpakai`, `mode_penomoran`, dan `tanggal_acuan` agar perilaku
+     * penomoran dapat diaudit tanpa membaca DB.
      */
     public function sisip()
     {
@@ -258,9 +283,13 @@ class Surat_keluar extends MY_Api_Controller
         }
 
         $diagnostik = array();
-        $rows = $this->susun_nomor($input, $penandatangan, $tanggal, TRUE, $diagnostik);
 
-        $this->M_nosur->insert_batch_nomor($rows);
+        // Alokasi nomor + simpan harus atomik terhadap request lain.
+        $rows = $this->M_nosur->dengan_kunci_penomoran((int) date('Y', $ts), function () use ($input, $penandatangan, $tanggal, &$diagnostik) {
+            $rows = $this->susun_nomor($input, $penandatangan, $tanggal, 'sisip', $diagnostik);
+            $this->M_nosur->insert_batch_nomor($rows);
+            return $rows;
+        });
 
         $daftar_no = array();
         foreach ($rows as $r) {
@@ -276,12 +305,14 @@ class Surat_keluar extends MY_Api_Controller
             'rows'   => $rows,
             'pesan'  => $pesan,
         ), array(
-            'tahun'               => (int) date('Y', $ts),
-            'tanggal'             => $tanggal,
-            'mode'                => 'sisip',
+            'tahun'                => (int) date('Y', $ts),
+            'tanggal'              => $tanggal,
+            'mode'                 => 'sisip',
+            'mode_penomoran'       => $diagnostik['mode_penomoran'],
+            'tanggal_acuan'        => $diagnostik['tanggal_acuan'],
             'last_no_urut_sebelum' => $diagnostik['last_no_urut_sebelum'],
-            'huruf_terpakai'      => $diagnostik['huruf_terpakai'],
-            'nomor_terpakai'      => $diagnostik['nomor_terpakai'],
+            'huruf_terpakai'       => $diagnostik['huruf_terpakai'],
+            'nomor_terpakai'       => $diagnostik['nomor_terpakai'],
         ));
     }
 
@@ -419,77 +450,118 @@ class Surat_keluar extends MY_Api_Controller
         $this->ok($this->payload_nomor($this->M_nosur->get((int) $row->id)));
     }
 
+    /**
+     * DELETE api/v1/surat-keluar/ID — hapus nomor surat (ADMIN saja).
+     *
+     * Mengapa admin saja: nomor surat adalah bukti administrasi. Pemilik
+     * nomor tidak boleh menghapusnya sendiri (ia hanya boleh mengubah data
+     * atau mengganti berkas), sedangkan admin perlu menghapus nomor yang
+     * salah ambil/sisip.
+     *
+     * Nomor TIDAK dinomori ulang setelah dihapus: nomor urut yang hilang
+     * menjadi celah, dan penomoran berikutnya tetap melanjutkan nomor
+     * tertinggi yang ada. Ini disengaja — menggeser nomor lama akan membuat
+     * nomor yang sudah tercetak di surat fisik tidak lagi cocok.
+     *
+     * Berkas PDF di disk TIDAK dihapus, sama seperti
+     * `Surat_masuk::destroy()` (controller HTML juga tidak menghapusnya).
+     *
+     * @param  int $id
+     * @return void
+     */
+    protected function destroy($id)
+    {
+        if (empty($this->user['admin'])) {
+            $this->fail('FORBIDDEN', 'Hanya admin yang dapat menghapus nomor surat.', 403);
+            return;
+        }
+
+        $row = $this->ambil_nomor($id);
+        if (! $row) {
+            $this->fail('NOT_FOUND', 'Nomor surat tidak ditemukan.', 404);
+            return;
+        }
+
+        /**
+         * Hapus di bawah kunci penomoran tahun terkait agar tidak berlomba
+         * dengan alokasi nomor yang sedang berjalan pada tahun yang sama.
+         */
+        $tahun = (int) date('Y', strtotime((string) $row->tanggal));
+
+        $terhapus = $this->M_nosur->dengan_kunci_penomoran($tahun, function () use ($row) {
+            return $this->M_nosur->delete((int) $row->id);
+        });
+
+        if (! $terhapus) {
+            $this->fail('DELETE_FAILED', 'Nomor surat gagal dihapus.', 500);
+            return;
+        }
+
+        $this->ok(array(
+            'id'      => (int) $row->id,
+            'no'      => (string) $row->no,
+            'dihapus' => TRUE,
+        ), array(
+            'pesan' => 'Nomor surat ' . $row->no . ' berhasil dihapus.',
+        ));
+    }
+
     // ------------------------------------------------------------------
-    // Penomoran (memakai method model yang sama dengan controller HTML)
+    // Penomoran (satu sumber: M_nosur::nomor_berikut())
     // ------------------------------------------------------------------
 
     /**
      * Susun baris `nosur` untuk ambil/sisip.
      *
-     * Deretan pemanggilan model identik dengan
-     * Surat_keluar::ambil_simpan()/sisip_simpan(); hanya pembungkusnya yang
-     * berbeda. `jumlah` selalu 1, sama seperti form saat ini.
+     * Seluruh aturan penomoran berada di `M_nosur::nomor_berikut()` supaya
+     * tidak ada dua salinan logika. Method ini hanya:
+     *   1. meminta nomor (urut + huruf) ke model,
+     *   2. menyusun string nomor lengkap lewat `format_no_surat()`,
+     *   3. merangkai baris siap `insert_batch_nomor()`.
+     *
+     * Ringkasnya aturan yang berlaku (detail di model):
+     *   - mode 'ambil' → nomor urut tertinggi tahun + 1, tanpa huruf;
+     *   - mode 'sisip' → nomor TERAKHIR pada tanggal <= tanggal sisip,
+     *                    lalu huruf berikutnya (Z → AA → AB, …).
+     *
+     * `jumlah` selalu 1, sama seperti form saat ini.
      *
      * @param  array      $input
      * @param  array      $penandatangan ['nip','nama','kode','label']
      * @param  string     $tanggal       Y-m-d
-     * @param  bool       $sisip         TRUE untuk mode sisip (diagnostik)
+     * @param  string     $mode          'ambil' atau 'sisip'
      * @param  array|null $diagnostik    Keluar: nilai antara yang dipakai
      * @return array baris siap insert_batch_nomor()
      */
-    protected function susun_nomor(array $input, array $penandatangan, $tanggal, $sisip, &$diagnostik = NULL)
+    protected function susun_nomor(array $input, array $penandatangan, $tanggal, $mode, &$diagnostik = NULL)
     {
         $ts    = strtotime($tanggal);
         $tahun = (int) date('Y', $ts);
         $bulan = getRomawi((int) date('n', $ts));
         $kode  = trim((string) $input['ks']);
+        $penetapan = isset($input['kode_penetapan']) ? trim((string) $input['kode_penetapan']) : '';
 
         /**
-         * Nomor urut bersifat GLOBAL per tahun, bukan per tanggal.
-         *
-         * Karena itu titik awalnya adalah nomor urut tertinggi pada tahun
-         * tersebut — bukan nomor tertinggi pada tanggal yang dipilih. Dengan
-         * begitu menyisipkan nomor bertanggal mundur tetap melanjutkan deret
-         * yang sedang berjalan dan tidak pernah menghasilkan nomor urut yang
-         * sudah dipakai di tanggal lain.
+         * Satu sumber aturan penomoran (lihat M_nosur::nomor_berikut()).
+         * `$mode` WAJIB dibedakan:
+         *   'ambil' → nomor tertinggi tahun + 1 (tanpa huruf)
+         *   'sisip' → nomor terakhir s.d. tanggal itu + huruf berikutnya
          */
-        $dasar   = $this->M_nosur->last_no_urut($tahun);
-        $sebelum = ($dasar === 0) ? NULL : $dasar;
-        $no_urut = $dasar + 1;
+        $nomor   = $this->M_nosur->nomor_berikut($tanggal, $tahun, $mode);
+        $no_urut = (int) $nomor['no_urut'];
+        $huruf   = (string) $nomor['huruf'];
 
-        // Huruf yang sudah terpakai untuk nomor urut ini (semua tanggal pada
-        // tahun berjalan) — dipakai untuk audit pada respons.
-        $terpakai = $this->M_nosur->huruf_terpakai($tanggal);
+        $jumlah   = 1; // form tidak lagi menampilkan field jumlah
+        $tercatat = array(array('no_urut' => $no_urut, 'huruf' => $huruf));
 
-        $rows      = array();
-        $tercatat  = array();
-        $jumlah    = 1; // form tidak lagi menampilkan field jumlah
-
-        for ($i = 0; $i < $jumlah; $i++) {
-            $index = $i;
-            $huruf = huruf_sisip($index);
-
-            // Hindari bentrok nomor urut + huruf dengan SELURUH tanggal pada
-            // tahun berjalan (batas 200, sama dengan controller HTML).
-            $pengaman = 0;
-            while ($this->M_nosur->nomor_terpakai($no_urut, $huruf, $tahun) && $pengaman < 200) {
-                $index++;
-                $huruf = huruf_sisip($index);
-                $pengaman++;
-            }
-
-            $tercatat[] = array(
-                'no_urut' => $no_urut,
-                'huruf'   => $huruf,
-            );
-
-            $rows[] = array(
+        $rows = array(
+            array(
                 'no'                 => format_no_surat(
                     $no_urut,
                     $huruf,
                     $penandatangan['kode'],
                     $this->config->item('instansi_kode') ?: 'W23-A1',
-                    isset($input['kode_penetapan']) ? trim((string) $input['kode_penetapan']) : '',
+                    $penetapan,
                     $kode,
                     $bulan,
                     $tahun
@@ -501,19 +573,27 @@ class Surat_keluar extends MY_Api_Controller
                 'penandatangan_nip'  => $penandatangan['nip'],
                 'penandatangan_nama' => $penandatangan['label'],
                 'kj'                 => $penandatangan['kode'],
-                'kode_penetapan'     => isset($input['kode_penetapan']) ? trim((string) $input['kode_penetapan']) : '',
+                'kode_penetapan'     => $penetapan,
                 'tanggal'            => $tanggal,
                 'hal'                => (string) $input['hal'],
                 'tujuan'             => (string) $input['tujuan'],
                 'jumlah'             => $jumlah,
-            );
-        }
+            ),
+        );
 
         if (is_array($diagnostik)) {
+            /**
+             * Bentuk `huruf_terpakai` dipertahankan {no_urut: [huruf, …]}
+             * karena `summarizeSisipMeta()` di frontend membacanya demikian.
+             * `mode`/`acuan`/`dasar` adalah tambahan audit: 'urut' berarti
+             * deret dilanjutkan, 'sisip' berarti nomor dipinjam + huruf.
+             */
             $diagnostik = array(
-                'last_no_urut_sebelum' => $sebelum,
-                'huruf_terpakai'       => $terpakai,
+                'last_no_urut_sebelum' => $nomor['dasar'],
+                'huruf_terpakai'       => array((string) $no_urut => $nomor['terpakai']),
                 'nomor_terpakai'       => $tercatat,
+                'mode_penomoran'       => $nomor['mode'],
+                'tanggal_acuan'        => $nomor['acuan'],
             );
         }
 
@@ -597,6 +677,8 @@ class Surat_keluar extends MY_Api_Controller
                 'can_view'   => TRUE,
                 'can_edit'   => (bool) ($is_admin || $is_owner),
                 'can_upload' => (bool) ($is_admin || $is_owner),
+                // Hapus nomor surat HANYA admin (lihat destroy()).
+                'can_delete' => (bool) $is_admin,
             ),
         );
     }

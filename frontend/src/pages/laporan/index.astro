@@ -29,7 +29,7 @@ import Icon from "../../components/Icon.astro";
 import { requireUser } from "../../lib/auth";
 import { apiFetch } from "../../lib/api";
 import { getSession } from "../../lib/session";
-import { currentYear } from "../../lib/format";
+import { currentYear, todayISO } from "../../lib/format";
 
 type Opsi = { value: string; label: string };
 type Klasifikasi = { kode: string; nama: string };
@@ -65,19 +65,64 @@ const opsiRes = isAdmin
 
 const opsi = opsiRes?.data ?? null;
 
-/** Bulan: `00` = "Tahun" (tanpa filter bulan), sama dengan CI3. */
-const bulanOpsi: Opsi[] = opsi?.bulan ?? [];
+/**
+ * Opsi periode: `00` = "Tahunan" (tanpa filter bulan), lalu nama-nama bulan.
+ *
+ * Label `00` datang dari API (config `$bulan` di api/Laporan.php). Bila API
+ * tidak memuatnya (mis. gagal), daftar lokal ini menjaga form tetap utuh.
+ */
+const bulanFallback: Opsi[] = [
+	{ value: "00", label: "Tahunan" },
+	{ value: "01", label: "Januari" },
+	{ value: "02", label: "Februari" },
+	{ value: "03", label: "Maret" },
+	{ value: "04", label: "April" },
+	{ value: "05", label: "Mei" },
+	{ value: "06", label: "Juni" },
+	{ value: "07", label: "Juli" },
+	{ value: "08", label: "Agustus" },
+	{ value: "09", label: "September" },
+	{ value: "10", label: "Oktober" },
+	{ value: "11", label: "Nopember" },
+	{ value: "12", label: "Desember" },
+];
+
+const bulanOpsi: Opsi[] =
+	opsi?.bulan && opsi.bulan.length > 0 ? opsi.bulan : bulanFallback;
 const tahunOpsi: number[] = opsi?.tahun ?? [];
 const jenisOpsi: Opsi[] = opsi?.jenis ?? [];
 const klasifikasiOpsi: Klasifikasi[] = opsi?.klasifikasi ?? [];
 
-/** Nilai awal dari API `default{}`; fallback mengikuti controller CI3. */
+/**
+ * Nilai awal dari API `default{}`; fallback mengikuti controller CI3.
+ *
+ * `tgl_cetak` dari API berformat Y-m-d (kontrak `<input type="date">`).
+ * Nilai lama berformat dd-mm-yyyy tetap diterima agar tautan/bookmark lama
+ * tidak menghasilkan field tanggal kosong.
+ */
 const d = opsi?.default;
 const nilaiJenis = d?.tipelaporan ?? "surkel";
 const nilaiBulan = d?.bulan ?? "00";
 const nilaiTahun = String(d?.tahun ?? tahun);
 const nilaiKode = d?.kode ?? "all";
-const nilaiTglCetak = d?.tgl_cetak ?? "";
+
+function keIso(raw: string | undefined): string {
+	const value = String(raw ?? "").trim();
+	if (value === "") return todayISO();
+	// Sudah Y-m-d?
+	if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+	// dd-mm-yyyy -> yyyy-mm-dd
+	const m = value.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+	if (m) {
+		return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+	}
+	return todayISO();
+}
+
+const nilaiTglCetak = keIso(d?.tgl_cetak);
+
+/** Hari ini menurut zona aplikasi (UTC+8), bukan zona mesin. */
+const hariIni = todayISO();
 
 const dashboard = await apiFetch<{ disposisi_belum_dibaca: number }>(
 	"/dashboard",
@@ -139,11 +184,19 @@ const disposisiCount = dashboard.data?.disposisi_belum_dibaca ?? 0;
 					target="_blank"
 					class="w-full"
 				>
+					{/*
+					 * Tata letak 4 kolom yang konsisten.
+					 *
+					 * Semua kontrol memakai lebar penuh sel gridnya, sehingga
+					 * tinggi dan lebarnya seragam — sebelumnya kolom "Tahun"
+					 * tampak lebih sempit daripada kolom lain karena jumlah
+					 * opsinya sedikit.
+					 */}
 					<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 						<div class="sm:col-span-2">
 							<Field label="Jenis Laporan" name="tipelaporan" required>
 								<select
-									class="select"
+									class="select w-full"
 									id="tipelaporan"
 									name="tipelaporan"
 									required
@@ -158,20 +211,28 @@ const disposisiCount = dashboard.data?.disposisi_belum_dibaca ?? 0;
 						</div>
 
 						<div class="sm:col-span-2">
+							{/*
+							 * Datepicker native: format yang dikirim selalu
+							 * Y-m-d, dan pemilih kalender mengikuti lokal
+							 * browser. `max` dibiarkan terbuka karena tanggal
+							 * cetak boleh diisi tanggal lain (mis. cetak
+							 * surat bertanggal mundur).
+							 */}
 							<Field label="Tanggal Cetak" name="tgl_cetak">
 								<input
-									class="input"
-									type="text"
+									class="input w-full"
+									type="date"
 									id="tgl_cetak"
 									name="tgl_cetak"
 									value={nilaiTglCetak}
+									max={hariIni}
 								/>
 							</Field>
 						</div>
 
-						<div>
-							<Field label="Bulan" name="bulan" required>
-								<select class="select" id="bulan" name="bulan" required>
+						<div class="sm:col-span-2 lg:col-span-1">
+							<Field label="Periode" name="bulan" required>
+								<select class="select w-full" id="bulan" name="bulan" required>
 									{bulanOpsi.map((b) => (
 										<option value={b.value} selected={b.value === nilaiBulan}>
 											{b.label}
@@ -181,9 +242,9 @@ const disposisiCount = dashboard.data?.disposisi_belum_dibaca ?? 0;
 							</Field>
 						</div>
 
-						<div>
+						<div class="sm:col-span-2 lg:col-span-1">
 							<Field label="Tahun" name="tahun" required>
-								<select class="select" id="tahun" name="tahun" required>
+								<select class="select w-full" id="tahun" name="tahun" required>
 									{tahunOpsi.map((y) => (
 										<option
 											value={String(y)}
@@ -197,14 +258,19 @@ const disposisiCount = dashboard.data?.disposisi_belum_dibaca ?? 0;
 						</div>
 
 						<div class="sm:col-span-2">
+							{/*
+							 * Hanya kode DASAR (DL, HK, HM, …). Filternya
+							 * memakai prefix di server, sehingga memilih 'HK'
+							 * mencakup HK1, HK2, HK1.2.5, dst.
+							 */}
 							<Field label="Kode Klasifikasi" name="kode">
-								<select class="select" id="kode" name="kode">
+								<select class="select w-full" id="kode" name="kode">
 									<option value="all" selected={nilaiKode === "all"}>
 										Semua Kode
 									</option>
 									{klasifikasiOpsi.map((k) => (
 										<option value={k.kode} selected={k.kode === nilaiKode}>
-											{`${k.kode} - ${k.nama}`}
+											{`${k.nama} [${k.kode}]`}
 										</option>
 									))}
 								</select>

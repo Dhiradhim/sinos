@@ -300,6 +300,74 @@ $config['surat_keluar_max_jumlah'] = 20;
 
 /*
 |--------------------------------------------------------------------------
+| LAPORAN - Kode klasifikasi DASAR
+|--------------------------------------------------------------------------
+| Daftar kode induk (2 huruf) yang ditampilkan pada dropdown "Kode
+| Klasifikasi" pada form cetak laporan. Pilihan ini menyaring daftar surat
+| yang dicetak (bukan lagi menjadi kolom rekap).
+|
+| KENAPA hanya kode dasar: kolom `nosur.kode` menyimpan kode apa adanya —
+| ada yang masih kode dasar ('HK') dan ada yang sudah turunan
+| ('HK1.2.5', 'DL1.10'). Menampilkan seluruh baris `ref_klasifikasi` membuat
+| dropdown berisi ratusan pilihan yang membingungkan. Filter laporan karena
+| itu memakai PREFIX (LIKE 'HK%'), sehingga 'HK' mencakup HK1, HK2, HK1.2.5,
+| dan seterusnya.
+|
+| Kunci = kode dasar, nilai = nama tampilan.
+*/
+$config['laporan_kode_dasar'] = array(
+    'OT' => 'Organisasi Tatalaksana',
+    'HM' => 'Humas dan Protokol',
+    'KP' => 'Kepegawaian',
+    'KU' => 'Keuangan',
+    'PL' => 'Perlengkapan',
+    'HK' => 'Hukum',
+    'PS' => 'Perpustakaan',
+    'KA' => 'Kearsipan',
+    'PW' => 'Pengawasan',
+    'RT' => 'Rumah Tangga',
+    'TI' => 'Teknologi Informasi',
+    'DL' => 'Pendidikan dan Pelatihan',
+    'RA' => 'Perencanaan Anggaran',
+);
+
+/*
+|--------------------------------------------------------------------------
+| LAPORAN - Blok tanda tangan PDF
+|--------------------------------------------------------------------------
+| Dua kolom tanda tangan pada bagian bawah laporan:
+|
+|   kiri  : "Mengetahui," / Sekretaris
+|   kanan : "Kupang, <tanggal cetak>" / Kepala Sub Bagian Umum dan Keuangan
+|
+| `nip` dipakai untuk mencari NAMA pada `pegawai_db.pegawai`, sehingga nama
+| dan NIP yang tercetak selalu mengikuti data pegawai terpusat. Bila pegawai
+| tidak ditemukan (atau NIP dikosongkan), nama diganti garis titik-titik —
+| laporan tidak pernah gagal karena data pegawai berubah.
+|
+| Baris pertama `jabatan` pada kolom kiri yang diawali "Mengetahui" dipakai
+| sebagai baris pembuka; sisanya menjadi nama jabatan.
+*/
+$config['laporan_ttd'] = array(
+    'kiri'  => array(
+        'jabatan' => array('Mengetahui,', 'Sekretaris'),
+        'nip'     => '197212192000121004',
+    ),
+    'kanan' => array(
+        'jabatan' => array('Kepala Sub Bagian Umum', 'dan Keuangan'),
+        'nip'     => '198407312009122007',
+    ),
+);
+
+/*
+|--------------------------------------------------------------------------
+| LAPORAN - Kota pada tanggal cetak
+|--------------------------------------------------------------------------
+*/
+$config['laporan_kota'] = 'Kupang';
+
+/*
+|--------------------------------------------------------------------------
 | API HEADLESS - Secret token (HMAC)
 |--------------------------------------------------------------------------
 | Kunci HMAC-SHA256 untuk menandatangani token API `/api/v1/`.

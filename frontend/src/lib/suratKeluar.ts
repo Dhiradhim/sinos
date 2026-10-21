@@ -81,6 +81,8 @@ export type SuratKeluarAksi = {
   can_view: boolean;
   can_edit: boolean;
   can_upload: boolean;
+  /** Hapus nomor surat — HANYA admin (`Surat_keluar::destroy()`). */
+  can_delete: boolean;
 };
 
 export type SuratKeluarDetail = {
@@ -206,6 +208,32 @@ export function submitUpdate(
   });
 }
 
+/**
+ * DELETE /surat-keluar/{id} — hapus nomor surat (admin saja).
+ *
+ * Form HTML tidak dapat mengirim DELETE, jadi dikirim sebagai POST dengan
+ * `_method=DELETE`.
+ *
+ * PENTING — posisi `_method`. Sama seperti `submitUpdate()`: body dikirim
+ * sebagai JSON, sehingga `$_POST` KOSONG dan `_method` di dalam body tidak
+ * terlihat `Surat_keluar::method_efektif()`. Akibatnya request tetap dianggap
+ * POST dan API membalas 405 "Gunakan metode GET, PUT, atau DELETE."
+ * Karena itu override dikirim di query string, yang dibaca `input->get()`.
+ */
+export function submitHapus(
+  token: string | null,
+  id: number | string,
+): Promise<ApiEnvelope<{ id: number; no: string; dihapus: boolean }>> {
+  return apiFetch<{ id: number; no: string; dihapus: boolean }>(
+    `/surat-keluar/${String(id)}`,
+    {
+      method: "POST",
+      token,
+      query: { _method: "DELETE" },
+    },
+  );
+}
+
 /** POST /surat-keluar/{id}/berkas — multipart, hanya field `file`. */
 export function submitBerkas(
   form: FormData,
@@ -237,9 +265,17 @@ export function errorFields(
  * Ringkasan audit `POST /surat-keluar/sisip` dari `meta` respons 201.
  *
  * Nilai mentah meta:
- *   last_no_urut_sebelum : int|null
+ *   mode_penomoran       : 'awal' | 'urut' | 'sisip'
+ *   tanggal_acuan        : Y-m-d|null — tanggal terakhir yang tercatat
+ *   last_no_urut_sebelum : int|null  — nomor dasar yang dipakai
  *   nomor_terpakai       : [{no_urut, huruf}]
  *   huruf_terpakai       : {no_urut: [huruf, ...]}
+ *
+ * `mode_penomoran` menjelaskan MENGAPA nomor yang dihasilkan seperti itu:
+ *   - `urut`  → deret tahun dilanjutkan (nomor tertinggi + 1);
+ *   - `sisip` → nomor terakhir pada tanggal <= tanggal sisip, lalu huruf
+ *               berikutnya (100 → 100A, Z → AA);
+ *   - `awal`  → belum ada nomor pada/selum tanggal itu (nomor 1).
  *
  * Diringkas menjadi string agar dapat disimpan di cookie umpan balik
  * (maksimal ~4 KB) lalu ditampilkan sebagai `.alert-success`.
@@ -266,12 +302,29 @@ export function summarizeSisipMeta(
   const hurufTerpakai = Object.entries(hurufMap)
     .map(([urut, huruf]) => {
       const list = Array.isArray(huruf) ? huruf.map(String) : [String(huruf)];
+      // Deret baru (mode `urut`) tidak punya huruf terpakai: tampilkan "—",
+      // bukan "1506: " dengan ekor kosong.
+      if (list.length === 0) return `${urut}: —`;
       return `${urut}: ${list.map((h) => (h === "" ? "—" : h)).join(", ")}`;
     })
     .join("; ");
 
+  const mode = String(meta?.mode_penomoran ?? "");
+  const modeLabel =
+    mode === "urut"
+      ? "Dilanjutkan (tanggal ujung deret)"
+      : mode === "sisip"
+        ? "Sisip (nomor dipinjam + huruf)"
+        : mode === "awal"
+          ? "Nomor pertama tahun ini"
+          : "—";
+
+  const acuan = meta?.tanggal_acuan;
+
   return {
     nomor: nomor.join(", "),
+    mode_penomoran: modeLabel,
+    tanggal_acuan: typeof acuan === "string" && acuan !== "" ? acuan : "—",
     last_no_urut_sebelum:
       sebelum === null || sebelum === undefined ? "—" : String(sebelum),
     nomor_terpakai: nomorTerpakai === "" ? "—" : nomorTerpakai,

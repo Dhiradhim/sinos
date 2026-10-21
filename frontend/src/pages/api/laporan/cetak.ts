@@ -55,16 +55,36 @@ export const POST: APIRoute = async ({ cookies, request }) => {
   };
 
   // Default tanggal cetak memakai zona aplikasi (UTC+8), bukan zona mesin.
-  const [tahunNow, bulanNow, hariNow] = todayISO().split('-');
-  const tahunDefault = tahunNow;
-  const tglDefault = `${hariNow}-${bulanNow}-${tahunNow}`;
+  const tahunDefault = todayISO().slice(0, 4);
+
+  /**
+   * `tgl_cetak` kini berasal dari `<input type="date">` sehingga formatnya
+   * Y-m-d. Nilai dd-mm-yyyy dari klien lama tetap diterima dan dinormalkan,
+   * supaya API selalu menerima satu bentuk.
+   */
+  const normalkanTanggal = (raw: string): string => {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    const m = raw.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+    if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+    return todayISO();
+  };
+
+  /**
+   * Kode klasifikasi kini kode DASAR (2 huruf). Nilai lain (mis. sisa kode
+   * turunan dari bookmark lama) diperlakukan sebagai 'all' agar laporan
+   * tidak kosong tanpa penjelasan.
+   */
+  const normalkanKode = (raw: string): string => {
+    const value = raw.toUpperCase();
+    return /^[A-Z]{2}$/.test(value) ? value : 'all';
+  };
 
   const payload = {
     tipelaporan: read('tipelaporan', 'surkel'),
-    tgl_cetak: read('tgl_cetak', tglDefault),
+    tgl_cetak: normalkanTanggal(read('tgl_cetak', todayISO())),
     bulan: read('bulan', '00'),
     tahun: read('tahun', tahunDefault),
-    kode: read('kode', 'all'),
+    kode: normalkanKode(read('kode', 'all')),
   };
 
   let upstream: Response;

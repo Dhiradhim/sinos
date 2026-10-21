@@ -293,6 +293,71 @@
 		background-size: 1rem;
 	}
 
+	/* ------------------------------ Date field -------------------------------
+	 * `placeholder` diabaikan pada <input type="date"> dan teks segmen
+	 * native mengikuti locale browser ("mm/dd/yyyy" di en-US), jadi tampilan
+	 * tanggal dirender sebagai overlay oleh src/lib/dateField.ts:
+	 *
+	 *   <span class="date-field">
+	 *     <input type="date" class="input is-empty">
+	 *     <span class="date-display is-placeholder">21/10/2026</span>
+	 *   </span>
+	 *
+	 * Teks native selalu dibuat transparan saat input TIDAK fokus, dan
+	 * overlay menampilkan nilai dalam dd/mm/yyyy (atau tanggal hari ini
+	 * sebagai placeholder bila kosong). Saat fokus, overlay disembunyikan
+	 * agar pengguna dapat mengetik/memilih dari kalender seperti biasa.
+	 */
+	.date-field {
+		position: relative;
+		display: block;
+		width: 100%;
+	}
+
+	.date-field > .input {
+		width: 100%;
+	}
+
+	.date-display {
+		position: absolute;
+		inset-block: 0;
+		inset-inline-start: 0.75rem;
+		display: flex;
+		align-items: center;
+		pointer-events: none;
+		font-size: 0.875rem;
+		line-height: 1.25rem;
+		color: var(--color-ink);
+	}
+
+	/* Kosong → placeholder, warnanya lebih lembut dari nilai sebenarnya. */
+	.date-display.is-placeholder {
+		color: var(--color-ink-subtle);
+	}
+
+	/* Sedang fokus: segmen native yang tampil, overlay disembunyikan. */
+	.date-field > .input:focus + .date-display {
+		display: none;
+	}
+
+	/*
+	 * Tidak fokus: sembunyikan teks native agar overlay terbaca tunggal.
+	 * Ikon kalender tetap tampil karena indikator picker memakai gambar
+	 * sendiri, bukan `color` input.
+	 */
+	.date-field > .input:not(:focus)::-webkit-datetime-edit {
+		color: transparent;
+	}
+
+	.date-field > .input:not(:focus) {
+		color: transparent;
+		-webkit-text-fill-color: transparent;
+	}
+
+	.date-field > .input::-webkit-calendar-picker-indicator {
+		opacity: 1;
+	}
+
 	/* ---------------------------------- Badge ---------------------------------
 	 * Pil, 0.6875rem, 600, border 1px, latar bertinta.
 	 * Pemetaan tone netral (brand|sky|amber|danger|ok|muted|neutral|warning|info)

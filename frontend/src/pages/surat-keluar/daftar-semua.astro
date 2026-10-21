@@ -29,6 +29,7 @@ import DataTable, { type Column } from "../../components/DataTable.astro";
 import Pagination from "../../components/Pagination.astro";
 import TahunSelector from "../../components/TahunSelector.astro";
 import FeedbackAlert from "../../components/FeedbackAlert.astro";
+import ConfirmModal from "../../components/ConfirmModal.astro";
 import NomorBerhasilModal from "../../components/NomorBerhasilModal.astro";
 import Icon from "../../components/Icon.astro";
 import { requireUser } from "../../lib/auth";
@@ -95,14 +96,32 @@ const disposisiCount = dashboard.data?.disposisi_belum_dibaca ?? 0;
 
 const isAdmin = Boolean(user.is_admin);
 
-/** Admin atau pemilik nomor — sama dengan `Surat_keluar::boleh_ubah()`. */
-const canTouch = (row: SuratKeluarRow): { edit: boolean; upload: boolean } => {
+/**
+ * Hak aksi per baris.
+ *
+ * `edit`/`upload` = admin atau pemilik (`Surat_keluar::boleh_ubah()`).
+ * `hapus` = HANYA admin (`Surat_keluar::destroy()`); pemilik nomor tidak
+ * boleh menghapus nomor suratnya sendiri.
+ */
+const canTouch = (
+	row: SuratKeluarRow,
+): { edit: boolean; upload: boolean; hapus: boolean } => {
 	if (row.aksi) {
-		return { edit: row.aksi.can_edit, upload: row.aksi.can_upload };
+		return {
+			edit: row.aksi.can_edit,
+			upload: row.aksi.can_upload,
+			hapus: row.aksi.can_delete ?? isAdmin,
+		};
 	}
 	const owner = String(row.nip ?? "") === String(user.nip ?? "");
-	return { edit: isAdmin || owner, upload: isAdmin || owner };
+	return { edit: isAdmin || owner, upload: isAdmin || owner, hapus: isAdmin };
 };
+
+/**
+ * Path halaman ini untuk kembali setelah aksi (hapus). Mempertahankan
+ * `tahun`, `page`, dan `q` agar pengguna tidak kehilangan konteks.
+ */
+const kembaliKe = `/surat-keluar/daftar-semua${Astro.url.search}`;
 
 const columns: Column[] = [
 	{ key: "no", label: "No. Surat", nowrap: true, width: "13rem" },
@@ -259,6 +278,23 @@ const renderKeys = ["no", "berkas", "aksi"];
 								<Icon name="edit" class="h-4 w-4" />
 							</a>
 						)}
+						{boleh.hapus && (
+							<form
+								method="post"
+								action={`/api/surat-keluar/${row.id}/hapus?kembali=${encodeURIComponent(kembaliKe)}`}
+								data-confirm={`Hapus nomor surat ${row.no}? Nomor yang dihapus tidak dapat dikembalikan dan nomor urut tidak dipakai ulang.`}
+								role="none"
+							>
+								<button
+									type="submit"
+									class="btn-icon text-[var(--color-danger)] hover:text-[var(--color-danger)]"
+									title="Hapus nomor surat"
+									aria-label={`Hapus nomor surat ${row.no}`}
+								>
+									<Icon name="trash" class="h-4 w-4" />
+								</button>
+							</form>
+						)}
 					</div>
 				);
 			}
@@ -290,4 +326,7 @@ const renderKeys = ["no", "berkas", "aksi"];
 			/>
 		)
 	}
+
+	{/* Overlay konfirmasi untuk hapus nomor surat (admin). */}
+	<ConfirmModal title="Hapus Nomor Surat" />
 </AppShell>

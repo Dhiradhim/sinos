@@ -34,5 +34,21 @@ const { title } = Astro.props;
 		<script>
 			import "preline";
 		</script>
+
+		<!--
+			Tampilan tanggal untuk SEMUA <input type="date">: nilai selalu
+			ditampilkan dd/mm/yyyy, dan tanggal hari ini dipakai sebagai
+			placeholder selama input masih kosong. Dipasang di shell agar
+			halaman baru otomatis ikut, tanpa menambah atribut per field.
+		-->
+		<script>
+			import { initDateFields } from "../lib/dateField";
+
+			initDateFields();
+
+			// Halaman yang merender ulang form di klien (mis. setelah galat
+			// validasi) dapat memanggil ulang; idempoten, jadi aman.
+			document.addEventListener("astro:page-load", () => initDateFields());
+		</script>
 	</body>
 </html>

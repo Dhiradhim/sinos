@@ -245,6 +245,53 @@ if (! function_exists('huruf_sisip')) {
     }
 }
 
+if (! function_exists('huruf_naik')) {
+    /**
+     * Huruf BERIKUTNYA setelah sebuah akhiran nomor surat.
+     *
+     * Dipakai penomoran sisip: nomor terakhir yang sudah diambil pada tanggal
+     * sebelum/sama dengan tanggal sisip diberi huruf berikutnya.
+     *
+     * Urutan (sama dengan `huruf_sisip()`):
+     *   ''   → 'A'
+     *   'A'  → 'B'
+     *   'Z'  → 'AA'
+     *   'AA' → 'AB'
+     *   'AZ' → 'BA'
+     *   'ZZ' → NULL (habis; kolom `huruf` hanya varchar(2))
+     *
+     * @param  string $huruf Huruf terakhir ('' bila belum berhuruf)
+     * @return string|null   NULL bila melewati 'ZZ'
+     */
+    function huruf_naik($huruf)
+    {
+        $h = strtoupper(trim((string) $huruf));
+
+        // Belum berhuruf: sisipan pertama memakai 'A'.
+        if ($h === '') {
+            return 'A';
+        }
+
+        // Nilai di luar A..ZZ (data lama/aneh) tidak dapat dinaikkan.
+        if (! preg_match('/^[A-Z]{1,2}$/', $h)) {
+            return NULL;
+        }
+
+        // A=1, Z=26, AA=27, AB=28, … (basis 26 dengan offset 1).
+        $n = 0;
+        for ($i = 0, $len = strlen($h); $i < $len; $i++) {
+            $n = ($n * 26) + (ord($h[$i]) - 64);
+        }
+        $n++;
+
+        if ($n > 702) { // di luar 'ZZ'
+            return NULL;
+        }
+
+        return huruf_sisip($n);
+    }
+}
+
 if (! function_exists('hs_select_attr')) {
     /**
      * Atribut `data-hs-select` untuk Preline Select (advanced select).

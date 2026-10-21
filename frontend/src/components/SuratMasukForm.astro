@@ -30,7 +30,7 @@
 import Field from "./Field.astro";
 import Select from "./Select.astro";
 import Icon from "./Icon.astro";
-import { berkasUrl, currentYear } from "../lib/format";
+import { berkasUrl, currentYear, todayISO } from "../lib/format";
 import type { FormFeedbackType } from "../lib/formFeedback";
 
 interface Klasifikasi {
@@ -89,6 +89,21 @@ function valueOf(field: string): string {
 		return iso === null || iso === undefined ? "" : String(iso);
 	}
 	return String(raw);
+}
+
+/**
+ * Nilai tanggal untuk field datepicker.
+ *
+ * Halaman /laporan menampilkan tanggal cetak yang SUDAH terisi hari ini, jadi
+ * kedua tanggal di sini mengikuti pola yang sama: saat membuat surat baru,
+ * `tgl_surat` dan `tgl_diterima` diisi tanggal hari ini (nilai sebenarnya,
+ * bukan hanya placeholder). Saat mengedit, nilai tersimpan yang dipakai.
+ * Format tampilan dd/mm/yyyy ditangani src/lib/dateField.ts; nilai yang
+ * dikirim ke API tetap Y-m-d.
+ */
+function dateValueOf(field: string): string {
+	const nilai = valueOf(field);
+	return nilai !== "" ? nilai : todayISO();
 }
 
 /** Path berkas saat ini; `file` dapat berupa string atau objek meta API. */
@@ -260,7 +275,7 @@ const backHref = isEdit
 				type="date"
 				id="tgl_surat"
 				name="tgl_surat"
-				value={valueOf("tgl_surat")}
+				value={dateValueOf("tgl_surat")}
 				aria-invalid={errorOf("tgl_surat") ? "true" : undefined}
 				aria-describedby={errorOf("tgl_surat") ? "tgl_surat-error" : undefined}
 				required
@@ -278,7 +293,7 @@ const backHref = isEdit
 				type="date"
 				id="tgl_diterima"
 				name="tgl_diterima"
-				value={valueOf("tgl_diterima")}
+				value={dateValueOf("tgl_diterima")}
 				aria-invalid={errorOf("tgl_diterima") ? "true" : undefined}
 				aria-describedby={errorOf("tgl_diterima")
 					? "tgl_diterima-error"

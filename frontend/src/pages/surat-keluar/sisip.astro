@@ -105,7 +105,13 @@ const audit = feedback?.result ?? null;
 						<dl class="mt-2 grid grid-cols-1 gap-x-4 gap-y-1 text-xs sm:grid-cols-3">
 							<div>
 								<dt class="font-medium uppercase tracking-wide">
-									Nomor urut sebelumnya
+									Cara penomoran
+								</dt>
+								<dd class="tabular">{audit.mode_penomoran}</dd>
+							</div>
+							<div>
+								<dt class="font-medium uppercase tracking-wide">
+									Nomor dasar
 								</dt>
 								<dd class="tabular">{audit.last_no_urut_sebelum}</dd>
 							</div>
@@ -120,6 +126,12 @@ const audit = feedback?.result ?? null;
 									Huruf terpakai
 								</dt>
 								<dd class="tabular">{audit.huruf_terpakai}</dd>
+							</div>
+							<div>
+								<dt class="font-medium uppercase tracking-wide">
+									Tanggal acuan
+								</dt>
+								<dd class="tabular">{audit.tanggal_acuan}</dd>
 							</div>
 						</dl>
 					</div>
